@@ -1,0 +1,18 @@
+{
+  "network": "polygon_amoy",
+  "chainId": 80002,
+  "contracts": {
+    "AccessManager": "0x230829f5EC30A1936fDECE13F1179381daaf69e8",
+    "PauseController": "0xF4d0F035900c313e44246ED473b3011E42192F77",
+    "FundryxToken": "0xdA2631Aadb95AB5Ea6926e431F66fe2a66EF930E",
+    "CreditHistoryRegistry": "0x27B46c075bf2Cd67D174BD59629cc66b8C9Ea36d",
+    "CreditPolicy": "0x68fC6E11cD8a855849D7788e035BA92E320Db0d2",
+    "LendingPool": "0xF35DaC9A5Db13c2b621Aa00288A4996D5d91c07C",
+    "RiskAttestationRegistry": "0xCa8C5f7AA0717BCc3435cAEbFB96Ff602232dEcC"
+  },
+  "roles": {
+    "LENDING_POOL_ROLE": "0xa05e016071881d2170d364744d63b2e41aeb933bc5c5727596db7b66f663c3ea",
+    "OPERATOR_ROLE": "0x97667070c54ef182b0f5858b034beac1b6f3089aa2d3188bb1e8929f4fa9b929",
+    "MONITOR_SIGNER_ROLE": "0xddb33508d222a4ac25871da02a331273f41858be15ffd3493bc61dc5f98e5a4e"
+  }
+}
