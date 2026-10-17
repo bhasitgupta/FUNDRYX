@@ -1,0 +1,258 @@
+@import url('https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400..800;1,6..96,400..700&family=Cinzel:wght@500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
+@import "tailwindcss";
+@import "lenis/dist/lenis.css";
+
+:root {
+  /* 3 Curated Font Pairings matching luxury brand styles */
+  --font-hero: 'Bodoni Moda', Georgia, serif;       /* "Things" / "Elegant" high-contrast editorial luxury */
+  --font-title: 'Cinzel', Didot, serif;              /* "Strong" / "Patcher" bold architectural serif */
+  --font-body: 'Plus Jakarta Sans', sans-serif;      /* "Papillon" modern clean luxury companion */
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+
+  /* Fundryx Fintech Theme Tokens */
+  --fintech-bg: #deded2;
+  --fintech-bg-alt: #dfded3;
+  --fintech-dark: #0e1814;
+  --fintech-forest: #263e34;
+  --fintech-forest-hover: #1f332b;
+  --fintech-card: #ffffff;
+  --fintech-border: #cacac0;
+  --fintech-border-dark: #1e332a;
+  --fintech-text-primary: #111614;
+  --fintech-text-muted: #757d77;
+  --fintech-text-accent: #84968d;
+  --fintech-orange: #ea580c;
+  --fintech-emerald: #10b981;
+}
+
+.font-hero {
+  font-family: var(--font-hero);
+}
+
+.font-title {
+  font-family: var(--font-title);
+}
+
+.font-body {
+  font-family: var(--font-body);
+}
+
+/* Floating Device Animation */
+@keyframes float-gentle {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-6px) rotate(0.3deg);
+  }
+}
+
+.animate-float-device {
+  animation: float-gentle 4s ease-in-out infinite;
+}
+
+@keyframes warm-pulse {
+  0%, 100% {
+    opacity: 0.25;
+    transform: scale(0.96);
+  }
+  50% {
+    opacity: 0.45;
+    transform: scale(1.05);
+  }
+}
+
+.animate-warm-pulse {
+  animation: warm-pulse 3.5s ease-in-out infinite;
+}
+
+/* Original circuit flow line animations */
+@keyframes circuit-flow {
+  0% {
+    stroke-dashoffset: 0;
+  }
+  100% {
+    stroke-dashoffset: -36;
+  }
+}
+
+.animate-circuit-flow {
+  stroke-dasharray: 6 6;
+  animation: circuit-flow 3s linear infinite;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html.lenis, html.lenis body {
+  height: auto;
+}
+
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+
+html, body, #root {
+  width: 100%;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--fintech-bg);
+  color: var(--fintech-text-primary);
+  line-height: 1.5;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Glassmorphism Navbar */
+.portal-navbar {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background-color: rgba(235, 231, 222, 0.78);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(216, 211, 197, 0.55);
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.06);
+  width: 100%;
+}
+
+/* Shared Dashboard Layout Container */
+.portal-container {
+  width: 100%;
+  max-width: 1400px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: clamp(16px, 3vw, 40px);
+  padding-right: clamp(16px, 3vw, 40px);
+}
+
+/* Standardized Portal Table Gutters & Alignment */
+.portal-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.portal-table th,
+.portal-table td {
+  padding-left: 14px;
+  padding-right: 14px;
+}
+
+.portal-table th:first-child,
+.portal-table td:first-child {
+  padding-left: 0;
+}
+
+.portal-table th:last-child,
+.portal-table td:last-child {
+  padding-right: 0;
+}
+
+/* Outer frame container */
+.fintech-outer-frame {
+  min-height: 100vh;
+  background-color: var(--fintech-bg);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.08);
+}
+
+/* Three.js canvas layer in background */
+.canvas-container {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.site-content {
+  position: relative;
+  z-index: 10;
+}
+
+/* Subtle circuit line styling */
+.circuit-line {
+  position: absolute;
+  background-color: #b8b8ac;
+  pointer-events: none;
+}
+
+.circuit-chip {
+  position: absolute;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #ffffff;
+  border: 1px solid #c2c2b6;
+  border-radius: 9999px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: #757d77;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  user-select: none;
+  z-index: 5;
+}
+
+/* Donut chart helper */
+.donut-segment {
+  transform-origin: center;
+  transition: stroke-dasharray 0.5s ease;
+}
+
+/* Pulsing Green Indicator */
+.pulse-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background-color: #10b981;
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.6);
+  animation: pulse-ring 2s infinite ease-in-out;
+}
+
+@keyframes pulse-ring {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.3); opacity: 0.6; }
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--fintech-bg);
+}
+::-webkit-scrollbar-thumb {
+  background: #b5b5a8;
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #8e8e82;
+}
+
+.portal-container {
+  width: 100%;
+  max-width: 1440px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+}
+@media (min-width: 768px) {
+  .portal-container {
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+}
+@media (min-width: 1280px) {
+  .portal-container {
+    padding-left: 2.5rem;
+    padding-right: 2.5rem;
+  }
+}
+
