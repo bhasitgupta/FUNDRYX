@@ -49,3 +49,7 @@ __pycache__/
 htmlcov/
 venv/
 .venv/
+
+# Local Office Templates
+*.dotm
+*.docm

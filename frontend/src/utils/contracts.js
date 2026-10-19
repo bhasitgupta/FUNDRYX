@@ -126,29 +126,102 @@ export function getReadProvider() {
   return new ethers.JsonRpcProvider('https://polygon-amoy-bor-rpc.publicnode.com');
 }
 
+export function getInjectedProvider(walletType = 'metamask') {
+  if (typeof window === 'undefined') return null;
+
+  const providers = window.ethereum?.providers || [];
+
+  if (walletType === 'metamask') {
+    // Specifically target MetaMask and exclude Phantom/Coinbase
+    if (providers.length > 0) {
+      const mm = providers.find((p) => p.isMetaMask && !p.isPhantom);
+      if (mm) return mm;
+    }
+    if (window.ethereum?.isMetaMask && !window.ethereum?.isPhantom) {
+      return window.ethereum;
+    }
+    if (window.ethereum && !window.ethereum.isPhantom) {
+      return window.ethereum;
+    }
+    return null;
+  }
+
+  if (walletType === 'phantom') {
+    if (window.phantom?.ethereum) return window.phantom.ethereum;
+    if (providers.length > 0) {
+      const ph = providers.find((p) => p.isPhantom);
+      if (ph) return ph;
+    }
+    if (window.ethereum?.isPhantom) return window.ethereum;
+    return null;
+  }
+
+  if (walletType === 'coinbase') {
+    if (window.coinbaseWalletExtension) return window.coinbaseWalletExtension;
+    if (providers.length > 0) {
+      const cb = providers.find((p) => p.isCoinbaseWallet);
+      if (cb) return cb;
+    }
+    if (window.ethereum?.isCoinbaseWallet) return window.ethereum;
+    return null;
+  }
+
+  if (walletType === 'trust') {
+    if (window.trustwallet) return window.trustwallet;
+    if (providers.length > 0) {
+      const tr = providers.find((p) => p.isTrust || p.isTrustWallet);
+      if (tr) return tr;
+    }
+    return null;
+  }
+
+  return window.ethereum || null;
+}
+
 // ─────────────────────────────────────────────────────────────
 // WALLET CONNECTION
 // ─────────────────────────────────────────────────────────────
-export async function connectWallet() {
-  if (!window.ethereum) {
-    throw new Error('MetaMask or Web3 wallet not detected. Please install MetaMask.');
+export async function connectWallet(walletType = 'metamask') {
+  const injected = getInjectedProvider(walletType);
+
+  if (!injected) {
+    if (walletType === 'metamask') {
+      if (window.ethereum?.isPhantom) {
+        throw new Error(
+          'MetaMask extension was not detected or Phantom has captured window.ethereum. Please enable MetaMask or set MetaMask as default EVM wallet.'
+        );
+      }
+      throw new Error('MetaMask extension not found. Please install MetaMask to connect.');
+    } else if (walletType === 'phantom') {
+      throw new Error('Phantom extension not found or EVM support not enabled.');
+    } else if (walletType === 'coinbase') {
+      throw new Error('Coinbase Wallet extension not found. Please install Coinbase Wallet.');
+    } else if (walletType === 'trust') {
+      throw new Error('Trust Wallet extension not found.');
+    } else {
+      throw new Error('Web3 wallet provider not detected in this browser.');
+    }
   }
 
-  const provider = new ethers.BrowserProvider(window.ethereum);
-  const accounts = await provider.send('eth_requestAccounts', []);
+  const provider = new ethers.BrowserProvider(injected);
+  const accounts = await injected.request({ method: 'eth_requestAccounts' });
+  if (!accounts || accounts.length === 0) {
+    throw new Error('No accounts selected in wallet.');
+  }
+
   const signer = await provider.getSigner();
   const network = await provider.getNetwork();
 
   // Switch to Polygon Amoy if needed
   if (network.chainId !== BigInt(CHAIN_ID)) {
     try {
-      await window.ethereum.request({
+      await injected.request({
         method: 'wallet_switchEthereumChain',
         params: [{ chainId: POLYGON_AMOY_CONFIG.chainId }],
       });
     } catch (switchError) {
       if (switchError.code === 4902) {
-        await window.ethereum.request({
+        await injected.request({
           method: 'wallet_addEthereumChain',
           params: [POLYGON_AMOY_CONFIG],
         });
@@ -157,7 +230,7 @@ export async function connectWallet() {
       }
     }
     // Re-init after chain switch
-    const updatedProvider = new ethers.BrowserProvider(window.ethereum);
+    const updatedProvider = new ethers.BrowserProvider(injected);
     const updatedSigner = await updatedProvider.getSigner();
     const updatedNetwork = await updatedProvider.getNetwork();
     const balance = await updatedProvider.getBalance(accounts[0]);
@@ -167,7 +240,7 @@ export async function connectWallet() {
       provider: updatedProvider,
       balance: ethers.formatEther(balance),
       chainId: Number(updatedNetwork.chainId),
-      isDemo: false,
+      walletType,
     };
   }
 
@@ -179,7 +252,7 @@ export async function connectWallet() {
     provider,
     balance: ethers.formatEther(balance),
     chainId: Number(network.chainId),
-    isDemo: false,
+    walletType,
   };
 }
 

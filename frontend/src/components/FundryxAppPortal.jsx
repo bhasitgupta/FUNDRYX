@@ -508,17 +508,8 @@ export default function FundryxAppPortal({
             </div>
           </div>
 
-          {/* Right Controls: Website, Wallet Login & Connect */}
+          {/* Right Controls: Website & Connect */}
           <div className="flex items-center gap-3 shrink-0">
-            {onNavigateWalletLogin && (
-              <button
-                onClick={onNavigateWalletLogin}
-                className="portal-btn-secondary h-10 px-3.5 text-xs font-semibold gap-2 hidden sm:flex items-center"
-              >
-                <Wallet size={15} className="text-[var(--primary)]" />
-                <span>Wallet Login</span>
-              </button>
-            )}
 
             <button
               onClick={onBackToLanding}

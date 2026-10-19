@@ -40,13 +40,6 @@ const WALLET_LIST = [
     desc: "Connect 400+ mobile wallets via QR",
     icon: "https://raw.githubusercontent.com/WalletConnect/walletconnect-assets/master/Logo/Blue%20(Default)/Logo.svg",
   },
-  {
-    id: "demo",
-    name: "Instant Demo Wallet",
-    desc: "Pre-funded institutional test account",
-    icon: "https://v3.material-tailwind.com/icon/metamask.svg",
-    badge: "1-Click Access",
-  },
 ];
 
 export default function ChooseCryptoWalletLogin({

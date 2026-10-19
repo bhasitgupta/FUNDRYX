@@ -73,37 +73,24 @@ export default function App() {
   }, [currentView]);
 
   // Connect Wallet handler
-  const handleConnectWallet = async () => {
+  const handleConnectWallet = async (walletType = 'metamask') => {
     try {
-      const conn = await connectWallet();
-      setWallet({ ...conn, isDemo: false });
+      const conn = await connectWallet(walletType);
+      setWallet(conn);
       fetchLivePoolData(conn.provider);
       setCurrentView('app');
+      window.location.hash = '#app';
       return true;
     } catch (err) {
       console.warn('Wallet connection notification:', err.message);
-      alert(err.message || 'Could not connect Web3 wallet. Try the Instant Demo Wallet!');
+      alert(err.message || 'Could not connect Web3 wallet.');
       return false;
     }
   };
 
   const handleSelectWallet = async (walletId) => {
     setIsWalletModalOpen(false);
-    if (walletId === 'demo') {
-      // 1-Click Instant Institutional Demo Wallet
-      setWallet({
-        address: '0x71C94142a59a72F2bB4E7d8DeF0882e88a0349A2',
-        signer: null,
-        provider: null,
-        balance: '10000.00',
-        chainId: 80002,
-        isDemo: true,
-      });
-      // Immediately navigate to the full working app!
-      setCurrentView('app');
-    } else {
-      await handleConnectWallet();
-    }
+    await handleConnectWallet(walletId);
   };
 
   const handleDisconnect = () => {
@@ -115,6 +102,8 @@ export default function App() {
       chainId: null,
       isDemo: false,
     });
+    setCurrentView('landing');
+    window.location.hash = '';
   };
 
   // Fetch live pool data if provider is available
@@ -148,19 +137,24 @@ export default function App() {
       if (hash === '#wallet-login' || hash === '#login' || hash.includes('choose-crypto-wallet')) {
         setCurrentView('wallet-login');
       } else if (hash.startsWith('#app') || hash === '#borrow' || hash === '#lending' || hash === '#credit' || hash === '#risk') {
-        setCurrentView('app');
-        if (hash.includes('lend') || hash.includes('borrow')) {
-          setActiveAppTab('lending');
-        } else if (hash.includes('credit') || hash.includes('score')) {
-          setActiveAppTab('credit');
-        } else if (hash.includes('risk')) {
-          setActiveAppTab('risk');
-        } else if (hash.includes('market')) {
-          setActiveAppTab('markets');
-        } else if (hash.includes('terms') || hash.includes('legal')) {
-          setActiveAppTab('terms');
+        if (!wallet.address) {
+          setCurrentView('landing');
+          setIsWalletModalOpen(true);
         } else {
-          setActiveAppTab('overview');
+          setCurrentView('app');
+          if (hash.includes('lend') || hash.includes('borrow')) {
+            setActiveAppTab('lending');
+          } else if (hash.includes('credit') || hash.includes('score')) {
+            setActiveAppTab('credit');
+          } else if (hash.includes('risk')) {
+            setActiveAppTab('risk');
+          } else if (hash.includes('market')) {
+            setActiveAppTab('markets');
+          } else if (hash.includes('terms') || hash.includes('legal')) {
+            setActiveAppTab('terms');
+          } else {
+            setActiveAppTab('overview');
+          }
         }
       } else if (hash === '#landing' || hash === '#top' || hash === '') {
         setCurrentView('landing');
@@ -170,9 +164,13 @@ export default function App() {
     handleHash();
     window.addEventListener('hashchange', handleHash);
     return () => window.removeEventListener('hashchange', handleHash);
-  }, []);
+  }, [wallet.address]);
 
   const openAppTab = (tabName) => {
+    if (!wallet.address) {
+      setIsWalletModalOpen(true);
+      return;
+    }
     setActiveAppTab(tabName);
     setCurrentView('app');
     window.location.hash = `#app-${tabName}`;
@@ -238,20 +236,16 @@ export default function App() {
           nav={[
             { label: "Why Fundryx", href: "#about" },
             { label: "Features", href: "#features" },
-            { label: "Capital Reserves", href: "#features" },
             {
-              label: "Wallet Login",
-              href: "#wallet-login",
+              label: wallet.address ? "Go to Dashboard" : "Connect Wallet",
+              href: wallet.address ? "#app" : "#connect",
               onClick: () => {
-                setCurrentView('wallet-login');
-                window.location.hash = '#wallet-login';
-                window.scrollTo({ top: 0, behavior: 'smooth' });
+                if (wallet.address) {
+                  openAppTab('overview');
+                } else {
+                  setIsWalletModalOpen(true);
+                }
               },
-            },
-            {
-              label: "Launch App",
-              href: "#app",
-              onClick: () => openAppTab('overview'),
             },
           ]}
           login={
@@ -265,17 +259,27 @@ export default function App() {
                   onClick: () => setIsWalletModalOpen(true),
                 }
           }
-          signup={{
-            label: "Launch App",
-            onClick: () => openAppTab('overview'),
-          }}
+          signup={
+            wallet.address
+              ? {
+                  label: "Go to Dashboard",
+                  onClick: () => openAppTab('overview'),
+                }
+              : null
+          }
           primaryAction={{
-            label: "Launch App",
-            onClick: () => openAppTab('overview'),
+            label: wallet.address ? "Go to Dashboard" : "Connect Wallet",
+            onClick: () => {
+              if (wallet.address) {
+                openAppTab('overview');
+              } else {
+                setIsWalletModalOpen(true);
+              }
+            },
           }}
           secondaryAction={{
-            label: wallet.address ? "Connected (Open App)" : "Connect Wallet",
-            onClick: () => (wallet.address ? openAppTab('overview') : setIsWalletModalOpen(true)),
+            label: "Explore Features",
+            href: "#features",
           }}
           info={{
             label: "/why/",

@@ -69,14 +69,6 @@ export default function WalletModal({ isOpen, onClose, onSelectWallet }) {
       desc: 'Multi-chain Web3 wallet',
       icon: <PhantomIcon />,
     },
-    {
-      id: 'demo',
-      name: 'Fundryx Instant Demo Wallet',
-      desc: '1-click simulated wallet pre-funded with 10,000 FDX',
-      icon: <img src="/fundryx-logo.png" alt="Fundryx" className="w-7 h-7 object-contain" />,
-      badge: 'Instant Access',
-      highlight: true,
-    },
   ];
 
   return (
