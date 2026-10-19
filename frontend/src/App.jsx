@@ -131,7 +131,7 @@ export default function App() {
         setCurrentView('app');
         if (hash.includes('lend') || hash.includes('borrow')) {
           setActiveAppTab('lending');
-        } else if (hash.includes('credit')) {
+        } else if (hash.includes('credit') || hash.includes('score')) {
           setActiveAppTab('credit');
         } else if (hash.includes('risk')) {
           setActiveAppTab('risk');

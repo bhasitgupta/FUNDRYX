@@ -406,161 +406,206 @@ export default function FundryxAppPortal({
         {/* ========================================================= */}
         {/* MAIN APP WORKSPACE - BALANCED LAYOUT SYSTEM               */}
         {/* ========================================================= */}
-        <main className="portal-container flex-1 py-8 md:py-10 flex flex-col gap-8 md:gap-10">
+        <main className="flex-1 max-w-7xl mx-auto w-full py-8 lg:py-10 px-4 sm:px-6 lg:px-8 flex flex-col gap-8 lg:gap-10">
 
         {/* ========================================================= */}
         {/* TAB 1: OVERVIEW & PORTFOLIO                               */}
         {/* ========================================================= */}
         {activeTab === 'overview' && (
-          <div className="flex flex-col gap-10 animate-fade-in">
-            {/* Top Overview Banner with Multi-Color Institutional Styling */}
-            <div className="p-8 md:p-10 rounded-3xl bg-gradient-to-r from-[#172b20] via-[#1a2838] to-[#281b16] border border-[#2d4838] flex flex-col md:flex-row items-start md:items-center justify-between gap-6 shadow-[0_16px_50px_rgba(0,0,0,0.6)]">
-              <div>
-                <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-teal-300 mb-3">
-                  <span className="w-2.5 h-2.5 rounded-full bg-teal-400 animate-ping" />
-                  <span className="px-2.5 py-0.5 rounded-md bg-teal-950/80 border border-teal-700/50">Verified Institutional Identity</span>
-                  <span>·</span>
-                  <span className="text-amber-300 font-medium">Tier 1 Prime Status (Score 785)</span>
-                </div>
-                <h1 className="text-3xl md:text-5xl font-bold bg-gradient-to-r from-white via-[#f0ece1] to-[#e6d5b8] bg-clip-text text-transparent tracking-tight">
-                  Capital Liquidity & Credit Dashboard
-                </h1>
-                <p className="text-sm md:text-base text-[#9eb5a7] mt-2.5 max-w-2xl leading-relaxed">
-                  Real-time portfolio management, deterministic risk limits, and zero-collateral uncollateralized lending capacity.
-                </p>
-              </div>
-
-              <div className="flex items-center gap-3 shrink-0">
-                <button
-                  onClick={() => setActiveTab('lending')}
-                  className="px-6 py-3.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-sm font-bold shadow-lg shadow-emerald-950/60 transition cursor-pointer"
-                >
-                  Borrow Capital
-                </button>
-                <button
-                  onClick={() => setActiveTab('credit')}
-                  className="px-6 py-3.5 rounded-xl bg-[#241c19] hover:bg-[#332520] border border-[#523b2e] text-[#f2dfc1] text-sm font-bold transition cursor-pointer shadow-md"
-                >
-                  Inspect Score
-                </button>
-              </div>
-            </div>
-
-            {/* 4 Colored Metric Cards - Multi-Color Theme (Emerald, Cyan, Amber, Purple) */}
-            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
-              {/* Card 1: Emerald Theme */}
-              <div className="p-6 rounded-2xl bg-gradient-to-br from-[#13281c] via-[#0f2016] to-[#0c1811] border border-emerald-500/30 hover:border-emerald-400/60 shadow-[0_8px_30px_rgba(16,185,129,0.06)] transition-all flex flex-col justify-between">
+          <div className="flex flex-col gap-8 lg:gap-10 animate-fade-in">
+            {/* Hero Banner */}
+            <div className="portal-card relative p-7 sm:p-9 lg:p-10 rounded-3xl bg-gradient-to-br from-[#15241b] via-[#122018] to-[#0f1b13] border border-[#263e30] shadow-[0_20px_60px_rgba(0,0,0,0.6)] overflow-hidden">
+              <div className="absolute top-0 right-0 w-80 h-80 rounded-full bg-emerald-500/5 blur-3xl pointer-events-none" />
+              <div className="absolute bottom-0 left-1/4 w-64 h-64 rounded-full bg-teal-500/4 blur-3xl pointer-events-none" />
+              <div className="relative flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
                 <div>
-                  <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-emerald-300/80 mb-2">
-                    <span>Total Net Worth</span>
-                    <DollarSign size={16} className="text-emerald-400" />
+                  <div className="flex items-center gap-2.5 mb-3 flex-wrap">
+                    <span className="w-2.5 h-2.5 rounded-full bg-teal-400 animate-ping" />
+                    <span className="text-xs font-bold uppercase tracking-widest text-teal-300 px-3 py-1 rounded-full bg-teal-950/60 border border-teal-700/40">Verified Institutional Identity</span>
+                    <span className="text-xs font-semibold text-amber-300 px-3 py-1 rounded-full bg-amber-950/60 border border-amber-700/40">Tier 1 Prime · Score 785</span>
                   </div>
-                  <div className="text-3xl font-bold text-white tracking-tight tabular-nums">$ 1,332,718.47</div>
+                  <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-white via-[#e8f0eb] to-[#a8c8b5] bg-clip-text text-transparent tracking-tight">
+                    Capital Liquidity &amp; Credit Dashboard
+                  </h1>
+                  <p className="text-sm text-[#8fa799] mt-2.5 max-w-xl leading-relaxed">
+                    Real-time portfolio management, deterministic risk limits, and zero-collateral uncollateralized lending.
+                  </p>
                 </div>
-                <div className="mt-4 pt-3 border-t border-emerald-900/30 flex items-center justify-between">
-                  <span className="text-xs text-[#71877b]">Quarter-to-date</span>
-                  <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-emerald-950/80 text-emerald-300 border border-emerald-700/50">
-                    ▲ +11.8%
-                  </span>
-                </div>
-              </div>
-
-              {/* Card 2: Electric Cyan Theme */}
-              <div className="p-6 rounded-2xl bg-gradient-to-br from-[#0e2430] via-[#0a1c26] to-[#08151e] border border-cyan-500/30 hover:border-cyan-400/60 shadow-[0_8px_30px_rgba(6,182,212,0.06)] transition-all flex flex-col justify-between">
-                <div>
-                  <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-cyan-300/80 mb-2">
-                    <span>Active Credit Line</span>
-                    <ShieldCheck size={16} className="text-cyan-400" />
-                  </div>
-                  <div className="text-3xl font-bold text-cyan-300 tracking-tight tabular-nums">$ 250,000.00</div>
-                </div>
-                <div className="mt-4 pt-3 border-t border-cyan-900/30 flex items-center justify-between">
-                  <span className="text-xs text-[#71877b]">Tier 1 (Score 785)</span>
-                  <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-cyan-950/80 text-cyan-300 border border-cyan-700/50">
-                    Prime Qualified
-                  </span>
-                </div>
-              </div>
-
-              {/* Card 3: Warm Amber / Terracotta Theme */}
-              <div className="p-6 rounded-2xl bg-gradient-to-br from-[#2a1c12] via-[#20150d] to-[#170e08] border border-amber-500/30 hover:border-amber-400/60 shadow-[0_8px_30px_rgba(245,158,11,0.06)] transition-all flex flex-col justify-between">
-                <div>
-                  <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-amber-300/80 mb-2">
-                    <span>Current Borrowed</span>
-                    <Clock size={16} className="text-amber-400" />
-                  </div>
-                  <div className="text-3xl font-bold text-amber-300 tracking-tight tabular-nums">$ 48,210.40</div>
-                </div>
-                <div className="mt-4 pt-3 border-t border-amber-900/30 flex items-center justify-between">
-                  <span className="text-xs text-[#71877b]">Due in 6 days</span>
-                  <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-amber-950/80 text-amber-300 border border-amber-700/50">
-                    2 Active Loans
-                  </span>
-                </div>
-              </div>
-
-              {/* Card 4: Royal Purple Theme */}
-              <div className="p-6 rounded-2xl bg-gradient-to-br from-[#241430] via-[#1a0e24] to-[#12081a] border border-purple-500/30 hover:border-purple-400/60 shadow-[0_8px_30px_rgba(168,85,247,0.06)] transition-all flex flex-col justify-between">
-                <div>
-                  <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-purple-300/80 mb-2">
-                    <span>Weighted Supply APY</span>
-                    <TrendingUp size={16} className="text-purple-400" />
-                  </div>
-                  <div className="text-3xl font-bold text-purple-300 tracking-tight tabular-nums">7.80% APY</div>
-                </div>
-                <div className="mt-4 pt-3 border-t border-purple-900/30 flex items-center justify-between">
-                  <span className="text-xs text-[#71877b]">Solvency Reserve</span>
-                  <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-purple-950/80 text-purple-300 border border-purple-700/50">
-                    100% Guaranteed
-                  </span>
+                <div className="flex items-center gap-3 shrink-0 flex-wrap">
+                  <button onClick={() => setActiveTab('lending')} className="px-6 py-3.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-sm font-bold shadow-lg shadow-emerald-950/60 transition cursor-pointer hover:scale-105">
+                    Borrow Capital
+                  </button>
+                  <button onClick={() => setActiveTab('credit')} className="px-6 py-3.5 rounded-xl bg-[#132219] hover:bg-[#1a2d21] border border-[#263e30] text-[#c8d8e8] text-sm font-bold transition cursor-pointer shadow-md">
+                    Inspect Score
+                  </button>
                 </div>
               </div>
             </div>
 
-            {/* Core Protocol Facilities Bento Grid */}
+            {/* Unified Executive Metric Ribbon — 4-color accent */}
+            <div className="rounded-2xl border border-[#1c2e24] bg-[#0d1a12] shadow-xl grid grid-cols-2 lg:grid-cols-4 overflow-hidden">
+              <div className="p-6 lg:p-7 flex flex-col gap-3 border-b lg:border-b-0 border-r border-[#1c2e24]">
+                <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-[#8fa799]">
+                  <span>Total Net Worth</span>
+                  <span className="p-1.5 rounded-lg bg-emerald-950/80 border border-emerald-800/40"><DollarSign size={13} className="text-emerald-400" /></span>
+                </div>
+                <div className="text-2xl lg:text-3xl font-bold text-white tracking-tight tabular-nums">$&thinsp;1,332,718</div>
+                <div className="flex items-center justify-between text-xs pt-3 border-t border-[#1c2e24]">
+                  <span className="text-[#71877b]">Quarter-to-date</span>
+                  <span className="badge-emerald">▲ +11.8%</span>
+                </div>
+              </div>
+              <div className="p-6 lg:p-7 flex flex-col gap-3 border-b lg:border-b-0 lg:border-r border-[#1c2e24] bg-[#0c1916]/50">
+                <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-[#8fa799]">
+                  <span>Active Credit Line</span>
+                  <span className="p-1.5 rounded-lg bg-cyan-950/80 border border-cyan-800/40"><ShieldCheck size={13} className="text-cyan-400" /></span>
+                </div>
+                <div className="text-2xl lg:text-3xl font-bold text-cyan-300 tracking-tight tabular-nums">$&thinsp;250,000</div>
+                <div className="flex items-center justify-between text-xs pt-3 border-t border-[#1c2e24]">
+                  <span className="text-[#71877b]">Tier 1 (Score 785)</span>
+                  <span className="text-xs font-semibold text-cyan-300 bg-cyan-950/60 border border-cyan-800/40 px-2 py-0.5 rounded-full">Prime Qualified</span>
+                </div>
+              </div>
+              <div className="p-6 lg:p-7 flex flex-col gap-3 border-r border-[#1c2e24] bg-[#1a140a]/40">
+                <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-[#8fa799]">
+                  <span>Current Borrowed</span>
+                  <span className="p-1.5 rounded-lg bg-amber-950/80 border border-amber-800/40"><Clock size={13} className="text-amber-400" /></span>
+                </div>
+                <div className="text-2xl lg:text-3xl font-bold text-amber-300 tracking-tight tabular-nums">$&thinsp;48,210</div>
+                <div className="flex items-center justify-between text-xs pt-3 border-t border-[#1c2e24]">
+                  <span className="text-[#71877b]">Due in 6 days</span>
+                  <span className="badge-amber">2 Active Loans</span>
+                </div>
+              </div>
+              <div className="p-6 lg:p-7 flex flex-col gap-3 bg-[#0f1420]/60">
+                <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-[#8fa799]">
+                  <span>Weighted Supply APY</span>
+                  <span className="p-1.5 rounded-lg bg-purple-950/80 border border-purple-800/40"><TrendingUp size={13} className="text-purple-400" /></span>
+                </div>
+                <div className="text-2xl lg:text-3xl font-bold text-purple-300 tracking-tight tabular-nums">7.80% APY</div>
+                <div className="flex items-center justify-between text-xs pt-3 border-t border-[#1c2e24]">
+                  <span className="text-[#71877b]">Solvency Reserve</span>
+                  <span className="text-xs font-semibold text-purple-300 bg-purple-950/60 border border-purple-800/40 px-2 py-0.5 rounded-full">100% Guaranteed</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Core Protocol Facilities Streamlined Navigation Directory */}
             <div className="flex flex-col gap-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
                   <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-emerald-400 mb-1">
                     <Sparkles size={14} className="text-emerald-400" />
-                    <span>Autonomous Modular Grid</span>
+                    <span>Protocol Facilities &amp; Architecture</span>
                   </div>
-                  <h2 className="text-2xl md:text-3xl font-bold text-white tracking-tight">
-                    Protocol Facilities & Architecture
+                  <h2 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
+                    Modular Execution Suite
                   </h2>
                 </div>
                 <div className="flex items-center gap-2 text-xs text-[#8fa799] font-medium bg-[#132319] px-3.5 py-1.5 rounded-xl border border-[#243d2f] self-start sm:self-auto">
                   <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                  <span>5 Interactive Modules</span>
+                  <span>5 Active Facilities</span>
                 </div>
               </div>
 
-              <MagicBento
-                items={overviewBentoItems}
-                columns={4}
-                rowHeight={290}
-                gap={18}
-                radius={24}
-                theme="dark"
-                glowColor="#10b981"
-                enableBorderGlow={true}
-                enableSpotlight={true}
-                spotlightRadius={320}
-                enableStars={true}
-                particleCount={24}
-                clickEffect={true}
-                textAutoHide={false}
-              />
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                {[
+                  {
+                    title: 'Able Credit',
+                    subtitle: 'Borrow & Lend',
+                    tag: 'Zero-Collateral',
+                    desc: 'Algorithmic rate curves, uncollateralized drawdowns & real-time servicing.',
+                    tab: 'lending',
+                    icon: <ArrowUpRight size={18} className="text-emerald-400" />,
+                    iconBg: 'bg-emerald-950/80 border-emerald-800/40',
+                    tagColor: 'text-emerald-400 bg-emerald-950/60 border-emerald-800/40',
+                    linkColor: 'text-emerald-400',
+                    cardBg: 'from-[#132219] to-[#0c1611] border-[#203328] hover:border-emerald-500/50'
+                  },
+                  {
+                    title: 'Borderline Verify',
+                    subtitle: 'zkSNARK Identity',
+                    tag: 'Prime Score 785',
+                    desc: 'Zero-knowledge solvency attestations without wallet address exposure.',
+                    tab: 'credit',
+                    icon: <ShieldCheck size={18} className="text-cyan-400" />,
+                    iconBg: 'bg-cyan-950/80 border-cyan-800/40',
+                    tagColor: 'text-cyan-300 bg-cyan-950/60 border-cyan-800/40',
+                    linkColor: 'text-cyan-400',
+                    cardBg: 'from-[#0e1e24] to-[#0c1611] border-[#1c3040] hover:border-cyan-500/50'
+                  },
+                  {
+                    title: 'AI Risk Sentinel',
+                    subtitle: 'Telemetry Suite',
+                    tag: 'Live Guard',
+                    desc: 'Dynamic liquidity drain indexing & 3-node offchain consensus protection.',
+                    tab: 'risk',
+                    icon: <Radio size={18} className="text-amber-400" />,
+                    iconBg: 'bg-amber-950/80 border-amber-800/40',
+                    tagColor: 'text-amber-300 bg-amber-950/60 border-amber-800/40',
+                    linkColor: 'text-amber-400',
+                    cardBg: 'from-[#201a0e] to-[#0c1611] border-[#3a2e1c] hover:border-amber-500/50'
+                  },
+                  {
+                    title: 'Capital Markets',
+                    subtitle: 'Federated Vaults',
+                    tag: 'Instant Swaps',
+                    desc: 'Multi-asset liquidity depth, live order book, and automated treasury compound.',
+                    tab: 'markets',
+                    icon: <BarChart3 size={18} className="text-purple-400" />,
+                    iconBg: 'bg-purple-950/80 border-purple-800/40',
+                    tagColor: 'text-purple-300 bg-purple-950/60 border-purple-800/40',
+                    linkColor: 'text-purple-400',
+                    cardBg: 'from-[#180f24] to-[#0c1611] border-[#2d1e40] hover:border-purple-500/50'
+                  },
+                  {
+                    title: 'Leganetum',
+                    subtitle: 'Legal Governance',
+                    tag: 'Binding Covenants',
+                    desc: 'Institutional master loan agreements and decentralized dispute arbitration.',
+                    tab: 'terms',
+                    icon: <FileText size={18} className="text-sky-400" />,
+                    iconBg: 'bg-sky-950/80 border-sky-800/40',
+                    tagColor: 'text-sky-300 bg-sky-950/60 border-sky-800/40',
+                    linkColor: 'text-sky-400',
+                    cardBg: 'from-[#0e1820] to-[#0c1611] border-[#1c2d3c] hover:border-sky-500/50'
+                  }
+                ].map((facility, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setActiveTab(facility.tab)}
+                    className={`p-5 rounded-2xl bg-gradient-to-br ${facility.cardBg} border transition-all cursor-pointer text-left flex flex-col gap-4 group shadow-sm hover:shadow-lg`}
+                  >
+                    <div className="flex items-start justify-between">
+                      <span className={`p-2.5 rounded-xl border ${facility.iconBg}`}>
+                        {facility.icon}
+                      </span>
+                      <span className={`text-[10px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded-md border ${facility.tagColor}`}>
+                        {facility.tag}
+                      </span>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <h3 className="text-sm font-bold text-white">{facility.title}</h3>
+                      <p className="text-[10px] font-semibold text-[#71877b] uppercase tracking-wider">{facility.subtitle}</p>
+                      <p className="text-xs text-[#8fa799] mt-1 line-clamp-2 leading-relaxed">{facility.desc}</p>
+                    </div>
+                    <div className="pt-3 border-t border-white/5 flex items-center justify-between text-xs font-bold group-hover:translate-x-0.5 transition">
+                      <span className={facility.linkColor}>Launch Terminal</span>
+                      <ChevronRight size={13} className={facility.linkColor} />
+                    </div>
+                  </button>
+                ))}
+              </div>
             </div>
 
-            {/* Middle Section: Active Loans (Col-8) + AI Risk Sentinel (Col-4) */}
-            <div className="grid lg:grid-cols-12 gap-8 items-stretch">
-              {/* Active Capital Loans Table with Numeric Right-Alignment */}
-              <div className="lg:col-span-8 p-7 md:p-8 rounded-3xl bg-gradient-to-br from-[#15241b] to-[#0f1b13] border border-[#263e30] shadow-xl flex flex-col justify-between">
+            {/* Middle Section: Active Loans (Col-7) + AI Risk Sentinel (Col-5) */}
+            <div className="grid lg:grid-cols-12 gap-6 xl:gap-8 items-stretch">
+              {/* Active Capital Loans Table Panel */}
+              <div className="lg:col-span-7 p-6 sm:p-8 rounded-2xl bg-gradient-to-br from-[#132219] to-[#0c1611] border border-[#203328] shadow-xl flex flex-col gap-6">
                 <div>
-                  <div className="flex items-center justify-between pb-5 border-b border-[#203328]">
+                  <div className="flex items-center justify-between pb-5 border-b border-[#1c2e24]">
                     <div className="flex items-center gap-3">
-                      <span className="p-2 rounded-xl bg-emerald-950/80 border border-emerald-800/40 text-emerald-400">
+                      <span className="p-2.5 rounded-xl bg-emerald-950/80 border border-emerald-800/40 text-emerald-400">
                         <Layers size={18} />
                       </span>
                       <div>
@@ -573,33 +618,33 @@ export default function FundryxAppPortal({
                     </span>
                   </div>
 
-                  <div className="mt-5 overflow-x-auto">
-                    <table className="portal-table text-sm">
+                  <div className="mt-5 rounded-xl border border-[#1c2e24] bg-[#09120d] overflow-x-auto">
+                    <table className="portal-table">
                       <thead>
-                        <tr className="border-b border-[#1c2c22] text-[#8fa799] text-xs font-semibold uppercase">
-                          <th className="pb-3.5 text-left">Loan ID</th>
-                          <th className="pb-3.5 text-right">Principal</th>
-                          <th className="pb-3.5 text-right">Fixed APR</th>
-                          <th className="pb-3.5 text-right">Maturity</th>
-                          <th className="pb-3.5 text-center">Status</th>
-                          <th className="pb-3.5 text-right">Action</th>
+                        <tr>
+                          <th className="text-left">Loan ID</th>
+                          <th className="text-right">Principal</th>
+                          <th className="text-right">Fixed APR</th>
+                          <th className="text-right">Maturity</th>
+                          <th className="text-center">Status</th>
+                          <th className="text-right">Action</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-[#1c2c22]">
+                      <tbody>
                         {activeLoans.map((loan) => (
-                          <tr key={loan.id} className="hover:bg-[#1a2d22]/50 transition-colors">
-                            <td className="py-4 font-mono text-xs text-[#8fa799] text-left">{loan.id}</td>
-                            <td className="py-4 font-semibold text-white text-right tabular-nums whitespace-nowrap">{loan.amount.toLocaleString()} {loan.asset}</td>
-                            <td className="py-4 text-emerald-400 font-mono font-semibold text-right tabular-nums">{loan.apr}</td>
-                            <td className="py-4 text-[#8fa799] text-right whitespace-nowrap">{loan.status === 'Active' ? `In ${loan.dueDays} days` : 'Matured'}</td>
-                            <td className="py-4 text-center">
+                          <tr key={loan.id}>
+                            <td className="font-mono text-xs text-[#8fa799] text-left">{loan.id}</td>
+                            <td className="font-semibold text-white text-right tabular-nums whitespace-nowrap">{loan.amount.toLocaleString()} {loan.asset}</td>
+                            <td className="text-emerald-400 font-mono font-semibold text-right tabular-nums">{loan.apr}</td>
+                            <td className="text-[#8fa799] text-right whitespace-nowrap">{loan.status === 'Active' ? `In ${loan.dueDays} days` : 'Matured'}</td>
+                            <td className="text-center">
                               <span className={`px-2.5 py-1 rounded-full text-xs font-semibold inline-block whitespace-nowrap ${
                                 loan.status === 'Active' ? 'bg-emerald-950 text-emerald-400 border border-emerald-800/50' : 'bg-stone-900 text-stone-400'
                               }`}>
                                 {loan.status}
                               </span>
                             </td>
-                            <td className="py-4 text-right">
+                            <td className="text-right">
                               {loan.status === 'Active' ? (
                                 <button
                                   onClick={() => handleExecuteRepay(loan.id)}
@@ -618,137 +663,114 @@ export default function FundryxAppPortal({
                   </div>
                 </div>
 
-                <div className="pt-4 border-t border-[#1c2c22] flex items-center justify-between text-xs text-[#71877b]">
+                <div className="pt-5 mt-6 border-t border-[#1c2e24] flex items-center justify-between text-xs text-[#71877b]">
                   <span>Total 3 positions tracked</span>
-                  <span className="font-mono text-emerald-400">100% Repayment Confidence Index</span>
+                  <span className="font-mono text-emerald-400 font-semibold">100% Repayment Confidence Index</span>
                 </div>
               </div>
 
-              {/* AI Risk Sentinel - Multi-Color Telemetry Card */}
-              <div className="lg:col-span-4 p-7 md:p-8 rounded-3xl bg-gradient-to-br from-[#0e1d24] to-[#08131a] border border-cyan-800/40 shadow-xl hover:border-cyan-500/40 transition-all flex flex-col justify-between">
-                <div>
-                  <div className="flex items-center justify-between pb-5 border-b border-cyan-900/30">
-                    <div className="flex items-center gap-2.5">
-                      <span className="p-1.5 rounded-lg bg-cyan-950/80 border border-cyan-800/40 text-cyan-400">
-                        <Radio size={16} />
-                      </span>
+              {/* AI Risk Sentinel Telemetry Card */}
+              <div className="lg:col-span-5 p-6 sm:p-8 rounded-2xl bg-gradient-to-br from-[#0e1e24] to-[#0c1611] border border-[#1c3040] shadow-xl flex flex-col gap-6">
+                <div className="flex items-center justify-between pb-5 border-b border-[#1c3040]">
+                  <div className="flex items-center gap-2.5">
+                    <span className="p-2.5 rounded-xl bg-cyan-950/80 border border-cyan-800/40 text-cyan-400"><Radio size={16} /></span>
+                    <div>
                       <h3 className="text-base font-bold text-white tracking-wide uppercase">AI Risk Sentinel</h3>
+                      <p className="text-xs text-[#8fa799]">Offchain solvency oversight</p>
                     </div>
-                    <span className="text-xs font-mono font-semibold text-cyan-300 bg-cyan-950/80 px-2.5 py-0.5 rounded-md border border-cyan-700/50">
-                      Live Guard
-                    </span>
                   </div>
-
-                  <div className="mt-5 flex flex-col gap-3.5">
-                    <div className="p-4 rounded-2xl bg-[#061016] border border-cyan-900/30">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-semibold uppercase text-[#8fa799]">Liquidity Drain Index</span>
-                        <span className="text-sm font-bold text-emerald-400 font-mono">0.02% (Optimal)</span>
-                      </div>
-                      <div className="text-xs text-[#71877b] mt-1.5">No anomalous outflow detected across 24h</div>
+                  <span className="text-xs font-mono font-semibold text-cyan-300 bg-cyan-950/80 px-2.5 py-0.5 rounded-md border border-cyan-700/50">Live Guard</span>
+                </div>
+                <div className="flex flex-col gap-3">
+                  <div className="p-4 rounded-xl bg-[#091520] border border-[#1c3040]">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs font-semibold uppercase text-[#8fa799]">Liquidity Drain Index</span>
+                      <span className="text-sm font-bold text-emerald-400 font-mono">0.02% (Optimal)</span>
                     </div>
-
-                    <div className="p-4 rounded-2xl bg-[#061016] border border-cyan-900/30">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-semibold uppercase text-[#8fa799]">Borrower Velocity Sensor</span>
-                        <span className="text-sm font-bold text-teal-300">Conforming</span>
-                      </div>
-                      <div className="text-xs text-[#71877b] mt-1.5">Repayment pacing conforms to Tier 1 standards</div>
+                    <div className="text-xs text-[#71877b]">No anomalous outflow detected across 24h</div>
+                  </div>
+                  <div className="p-4 rounded-xl bg-[#091520] border border-[#1c3040]">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs font-semibold uppercase text-[#8fa799]">Borrower Velocity Sensor</span>
+                      <span className="text-sm font-bold text-cyan-300">Conforming</span>
                     </div>
-
-                    <div className="p-4 rounded-2xl bg-[#061016] border border-cyan-900/30">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-semibold uppercase text-[#8fa799]">Quorum Consensus</span>
-                        <span className="text-xs font-mono text-cyan-300 font-bold">3/3 Signatures</span>
-                      </div>
-                      <div className="font-mono text-[11px] text-[#71877b] truncate mt-1">Hash: 0x9d4a82...c77b (Verified)</div>
+                    <div className="text-xs text-[#71877b]">Repayment pacing conforms to Tier 1 standards</div>
+                  </div>
+                  <div className="p-4 rounded-xl bg-[#091520] border border-[#1c3040]">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs font-semibold uppercase text-[#8fa799]">Quorum Consensus</span>
+                      <span className="text-xs font-mono text-cyan-300 font-bold">3/3 Signatures</span>
                     </div>
+                    <div className="font-mono text-[11px] text-[#71877b] truncate">Hash: 0x9d4a82...c77b (Verified)</div>
                   </div>
                 </div>
-
-                <button
-                  onClick={() => setActiveTab('risk')}
-                  className="mt-6 w-full py-3 rounded-xl bg-gradient-to-r from-cyan-950/70 to-teal-950/70 hover:from-cyan-900/80 hover:to-teal-900/80 border border-cyan-700/50 text-xs font-bold uppercase tracking-wider text-cyan-200 transition cursor-pointer shadow-md"
-                >
-                  Open Risk Telemetry Feed →
-                </button>
+                <div className="pt-4 border-t border-[#1c3040] mt-auto">
+                  <button onClick={() => setActiveTab('risk')} className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-cyan-950/80 to-teal-950/80 hover:from-cyan-900 hover:to-teal-900 border border-cyan-700/60 text-xs font-bold uppercase tracking-wider text-cyan-200 transition cursor-pointer shadow-md">
+                    Open Risk Telemetry Feed →
+                  </button>
+                </div>
               </div>
             </div>
 
-            {/* Bottom Section 1: Multi-Currency Capital Reserves Breakdown */}
-            <div className="p-8 md:p-10 rounded-3xl bg-gradient-to-br from-[#15241b] to-[#0f1b13] border border-[#263e30] shadow-xl">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-6 border-b border-[#203328] gap-3">
+            {/* Treasury Reserves — purple accent section */}
+            <div className="p-6 sm:p-8 rounded-2xl bg-gradient-to-br from-[#180f24] via-[#130e1d] to-[#0c1611] border border-[#2d1e40] shadow-xl">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-6 border-b border-[#2d1e40] gap-3">
                 <div className="flex items-center gap-3">
-                  <span className="p-2 rounded-xl bg-purple-950/80 border border-purple-800/40 text-purple-400">
-                    <BarChart3 size={18} />
-                  </span>
+                  <span className="p-2.5 rounded-xl bg-purple-950/80 border border-purple-800/40 text-purple-400"><BarChart3 size={18} /></span>
                   <div>
-                    <h3 className="text-lg font-bold text-white tracking-wide uppercase">Treasury Reserves & Capital Allocation</h3>
+                    <h3 className="text-lg font-bold text-white tracking-wide uppercase">Treasury Reserves &amp; Capital Allocation</h3>
                     <p className="text-xs text-[#9eb5a7] mt-0.5">Automated yield compounding across segregated non-custodial vaults</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className="text-xs font-mono font-semibold px-3 py-1.5 rounded-lg bg-[#16251e] text-emerald-400 border border-[#253e30]">
-                    Total TVL: $11,480,000
-                  </span>
-                  <button
-                    onClick={() => setActiveTab('lending')}
-                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl transition cursor-pointer"
-                  >
-                    + Supply Vault
-                  </button>
+                  <span className="text-xs font-mono font-semibold px-3.5 py-1.5 rounded-xl bg-purple-950/60 text-purple-300 border border-purple-800/40">Total TVL: $11,480,000</span>
+                  <button onClick={() => setActiveTab('lending')} className="px-4 py-2 bg-purple-700 hover:bg-purple-600 text-white text-xs font-bold rounded-xl transition cursor-pointer shadow-sm">+ Supply Vault</button>
                 </div>
               </div>
-
-              <div className="mt-8 grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
+              <div className="mt-6 grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 {[
-                  { asset: 'USDC Vault', balance: '$ 912,400', apy: '8.20% APY', alloc: '48%', color: 'bg-emerald-500', cardBg: 'bg-gradient-to-br from-[#12281c] to-[#0c1811] border-emerald-500/30 hover:border-emerald-400/60 shadow-[0_4px_20px_rgba(16,185,129,0.06)]', apyColor: 'text-emerald-400' },
-                  { asset: 'EURC Vault', balance: '€ 228,900', apy: '7.10% APY', alloc: '22%', color: 'bg-cyan-500', cardBg: 'bg-gradient-to-br from-[#0c222e] to-[#08151e] border-cyan-500/30 hover:border-cyan-400/60 shadow-[0_4px_20px_rgba(6,182,212,0.06)]', apyColor: 'text-cyan-300' },
-                  { asset: 'USD Liquid', balance: '$ 540,000', apy: '6.50% APY', alloc: '18%', color: 'bg-amber-500', cardBg: 'bg-gradient-to-br from-[#2a1d12] to-[#1a110a] border-amber-500/30 hover:border-amber-400/60 shadow-[0_4px_20px_rgba(245,158,11,0.06)]', apyColor: 'text-amber-300' },
-                  { asset: 'FDX Native', balance: '✦ 9,820,000', apy: '9.40% APY', alloc: '12%', color: 'bg-purple-500', cardBg: 'bg-gradient-to-br from-[#22132e] to-[#140b1c] border-purple-500/30 hover:border-purple-400/60 shadow-[0_4px_20px_rgba(168,85,247,0.06)]', apyColor: 'text-purple-300' },
+                  { asset: 'USDC Vault', balance: '$ 912,400', apy: '8.20% APY', alloc: 48, color: 'bg-emerald-500', apyColor: 'text-emerald-400', bg: 'bg-emerald-950/20 border-emerald-800/30' },
+                  { asset: 'EURC Vault', balance: '€ 228,900', apy: '7.10% APY', alloc: 22, color: 'bg-cyan-500', apyColor: 'text-cyan-300', bg: 'bg-cyan-950/20 border-cyan-800/30' },
+                  { asset: 'USD Liquid', balance: '$ 540,000', apy: '6.50% APY', alloc: 18, color: 'bg-amber-500', apyColor: 'text-amber-300', bg: 'bg-amber-950/20 border-amber-800/30' },
+                  { asset: 'FDX Native', balance: '✦ 9,820,000', apy: '9.40% APY', alloc: 12, color: 'bg-purple-500', apyColor: 'text-purple-300', bg: 'bg-purple-950/20 border-purple-800/30' },
                 ].map((vault, i) => (
-                  <div key={i} className={`p-5 rounded-2xl border ${vault.cardBg} space-y-3.5 transition-all`}>
+                  <div key={i} className={`p-5 rounded-2xl border ${vault.bg} flex flex-col gap-3`}>
                     <div className="flex items-center justify-between">
                       <span className="text-sm font-bold text-white">{vault.asset}</span>
-                      <span className={`text-xs font-mono font-semibold ${vault.apyColor} text-right`}>{vault.apy}</span>
+                      <span className={`text-xs font-mono font-semibold ${vault.apyColor}`}>{vault.apy}</span>
                     </div>
-                    <div className="text-2xl font-bold text-white tracking-tight tabular-nums">{vault.balance}</div>
+                    <div className="text-xl font-bold text-white tracking-tight tabular-nums">{vault.balance}</div>
                     <div>
                       <div className="flex justify-between text-xs text-[#8fa799] mb-1.5">
                         <span>Vault Allocation</span>
-                        <span className="font-semibold text-white tabular-nums">{vault.alloc}</span>
+                        <span className="font-semibold text-white tabular-nums">{vault.alloc}%</span>
                       </div>
-                      <div className="w-full h-2 rounded-full bg-[#1b2d24] overflow-hidden">
-                        <div className={`h-full ${vault.color}`} style={{ width: vault.alloc }} />
-                      </div>
+                      <div className="progress-track h-2"><div className={`progress-fill ${vault.color}`} style={{ width: `${vault.alloc}%` }} /></div>
                     </div>
                   </div>
                 ))}
               </div>
             </div>
 
-            {/* Bottom Section 2: Real-time Live Event Feed */}
-            <div className="p-8 md:p-10 rounded-3xl bg-gradient-to-br from-[#15241b] to-[#0f1b13] border border-[#263e30] shadow-xl">
-              <div className="flex items-center justify-between pb-6 border-b border-[#203328]">
+            {/* Live Protocol Event Stream */}
+            <div className="p-6 sm:p-8 rounded-2xl bg-gradient-to-br from-[#0e1820] to-[#0c1611] border border-[#1c2d3c] shadow-xl">
+              <div className="flex items-center justify-between pb-5 border-b border-[#1c2d3c]">
                 <div className="flex items-center gap-3">
-                  <span className="p-2 rounded-xl bg-teal-950/80 border border-teal-800/40 text-teal-400">
-                    <Activity size={18} />
-                  </span>
+                  <span className="p-2.5 rounded-xl bg-sky-950/80 border border-sky-800/40 text-sky-400"><Activity size={18} /></span>
                   <div>
                     <h3 className="text-lg font-bold text-white tracking-wide uppercase">Live Protocol Event Stream</h3>
                     <p className="text-xs text-[#8fa799] mt-0.5">Real-time ledger audit log of disbursements, yields, and repayments</p>
                   </div>
                 </div>
-                <span className="text-xs font-mono text-emerald-400 flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                <span className="text-xs font-mono text-sky-400 flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-sky-400 animate-pulse" />
                   Synchronized to deterministic consensus
                 </span>
               </div>
-
-              <div className="mt-6 divide-y divide-[#1b2d22]">
+              <div className="mt-5 rounded-xl border border-[#1c2d3c] bg-[#09111a]/80 divide-y divide-[#1c2d3c] overflow-hidden">
                 {activityFeed.map((ev) => (
-                  <div key={ev.id} className="py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-sm">
-                    <div className="flex items-center gap-3">
+                  <div key={ev.id} className="py-3.5 px-4 sm:px-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 hover:bg-[#111d2a]/60 transition-colors">
+                    <div className="flex items-center gap-3 flex-wrap">
                       <span className="font-mono text-xs text-[#71877b]">{ev.id}</span>
                       <span className={`px-2.5 py-0.5 rounded-md text-xs font-semibold ${
                         ev.type === 'Repayment' ? 'bg-emerald-950/70 text-emerald-300 border border-emerald-800/50' :
@@ -756,17 +778,14 @@ export default function FundryxAppPortal({
                         ev.type === 'Yield Compound' ? 'bg-amber-950/70 text-amber-300 border border-amber-800/50' :
                         ev.type === 'Capital Supply' ? 'bg-purple-950/70 text-purple-300 border border-purple-800/50' :
                         'bg-sky-950/70 text-sky-300 border border-sky-800/50'
-                      }`}>
-                        {ev.type}
-                      </span>
+                      }`}>{ev.type}</span>
                       <span className="font-mono text-xs text-[#9eb5a7]">{ev.borrower}</span>
                     </div>
-
-                    <div className="flex items-center gap-6">
-                      <span className="font-semibold text-emerald-400 font-mono text-right tabular-nums">{ev.amount}</span>
-                      <span className="text-xs text-[#71877b]">{ev.score}</span>
+                    <div className="flex items-center gap-4 shrink-0">
+                      <span className="font-semibold text-emerald-400 font-mono tabular-nums">{ev.amount}</span>
+                      <span className="text-xs text-[#71877b] hidden sm:block">{ev.score}</span>
                       <span className="text-xs font-mono text-[#8fa799]">{ev.time}</span>
-                      <span className="text-xs text-emerald-400 font-semibold">✓ Verified</span>
+                      <span className="text-xs text-emerald-400 font-bold">✓</span>
                     </div>
                   </div>
                 ))}
@@ -779,7 +798,7 @@ export default function FundryxAppPortal({
         {/* TAB 2: BORROW & LEND CAPITAL POOLS                        */}
         {/* ========================================================= */}
         {activeTab === 'lending' && (
-          <div className="flex flex-col gap-10 animate-fade-in">
+          <div className="flex flex-col gap-8 lg:gap-10 animate-fade-in">
             {borrowSuccess && (
               <div className="p-5 rounded-2xl bg-gradient-to-r from-emerald-900/60 to-[#12281b] border border-emerald-500/50 text-emerald-200 text-sm font-semibold flex items-center justify-between shadow-lg">
                 <div className="flex items-center gap-3">
@@ -800,215 +819,196 @@ export default function FundryxAppPortal({
               </div>
             )}
 
-            {/* Market Metrics Strip - Multi-Color Theme */}
-            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
-              <div className="p-6 rounded-2xl bg-gradient-to-br from-[#13281c] via-[#0f2016] to-[#0c1811] border border-emerald-500/30 hover:border-emerald-400/60 shadow-[0_8px_30px_rgba(16,185,129,0.06)] transition-all">
-                <div className="text-xs font-semibold uppercase tracking-wider text-emerald-300/80 mb-1">Available Liquidity</div>
-                <div className="text-3xl font-bold text-white tracking-tight tabular-nums">$ 11,480,000</div>
-                <div className="mt-2 text-xs text-emerald-400 font-mono">100% Solvency Guard</div>
+            {/* Section Header */}
+            <div className="flex items-center gap-3">
+              <span className="p-2.5 rounded-2xl bg-emerald-950 border border-emerald-700/50 text-emerald-400"><ArrowUpRight size={20} /></span>
+              <div>
+                <h2 className="text-2xl md:text-3xl font-bold text-white tracking-tight">Able Credit — Borrow &amp; Lend</h2>
+                <p className="text-sm text-[#8fa799] mt-0.5">Uncollateralized capital facilities powered by deterministic Prime scoring</p>
+              </div>
+            </div>
+
+            {/* Unified Executive Metric Ribbon */}
+            <div className="rounded-2xl border border-[#203328] bg-[#122018]/90 backdrop-blur-md shadow-lg grid grid-cols-2 lg:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-[#1c2e24] overflow-hidden">
+              <div className="p-5 lg:p-6 flex flex-col justify-between min-h-[140px]">
+                <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-[#8fa799]">
+                  <span>Available Liquidity</span>
+                  <DollarSign size={15} className="text-emerald-400 opacity-90" />
+                </div>
+                <div className="metric-value text-2xl lg:text-3xl font-bold text-white tracking-tight tabular-nums my-2">
+                  $&thinsp;11.48M
+                </div>
+                <div className="flex items-center justify-between text-xs pt-2.5 border-t border-[#1c2e24]/70">
+                  <span className="text-[#71877b]">Solvency Buffer</span>
+                  <span className="badge-emerald">100% Guard</span>
+                </div>
               </div>
 
-              <div className="p-6 rounded-2xl bg-gradient-to-br from-[#0e2430] via-[#0a1c26] to-[#08151e] border border-cyan-500/30 hover:border-cyan-400/60 shadow-[0_8px_30px_rgba(6,182,212,0.06)] transition-all">
-                <div className="text-xs font-semibold uppercase tracking-wider text-cyan-300/80 mb-1">Active Borrow Volume</div>
-                <div className="text-3xl font-bold text-cyan-300 tracking-tight tabular-nums">$ 48,210.40</div>
-                <div className="mt-2 text-xs text-cyan-400/80 font-mono">12 Repayments Verified</div>
+              <div className="p-5 lg:p-6 flex flex-col justify-between min-h-[140px]">
+                <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-[#8fa799]">
+                  <span>Active Borrow Volume</span>
+                  <Activity size={15} className="text-emerald-400 opacity-90" />
+                </div>
+                <div className="metric-value text-2xl lg:text-3xl font-bold text-emerald-400 tracking-tight tabular-nums my-2">
+                  $&thinsp;48,210
+                </div>
+                <div className="flex items-center justify-between text-xs pt-2.5 border-t border-[#1c2e24]/70">
+                  <span className="text-[#71877b]">Pacing Conforming</span>
+                  <span className="badge-emerald">12 Repaid</span>
+                </div>
               </div>
 
-              <div className="p-6 rounded-2xl bg-gradient-to-br from-[#2a1c12] via-[#20150d] to-[#170e08] border border-amber-500/30 hover:border-amber-400/60 shadow-[0_8px_30px_rgba(245,158,11,0.06)] transition-all">
-                <div className="text-xs font-semibold uppercase tracking-wider text-amber-300/80 mb-1">Prime Borrow Rate</div>
-                <div className="text-3xl font-bold text-amber-300 tracking-tight tabular-nums">5.20% Fixed</div>
-                <div className="mt-2 text-xs text-amber-400/80 font-mono">Zero Collateral</div>
+              <div className="p-5 lg:p-6 flex flex-col justify-between min-h-[140px]">
+                <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-[#8fa799]">
+                  <span>Prime Borrow Rate</span>
+                  <Lock size={15} className="text-amber-400 opacity-90" />
+                </div>
+                <div className="metric-value text-2xl lg:text-3xl font-bold text-amber-300 tracking-tight tabular-nums my-2">
+                  5.20% Fixed
+                </div>
+                <div className="flex items-center justify-between text-xs pt-2.5 border-t border-[#1c2e24]/70">
+                  <span className="text-[#71877b]">Tenure 7-30 Days</span>
+                  <span className="badge-amber">Zero Collateral</span>
+                </div>
               </div>
 
-              <div className="p-6 rounded-2xl bg-gradient-to-br from-[#241430] via-[#1a0e24] to-[#12081a] border border-purple-500/30 hover:border-purple-400/60 shadow-[0_8px_30px_rgba(168,85,247,0.06)] transition-all">
-                <div className="text-xs font-semibold uppercase tracking-wider text-purple-300/80 mb-1">Weighted Supply APY</div>
-                <div className="text-3xl font-bold text-purple-300 tracking-tight tabular-nums">7.80% APY</div>
-                <div className="mt-2 text-xs text-purple-400/80 font-mono">Continuous Compounding</div>
+              <div className="p-5 lg:p-6 flex flex-col justify-between min-h-[140px]">
+                <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-[#8fa799]">
+                  <span>Weighted Supply APY</span>
+                  <TrendingUp size={15} className="text-teal-400 opacity-90" />
+                </div>
+                <div className="metric-value text-2xl lg:text-3xl font-bold text-teal-300 tracking-tight tabular-nums my-2">
+                  7.80% APY
+                </div>
+                <div className="flex items-center justify-between text-xs pt-2.5 border-t border-[#1c2e24]/70">
+                  <span className="text-[#71877b]">Yield Compounding</span>
+                  <span className="badge-emerald">Continuous</span>
+                </div>
               </div>
             </div>
 
             {/* Dual Interactive Terminals: Borrow & Supply */}
-            <div className="grid lg:grid-cols-12 gap-8 items-stretch">
-              {/* Borrow Panel */}
-              <div className="lg:col-span-6 p-8 md:p-10 rounded-3xl bg-gradient-to-br from-[#15241b] to-[#0f1b13] border border-[#263e30] shadow-xl flex flex-col justify-between">
-                <div>
-                  <div className="flex items-center justify-between pb-6 border-b border-[#203328]">
-                    <div className="flex items-center gap-3">
-                      <span className="p-2 rounded-xl bg-emerald-950/80 border border-emerald-800/40 text-emerald-400">
-                        <ArrowUpRight size={18} />
-                      </span>
-                      <div>
-                        <h2 className="text-xl font-bold text-white tracking-wide uppercase">Request Uncollateralized Loan</h2>
-                        <p className="text-xs text-[#8fa799] mt-0.5">Instant capital disbursement based on deterministic credit score</p>
-                      </div>
+            <div className="grid lg:grid-cols-2 gap-6 xl:gap-8 items-stretch">
+              {/* Borrow Panel — emerald */}
+              <div className="p-7 sm:p-8 rounded-2xl bg-gradient-to-br from-[#132219] to-[#0c1611] border border-[#22382b] shadow-xl flex flex-col gap-7">
+                <div className="flex items-center justify-between pb-5 border-b border-[#203328]">
+                  <div className="flex items-center gap-3">
+                    <span className="p-2.5 rounded-xl bg-emerald-950/80 border border-emerald-800/40 text-emerald-400"><ArrowUpRight size={18} /></span>
+                    <div>
+                      <h2 className="text-lg font-bold text-white tracking-wide uppercase">Request Uncollateralized Loan</h2>
+                      <p className="text-xs text-[#8fa799] mt-0.5">Instant disbursement based on Prime scoring</p>
                     </div>
-                    <span className="text-xs font-mono font-semibold px-3 py-1 rounded-full bg-emerald-950/70 text-emerald-300 border border-emerald-800/50">
-                      Prime Eligible
-                    </span>
                   </div>
-
-                  <div className="mt-8 flex flex-col gap-6">
-                    <div>
-                      <div className="flex justify-between items-center text-sm text-[#8fa799] mb-3 font-semibold">
-                        <span>Borrow Amount</span>
-                        <span className="text-xl font-bold text-emerald-400 font-mono tabular-nums">${Number(borrowInput).toLocaleString()} USDC</span>
-                      </div>
-                      <input
-                        type="range"
-                        min="1000"
-                        max="250000"
-                        step="1000"
-                        value={borrowInput}
-                        onChange={(e) => setBorrowInput(e.target.value)}
-                        className="w-full accent-emerald-500 cursor-pointer h-2 bg-[#1b2d24] rounded-lg"
-                      />
-                      <div className="flex justify-between text-xs text-[#6e8576] mt-2 font-mono">
-                        <span>Min $1,000</span>
-                        <span>Max Line $250,000</span>
-                      </div>
+                  <span className="text-xs font-mono font-semibold px-3 py-1 rounded-full bg-emerald-950/70 text-emerald-300 border border-emerald-800/50">Prime Eligible</span>
+                </div>
+                <div className="flex flex-col gap-5">
+                  <div className="p-5 rounded-xl bg-[#09120d] border border-[#1c2e24]">
+                    <div className="flex justify-between items-center text-sm text-[#8fa799] mb-3 font-semibold">
+                      <span>Borrow Amount</span>
+                      <span className="text-xl font-bold text-emerald-400 font-mono tabular-nums">${Number(borrowInput).toLocaleString()} USDC</span>
                     </div>
-
-                    <div>
-                      <label className="block text-xs font-semibold uppercase text-[#8fa799] mb-3">Repayment Tenure</label>
-                      <div className="grid grid-cols-3 gap-3">
-                        {[7, 14, 30].map((days) => (
-                          <button
-                            key={days}
-                            type="button"
-                            onClick={() => setBorrowTerm(days)}
-                            className={`py-3 rounded-xl text-sm font-bold transition cursor-pointer ${
-                              borrowTerm === days
-                                ? 'bg-[#243e32] text-white border border-emerald-500/50 shadow-md'
-                                : 'bg-[#0c1611] text-[#8fa799] border border-[#22362a] hover:bg-[#18261e]'
-                            }`}
-                          >
-                            {days} DAYS
-                          </button>
-                        ))}
-                      </div>
+                    <input type="range" min="1000" max="250000" step="1000" value={borrowInput} onChange={(e) => setBorrowInput(e.target.value)} className="w-full accent-emerald-500 cursor-pointer" />
+                    <div className="flex justify-between text-xs text-[#6e8576] mt-2 font-mono">
+                      <span>Min $1,000</span>
+                      <span>Max $250,000</span>
                     </div>
-
-                    <div className="p-5 rounded-2xl bg-[#0c1611] border border-[#22362a] flex flex-col gap-3 text-sm">
-                      <div className="flex justify-between items-center text-[#8fa799]">
-                        <span>Fixed Protocol APR</span>
-                        <span className="font-mono text-emerald-400 font-bold text-right">5.20%</span>
-                      </div>
-                      <div className="flex justify-between items-center text-[#8fa799]">
-                        <span>Estimated Total Repayment</span>
-                        <span className="font-mono text-white font-bold text-right tabular-nums">
-                          ${(Number(borrowInput) * (1 + (0.052 * borrowTerm) / 365)).toFixed(2)} USDC
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center text-[#8fa799]">
-                        <span>Collateral Requirement</span>
-                        <span className="text-emerald-400 font-bold text-right">Zero Collateral (Uncollateralized)</span>
-                      </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold uppercase text-[#8fa799] mb-3">Repayment Tenure</label>
+                    <div className="grid grid-cols-3 gap-3">
+                      {[7, 14, 30].map((days) => (
+                        <button key={days} type="button" onClick={() => setBorrowTerm(days)} className={`py-3 px-4 rounded-xl text-sm font-bold transition cursor-pointer text-center ${
+                          borrowTerm === days ? 'bg-emerald-950/80 text-emerald-300 border border-emerald-500/60 shadow-md' : 'bg-[#09120d] text-[#8fa799] border border-[#1c2e24] hover:bg-[#16271e]'
+                        }`}>{days} DAYS</button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="p-5 rounded-xl bg-[#09120d] border border-[#1c2e24] flex flex-col gap-3 text-sm">
+                    <div className="flex justify-between items-center text-[#8fa799]">
+                      <span>Fixed Protocol APR</span>
+                      <span className="font-mono text-emerald-400 font-bold">5.20%</span>
+                    </div>
+                    <div className="flex justify-between items-center text-[#8fa799]">
+                      <span>Estimated Total Repayment</span>
+                      <span className="font-mono text-white font-bold tabular-nums">${(Number(borrowInput) * (1 + (0.052 * borrowTerm) / 365)).toFixed(2)} USDC</span>
+                    </div>
+                    <div className="flex justify-between items-center text-[#8fa799]">
+                      <span>Collateral Requirement</span>
+                      <span className="text-emerald-400 font-bold">Zero Collateral</span>
                     </div>
                   </div>
                 </div>
-
-                <button
-                  onClick={handleExecuteBorrow}
-                  className="mt-8 w-full py-4 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm uppercase tracking-wider shadow-xl transition cursor-pointer"
-                >
-                  Execute Uncollateralized Loan
-                </button>
+                <div className="pt-6 border-t border-[#1c2e24]">
+                  <button onClick={handleExecuteBorrow} className="w-full py-4 px-6 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-sm uppercase tracking-wider shadow-lg hover:shadow-emerald-900/50 transition cursor-pointer">
+                    Execute Uncollateralized Loan
+                  </button>
+                </div>
               </div>
 
-              {/* Supply Vault Panel */}
-              <div className="lg:col-span-6 p-8 md:p-10 rounded-3xl bg-gradient-to-br from-[#15241b] to-[#0f1b13] border border-[#263e30] shadow-xl flex flex-col justify-between">
-                <div>
-                  <div className="flex items-center justify-between pb-6 border-b border-[#203328]">
-                    <div className="flex items-center gap-3">
-                      <span className="p-2 rounded-xl bg-teal-950/80 border border-teal-800/40 text-teal-400">
-                        <ArrowDownLeft size={18} />
-                      </span>
-                      <div>
-                        <h2 className="text-xl font-bold text-white tracking-wide uppercase">Supply Liquidity Vaults</h2>
-                        <p className="text-xs text-[#8fa799] mt-0.5">Earn deterministic non-custodial yields backed by verified borrowers</p>
-                      </div>
+              {/* Supply Vault Panel — cyan/teal accent */}
+              <div className="p-7 sm:p-8 rounded-2xl bg-gradient-to-br from-[#0e1e24] to-[#0c1611] border border-[#1c3040] shadow-xl flex flex-col gap-7">
+                <div className="flex items-center justify-between pb-5 border-b border-[#1c3040]">
+                  <div className="flex items-center gap-3">
+                    <span className="p-2.5 rounded-xl bg-teal-950/80 border border-teal-800/40 text-teal-400"><ArrowDownLeft size={18} /></span>
+                    <div>
+                      <h2 className="text-lg font-bold text-white tracking-wide uppercase">Supply Liquidity Vaults</h2>
+                      <p className="text-xs text-[#8fa799] mt-0.5">Earn deterministic non-custodial yields</p>
                     </div>
-                    <span className="text-teal-300 font-bold text-base bg-teal-950/70 px-3 py-1 rounded-full border border-teal-800/50">
-                      7.80% APY
-                    </span>
                   </div>
-
-                  <div className="mt-8 flex flex-col gap-6">
-                    <div>
-                      <label className="block text-xs font-semibold uppercase text-[#8fa799] mb-3">Select Capital Vault</label>
-                      <div className="grid grid-cols-3 gap-3">
-                        {['USDC', 'EURC', 'FDX'].map((asset) => (
-                          <button
-                            key={asset}
-                            type="button"
-                            onClick={() => setSupplyAsset(asset)}
-                            className={`py-3 rounded-xl text-sm font-semibold transition cursor-pointer text-left px-4 ${
-                              supplyAsset === asset
-                                ? 'bg-[#243e32] text-white border border-emerald-500/50 shadow-md'
-                                : 'bg-[#0c1611] text-[#8fa799] border border-[#22362a] hover:bg-[#18261e]'
-                            }`}
-                          >
-                            <div className="font-bold">{asset}</div>
-                            <div className="text-xs text-emerald-400 font-mono mt-0.5">
-                              {asset === 'USDC' ? '8.2% APY' : asset === 'EURC' ? '7.1% APY' : '9.4% APY'}
-                            </div>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div>
-                      <div className="flex justify-between text-sm text-[#8fa799] mb-3">
-                        <span className="font-semibold">Deposit Capital</span>
-                        <span>Wallet: 148,250 {supplyAsset}</span>
-                      </div>
-                      <div className="relative">
-                        <input
-                          type="number"
-                          value={supplyAmount}
-                          onChange={(e) => setSupplyAmount(e.target.value)}
-                          className="w-full bg-[#0c1611] border border-[#22362a] rounded-2xl px-5 py-4 text-white text-xl font-bold focus:outline-hidden focus:border-emerald-500 tabular-nums"
-                        />
-                        <button
-                          onClick={() => setSupplyAmount('25000')}
-                          className="absolute right-4 top-4 px-3 py-1 bg-[#1b2d24] text-emerald-400 text-xs font-mono font-bold rounded-lg cursor-pointer"
-                        >
-                          MAX
+                  <span className="text-teal-300 font-bold text-sm bg-teal-950/70 px-3 py-1 rounded-full border border-teal-800/50">7.80% APY</span>
+                </div>
+                <div className="flex flex-col gap-5">
+                  <div>
+                    <label className="block text-xs font-semibold uppercase text-[#8fa799] mb-3">Select Capital Vault</label>
+                    <div className="grid grid-cols-3 gap-3">
+                      {['USDC', 'EURC', 'FDX'].map((asset) => (
+                        <button key={asset} type="button" onClick={() => setSupplyAsset(asset)} className={`p-3.5 rounded-xl text-left transition cursor-pointer ${
+                          supplyAsset === asset ? 'bg-teal-950/60 text-white border border-teal-500/60 shadow-md' : 'bg-[#091520] text-[#8fa799] border border-[#1c3040] hover:bg-[#112030]'
+                        }`}>
+                          <div className="font-bold text-sm text-white">{asset}</div>
+                          <div className="text-xs text-teal-400 font-mono mt-0.5">{asset === 'USDC' ? '8.2% APY' : asset === 'EURC' ? '7.1% APY' : '9.4% APY'}</div>
                         </button>
-                      </div>
+                      ))}
                     </div>
-
-                    <div className="p-5 rounded-2xl bg-[#0c1611] border border-[#22362a] flex flex-col gap-3 text-sm">
-                      <div className="flex justify-between items-center text-[#8fa799]">
-                        <span>Interest Compounding</span>
-                        <span className="text-white font-mono font-semibold text-right">Continuous per-second</span>
-                      </div>
-                      <div className="flex justify-between items-center text-[#8fa799]">
-                        <span>Withdrawal Liquidity</span>
-                        <span className="text-teal-400 font-semibold text-right">Instant (No Lockup)</span>
-                      </div>
-                      <div className="flex justify-between items-center text-[#8fa799]">
-                        <span>Loss Protection Buffer</span>
-                        <span className="text-emerald-400 font-bold text-right">100% Solvency Reserve</span>
-                      </div>
+                  </div>
+                  <div className="p-5 rounded-xl bg-[#091520] border border-[#1c3040]">
+                    <div className="flex justify-between text-xs text-[#8fa799] mb-2 font-semibold">
+                      <span>Deposit Capital</span>
+                      <span>Wallet: 148,250 {supplyAsset}</span>
+                    </div>
+                    <div className="relative">
+                      <input type="number" value={supplyAmount} onChange={(e) => setSupplyAmount(e.target.value)} className="w-full bg-[#091520] border border-[#1c3040] rounded-xl px-4 py-3.5 text-white text-xl font-bold focus:outline-hidden focus:border-teal-500 tabular-nums pr-20" />
+                      <button onClick={() => setSupplyAmount('25000')} className="absolute right-3 top-3.5 px-3 py-1 bg-teal-950/60 hover:bg-teal-900/60 text-teal-400 text-xs font-mono font-bold rounded-lg transition cursor-pointer">MAX</button>
+                    </div>
+                  </div>
+                  <div className="p-5 rounded-xl bg-[#091520] border border-[#1c3040] flex flex-col gap-3 text-sm">
+                    <div className="flex justify-between items-center text-[#8fa799]">
+                      <span>Interest Compounding</span>
+                      <span className="text-white font-mono font-semibold">Continuous per-second</span>
+                    </div>
+                    <div className="flex justify-between items-center text-[#8fa799]">
+                      <span>Withdrawal Liquidity</span>
+                      <span className="text-teal-400 font-semibold">Instant (No Lockup)</span>
+                    </div>
+                    <div className="flex justify-between items-center text-[#8fa799]">
+                      <span>Loss Protection Buffer</span>
+                      <span className="text-cyan-400 font-bold">100% Solvency Reserve</span>
                     </div>
                   </div>
                 </div>
-
-                <button
-                  onClick={handleExecuteSupply}
-                  className="mt-8 w-full py-4 rounded-2xl bg-[#1b2d24] hover:bg-[#253e32] border border-[#2d493a] text-white text-sm font-bold uppercase tracking-wider transition cursor-pointer"
-                >
-                  Deposit & Earn {supplyAsset} Yield
-                </button>
+                <div className="pt-6 border-t border-[#1c3040]">
+                  <button onClick={handleExecuteSupply} className="w-full py-4 px-6 rounded-xl bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-500 hover:to-cyan-500 text-white font-bold text-sm uppercase tracking-wider shadow-lg hover:shadow-teal-900/50 transition cursor-pointer">
+                    Deposit &amp; Earn {supplyAsset} Yield
+                  </button>
+                </div>
               </div>
             </div>
 
-            {/* Active Position Management Table with Numeric Right-Alignment */}
-            <div className="p-8 md:p-10 rounded-3xl bg-gradient-to-br from-[#15241b] to-[#0f1b13] border border-[#263e30] shadow-xl">
+            {/* Active Position Management Table */}
+            <div className="p-6 sm:p-8 lg:p-9 rounded-3xl bg-gradient-to-br from-[#14231a] to-[#0e1912] border border-[#22382b] shadow-xl">
               <div className="flex items-center justify-between pb-6 border-b border-[#203328]">
                 <div className="flex items-center gap-3">
-                  <span className="p-2 rounded-xl bg-emerald-950/80 border border-emerald-800/40 text-emerald-400">
+                  <span className="p-2.5 rounded-xl bg-emerald-950/80 border border-emerald-800/40 text-emerald-400">
                     <Sliders size={18} />
                   </span>
                   <div>
@@ -1018,50 +1018,48 @@ export default function FundryxAppPortal({
                 </div>
                 <span className="text-xs font-mono text-emerald-400">Deterministic Repayment Schedule</span>
               </div>
-              <div className="mt-6 overflow-x-auto">
-                <table className="portal-table text-sm">
+              <div className="mt-5 rounded-2xl border border-[#1e3226] bg-[#0c1611]/80 overflow-x-auto">
+                <table className="portal-table">
                   <thead>
-                    <tr className="border-b border-[#1c2c22] text-[#8fa799] text-xs font-semibold uppercase">
-                      <th className="pb-3.5 text-left">Loan ID</th>
-                      <th className="pb-3.5 text-left">Asset</th>
-                      <th className="pb-3.5 text-right">Principal</th>
-                      <th className="pb-3.5 text-right">Fixed APR</th>
-                      <th className="pb-3.5 text-right">Due Tenure</th>
-                      <th className="pb-3.5 text-center">Repaid Progress</th>
-                      <th className="pb-3.5 text-center">Status</th>
-                      <th className="pb-3.5 text-right">Action</th>
+                    <tr>
+                      <th className="text-left">Loan ID</th>
+                      <th className="text-right">Principal</th>
+                      <th className="text-right">APR</th>
+                      <th className="text-right">Due</th>
+                      <th className="text-center">Progress</th>
+                      <th className="text-center">Status</th>
+                      <th className="text-right">Action</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-[#1c2c22]">
+                  <tbody>
                     {activeLoans.map((loan) => (
-                      <tr key={loan.id} className="hover:bg-[#1a2d22]/50 transition-colors">
-                        <td className="py-4 font-mono text-xs text-[#8fa799] text-left">{loan.id}</td>
-                        <td className="py-4 font-bold text-white text-left">{loan.asset}</td>
-                        <td className="py-4 font-semibold text-white text-right tabular-nums whitespace-nowrap">{loan.amount.toLocaleString()} {loan.asset}</td>
-                        <td className="py-4 text-emerald-400 font-mono font-semibold text-right tabular-nums">{loan.apr}</td>
-                        <td className="py-4 text-[#8fa799] text-right whitespace-nowrap">{loan.status === 'Active' ? `In ${loan.dueDays} days` : 'Matured'}</td>
-                        <td className="py-4 text-center">
-                          <div className="w-24 h-2 rounded-full bg-[#1b2d24] overflow-hidden mx-auto">
+                      <tr key={loan.id}>
+                        <td className="font-mono text-xs text-[#8fa799] text-left">{loan.id}</td>
+                        <td className="font-semibold text-white text-right tabular-nums">{loan.amount.toLocaleString()} <span className="text-[#8fa799] text-xs">{loan.asset}</span></td>
+                        <td className="text-emerald-400 font-mono font-semibold text-right tabular-nums">{loan.apr}</td>
+                        <td className="text-[#8fa799] text-right">{loan.status === 'Active' ? `${loan.dueDays}d` : 'Matured'}</td>
+                        <td className="text-center">
+                          <div className="w-20 h-2 rounded-full bg-[#1b2d24] overflow-hidden mx-auto">
                             <div className="h-full bg-emerald-500" style={{ width: loan.progress }} />
                           </div>
                         </td>
-                        <td className="py-4 text-center">
-                          <span className={`px-2.5 py-1 rounded-full text-xs font-semibold inline-block whitespace-nowrap ${
+                        <td className="text-center">
+                          <span className={`px-2.5 py-1 rounded-full text-xs font-semibold inline-block ${
                             loan.status === 'Active' ? 'bg-emerald-950 text-emerald-400 border border-emerald-800/50' : 'bg-stone-900 text-stone-400'
                           }`}>
                             {loan.status}
                           </span>
                         </td>
-                        <td className="py-4 text-right">
+                        <td className="text-right">
                           {loan.status === 'Active' ? (
                             <button
                               onClick={() => handleExecuteRepay(loan.id)}
-                              className="px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition cursor-pointer whitespace-nowrap"
+                              className="px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition cursor-pointer"
                             >
-                              Settle Loan
+                              Settle
                             </button>
                           ) : (
-                            <span className="text-xs text-stone-500 font-medium whitespace-nowrap">Receipt Verified</span>
+                            <span className="text-xs text-stone-500 font-medium">Verified</span>
                           )}
                         </td>
                       </tr>
@@ -1071,11 +1069,11 @@ export default function FundryxAppPortal({
               </div>
             </div>
 
-            {/* Available Capital Pools Matrix with Numeric Right-Alignment */}
-            <div className="p-8 md:p-10 rounded-3xl bg-gradient-to-br from-[#15241b] to-[#0f1b13] border border-[#263e30] shadow-xl">
+            {/* Available Capital Pools Matrix */}
+            <div className="p-6 sm:p-8 lg:p-9 rounded-3xl bg-gradient-to-br from-[#14231a] to-[#0e1912] border border-[#22382b] shadow-xl">
               <div className="flex items-center justify-between pb-6 border-b border-[#203328]">
                 <div className="flex items-center gap-3">
-                  <span className="p-2 rounded-xl bg-purple-950/80 border border-purple-800/40 text-purple-400">
+                  <span className="p-2.5 rounded-xl bg-purple-950/80 border border-purple-800/40 text-purple-400">
                     <Layers size={18} />
                   </span>
                   <div>
@@ -1085,34 +1083,34 @@ export default function FundryxAppPortal({
                 </div>
                 <span className="text-xs font-mono text-teal-300">Updated live</span>
               </div>
-              <div className="mt-6 overflow-x-auto">
-                <table className="portal-table text-sm">
+              <div className="mt-5 rounded-2xl border border-[#1e3226] bg-[#0c1611]/80 overflow-x-auto">
+                <table className="portal-table">
                   <thead>
-                    <tr className="border-b border-[#1c2c22] text-[#8fa799] text-xs font-semibold uppercase">
-                      <th className="pb-3.5 text-left">Pool Asset</th>
-                      <th className="pb-3.5 text-right">Total Value Locked</th>
-                      <th className="pb-3.5 text-right">Utilization</th>
-                      <th className="pb-3.5 text-right">Supply APY</th>
-                      <th className="pb-3.5 text-right">Borrow APR</th>
-                      <th className="pb-3.5 text-right">Action</th>
+                    <tr>
+                      <th className="text-left">Pool Asset</th>
+                      <th className="text-right">Total Value Locked</th>
+                      <th className="text-right">Utilization</th>
+                      <th className="text-right">Supply APY</th>
+                      <th className="text-right">Borrow APR</th>
+                      <th className="text-right">Action</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-[#1c2c22]">
+                  <tbody>
                     {[
                       { asset: 'USDC Vault', tvl: '$ 5,420,000', util: '64.2%', supplyApy: '8.20%', borrowApr: '5.20%' },
                       { asset: 'EURC Vault', tvl: '€ 3,120,000', util: '58.5%', supplyApy: '7.10%', borrowApr: '4.80%' },
                       { asset: 'USD Liquid', tvl: '$ 1,840,000', util: '42.0%', supplyApy: '6.50%', borrowApr: '4.50%' },
                       { asset: 'FDX Native', tvl: '✦ 9,820,000', util: '78.4%', supplyApy: '9.40%', borrowApr: '6.10%' },
                     ].map((pool, idx) => (
-                      <tr key={idx} className="hover:bg-[#1a2d22]/50 transition-colors">
-                        <td className="py-4 font-bold text-white text-left">{pool.asset}</td>
-                        <td className="py-4 font-mono text-right tabular-nums">{pool.tvl}</td>
-                        <td className="py-4 text-right">
+                      <tr key={idx}>
+                        <td className="font-bold text-white text-left">{pool.asset}</td>
+                        <td className="font-mono text-right tabular-nums">{pool.tvl}</td>
+                        <td className="text-right">
                           <span className="text-xs font-mono text-teal-300 tabular-nums">{pool.util}</span>
                         </td>
-                        <td className="py-4 text-emerald-400 font-mono font-bold text-right tabular-nums">{pool.supplyApy}</td>
-                        <td className="py-4 text-white font-mono font-bold text-right tabular-nums">{pool.borrowApr}</td>
-                        <td className="py-4 text-right">
+                        <td className="text-emerald-400 font-mono font-bold text-right tabular-nums">{pool.supplyApy}</td>
+                        <td className="text-white font-mono font-bold text-right tabular-nums">{pool.borrowApr}</td>
+                        <td className="text-right">
                           <button
                             onClick={() => { setSupplyAsset(pool.asset.split(' ')[0]); setSupplyAmount('5000'); }}
                             className="px-4 py-1.5 rounded-lg bg-[#1b2d24] hover:bg-[#253e32] border border-[#2d493a] text-white text-xs font-bold transition cursor-pointer"
@@ -1133,16 +1131,26 @@ export default function FundryxAppPortal({
         {/* TAB 3: VERIFIABLE CREDIT & SCORE ENGINE                   */}
         {/* ========================================================= */}
         {activeTab === 'credit' && (
-          <div className="flex flex-col gap-10 animate-fade-in">
+          <div className="flex flex-col gap-8 lg:gap-10 animate-fade-in">
+            {/* Section Header */}
+            <div className="flex items-center gap-3">
+              <span className="p-2.5 rounded-2xl bg-cyan-950 border border-cyan-700/50 text-cyan-400"><ShieldCheck size={20} /></span>
+              <div>
+                <h2 className="text-2xl md:text-3xl font-bold text-white tracking-tight">Borderline Verify — zkSNARK Identity</h2>
+                <p className="text-sm text-[#8fa799] mt-0.5">Deterministic credit score engine with zero-knowledge proofs</p>
+              </div>
+            </div>
+
             {/* Top Row: Score Gauge & Mathematical Breakdown */}
-            <div className="grid lg:grid-cols-12 gap-8 items-stretch">
+            <div className="grid lg:grid-cols-12 gap-6 xl:gap-8 items-stretch">
               {/* Score Gauge Card */}
-              <div className="lg:col-span-5 p-8 md:p-10 rounded-3xl bg-gradient-to-br from-[#15241b] to-[#0f1b13] border border-[#263e30] shadow-xl flex flex-col items-center justify-center text-center">
-                <span className="text-xs font-semibold uppercase tracking-widest text-emerald-400 mb-6 px-3 py-1 rounded-full bg-emerald-950/70 border border-emerald-800/40">
+              <div className="lg:col-span-5 p-6 sm:p-8 rounded-2xl bg-gradient-to-br from-[#132219] to-[#0c1611] border border-[#203328] shadow-xl flex flex-col items-center justify-between text-center">
+                <span className="text-xs font-semibold uppercase tracking-widest text-emerald-300 px-3.5 py-1 rounded-full bg-emerald-950/80 border border-emerald-800/50">
                   Deterministic Score Engine
                 </span>
-                <div className="relative w-56 h-56 flex items-center justify-center">
-                  <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
+
+                <div className="relative w-56 h-56 sm:w-60 sm:h-60 flex items-center justify-center my-6">
+                  <svg className="w-full h-full -rotate-90 overflow-visible" viewBox="0 0 160 160">
                     <defs>
                       <linearGradient id="primeScoreGrad" x1="0%" y1="0%" x2="100%" y2="100%">
                         <stop offset="0%" stopColor="#10b981" />
@@ -1151,35 +1159,46 @@ export default function FundryxAppPortal({
                         <stop offset="100%" stopColor="#a855f7" />
                       </linearGradient>
                     </defs>
-                    <circle cx="50" cy="50" r="42" fill="none" stroke="#1c2c22" strokeWidth="8" />
+                    <circle cx="80" cy="80" r="62" fill="none" stroke="#16271e" strokeWidth="11" />
                     <circle
-                      cx="50"
-                      cy="50"
-                      r="42"
+                      cx="80"
+                      cy="80"
+                      r="62"
                       fill="none"
                       stroke="url(#primeScoreGrad)"
-                      strokeWidth="8"
-                      strokeDasharray="264"
-                      strokeDashoffset="60"
+                      strokeWidth="11"
+                      strokeDasharray="389.6"
+                      strokeDashoffset="88"
                       strokeLinecap="round"
+                      className="animate-ring-draw"
                     />
                   </svg>
                   <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <span className="text-5xl font-bold text-white tracking-tight tabular-nums">785</span>
-                    <span className="text-xs font-semibold uppercase tracking-wider text-emerald-400 mt-2">Tier 1 Prime</span>
+                    <span className="text-4xl sm:text-5xl font-extrabold text-white tracking-tight tabular-nums metric-value">785</span>
+                    <span className="text-xs font-bold uppercase tracking-wider text-emerald-400 mt-1">Tier 1 Prime</span>
                   </div>
                 </div>
-                <p className="text-sm text-[#9eb5a7] max-w-sm mt-6 leading-relaxed">
-                  Ranked in top 2% of institutional borrowers. Eligible for max $250,000 zero-collateral line with 0.85x fee discount.
-                </p>
+
+                <div className="grid grid-cols-2 gap-3 w-full">
+                  <div className="p-3.5 rounded-xl bg-[#09120d] border border-[#1c2e24] text-center">
+                    <div className="text-xs text-[#71877b] mb-0.5">Max Credit Line</div>
+                    <div className="text-sm font-bold text-emerald-400">$250,000</div>
+                  </div>
+                  <div className="p-3.5 rounded-xl bg-[#09120d] border border-[#1c2e24] text-center">
+                    <div className="text-xs text-[#71877b] mb-0.5">Fee Multiplier</div>
+                    <div className="text-sm font-bold text-cyan-300">0.85x</div>
+                  </div>
+                </div>
+
+                <p className="text-xs text-[#9eb5a7] mt-4 leading-relaxed">Ranked in top 2% of institutional borrowers. Eligible for max $250,000 zero-collateral line.</p>
               </div>
 
-              {/* Scoring Factors Breakdown - Multi-Color Theme */}
-              <div className="lg:col-span-7 p-8 md:p-10 rounded-3xl bg-gradient-to-br from-[#15241b] to-[#0f1b13] border border-[#263e30] shadow-xl space-y-5 flex flex-col justify-between">
+              {/* Scoring Factors Breakdown */}
+              <div className="lg:col-span-7 p-6 sm:p-8 rounded-2xl bg-gradient-to-br from-[#132219] to-[#0c1611] border border-[#203328] shadow-xl flex flex-col justify-between">
                 <div>
-                  <div className="flex items-center justify-between pb-4 border-b border-[#203328]">
+                  <div className="flex items-center justify-between pb-5 border-b border-[#1c2e24]">
                     <div className="flex items-center gap-2.5">
-                      <span className="p-1.5 rounded-lg bg-emerald-950/80 border border-emerald-800/40 text-emerald-400">
+                      <span className="p-2 rounded-xl bg-emerald-950/80 border border-emerald-800/40 text-emerald-400">
                         <Award size={16} />
                       </span>
                       <h3 className="text-lg font-bold text-white uppercase tracking-wide">
@@ -1189,21 +1208,21 @@ export default function FundryxAppPortal({
                     <span className="text-xs font-mono text-emerald-400">Max Score: 850</span>
                   </div>
 
-                  <div className="mt-5 space-y-4">
+                  <div className="mt-5 space-y-3">
                     {[
-                      { label: 'On-Time Repayment Consistency', score: '99.2%', impact: '+220 pts', color: 'bg-emerald-500', textCol: 'text-emerald-400' },
-                      { label: 'Capital Velocity & Turnaround Rate', score: '94.5%', impact: '+180 pts', color: 'bg-cyan-500', textCol: 'text-cyan-300' },
-                      { label: 'Reserve Staking Commitment', score: '88.0%', impact: '+150 pts', color: 'bg-amber-500', textCol: 'text-amber-300' },
-                      { label: 'Protocol Longevity & History', score: '82.4%', impact: '+135 pts', color: 'bg-purple-500', textCol: 'text-purple-300' },
-                      { label: 'Historical Default Rate', score: '0.00%', impact: 'Perfect Record', color: 'bg-rose-500', textCol: 'text-rose-300' },
+                      { label: 'On-Time Repayment Consistency', score: 99.2, impact: '+220 pts', color: 'bg-emerald-500', textCol: 'text-emerald-400' },
+                      { label: 'Capital Velocity & Turnaround Rate', score: 94.5, impact: '+180 pts', color: 'bg-cyan-500', textCol: 'text-cyan-300' },
+                      { label: 'Reserve Staking Commitment', score: 88.0, impact: '+150 pts', color: 'bg-amber-500', textCol: 'text-amber-300' },
+                      { label: 'Protocol Longevity & History', score: 82.4, impact: '+135 pts', color: 'bg-purple-500', textCol: 'text-purple-300' },
+                      { label: 'Historical Default Rate', score: 100, impact: 'Perfect Record', color: 'bg-rose-500', textCol: 'text-rose-300' },
                     ].map((factor, i) => (
-                      <div key={i} className="p-4 rounded-2xl bg-[#0c1611] border border-[#22362a]">
-                        <div className="flex justify-between items-center text-sm mb-2">
+                      <div key={i} className="p-4 rounded-xl bg-[#09120d] border border-[#1c2e24]">
+                        <div className="flex justify-between items-center text-sm mb-2.5">
                           <span className="font-semibold text-white">{factor.label}</span>
-                          <span className={`${factor.textCol} font-mono font-bold text-right tabular-nums`}>{factor.impact}</span>
+                          <span className={`${factor.textCol} font-mono font-bold text-right tabular-nums shrink-0 ml-4`}>{factor.impact}</span>
                         </div>
-                        <div className="w-full h-2 rounded-full bg-[#1b2d24] overflow-hidden">
-                          <div className={`h-full ${factor.color}`} style={{ width: factor.score }} />
+                        <div className="progress-track h-1.5">
+                          <div className={`progress-fill ${factor.color}`} style={{ width: `${factor.score}%` }} />
                         </div>
                       </div>
                     ))}
@@ -1213,121 +1232,82 @@ export default function FundryxAppPortal({
             </div>
 
             {/* Middle Row: Credit Tier Progression Matrix + Dynamic Simulator */}
-            <div className="grid lg:grid-cols-12 gap-8 items-stretch">
-              {/* Credit Tier Matrix */}
-              <div className="lg:col-span-6 p-8 md:p-10 rounded-3xl bg-gradient-to-br from-[#15241b] to-[#0f1b13] border border-[#263e30] shadow-xl flex flex-col justify-between">
-                <div>
-                  <div className="flex items-center justify-between pb-4 border-b border-[#203328]">
-                    <div className="flex items-center gap-2.5">
-                      <span className="p-1.5 rounded-lg bg-teal-950/80 border border-teal-800/40 text-teal-400">
-                        <Scale size={16} />
-                      </span>
-                      <h3 className="text-lg font-bold text-white uppercase tracking-wide">Credit Tier Progression</h3>
-                    </div>
-                    <span className="text-xs font-mono text-teal-300">Deterministic Gates</span>
+            <div className="grid lg:grid-cols-2 gap-6 xl:gap-8 items-stretch">
+              {/* Credit Tier Matrix — teal accent */}
+              <div className="p-6 sm:p-8 rounded-2xl bg-gradient-to-br from-[#0e1e24] to-[#0c1611] border border-[#1c3040] shadow-xl flex flex-col gap-6">
+                <div className="flex items-center justify-between pb-5 border-b border-[#1c3040]">
+                  <div className="flex items-center gap-2.5">
+                    <span className="p-2.5 rounded-xl bg-teal-950/80 border border-teal-800/40 text-teal-400"><Scale size={16} /></span>
+                    <h3 className="text-lg font-bold text-white uppercase tracking-wide">Credit Tier Progression</h3>
                   </div>
-
-                  <div className="mt-5 space-y-4">
-                    {[
-                      { tier: 'Tier 1 Prime', line: '$ 250,000 Max Line', minScore: '750+ Score', discount: '0.85x Fee Multiplier', active: true, color: 'border-emerald-500/50 bg-emerald-950/20' },
-                      { tier: 'Tier 2 Growth', line: '$ 100,000 Max Line', minScore: '680+ Score', discount: '1.00x Fee Multiplier', active: false, color: 'border-[#22362a] bg-[#0c1611]' },
-                      { tier: 'Tier 3 Emerging', line: '$ 25,000 Max Line', minScore: '600+ Score', discount: '1.15x Fee Multiplier', active: false, color: 'border-[#22362a] bg-[#0c1611]' },
-                    ].map((t, idx) => (
-                      <div key={idx} className={`p-5 rounded-2xl border ${t.color} flex items-center justify-between`}>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="font-bold text-white text-base">{t.tier}</span>
-                            {t.active && (
-                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-900 text-emerald-300">
-                                CURRENT STATUS
-                              </span>
-                            )}
-                          </div>
-                          <div className="text-xs text-[#8fa799] mt-1">{t.minScore} · {t.discount}</div>
+                  <span className="text-xs font-mono text-teal-300">Deterministic Gates</span>
+                </div>
+                <div className="flex flex-col gap-3">
+                  {[
+                    { tier: 'Tier 1 Prime', line: '$ 250,000 Max Line', minScore: '750+ Score', discount: '0.85x Fee Multiplier', active: true, border: 'border-emerald-500/50', bg: 'bg-emerald-950/20' },
+                    { tier: 'Tier 2 Growth', line: '$ 100,000 Max Line', minScore: '680+ Score', discount: '1.00x Fee Multiplier', active: false, border: 'border-[#1c3040]', bg: 'bg-[#091520]' },
+                    { tier: 'Tier 3 Emerging', line: '$ 25,000 Max Line', minScore: '600+ Score', discount: '1.15x Fee Multiplier', active: false, border: 'border-[#1c3040]', bg: 'bg-[#091520]' },
+                  ].map((t, idx) => (
+                    <div key={idx} className={`p-4 sm:p-5 rounded-xl border ${t.border} ${t.bg} flex flex-col sm:flex-row sm:items-center justify-between gap-3`}>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-white">{t.tier}</span>
+                          {t.active && <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-900 text-emerald-300">CURRENT STATUS</span>}
                         </div>
-                        <div className="text-right">
-                          <div className="text-emerald-400 font-bold font-mono text-base tabular-nums">{t.line}</div>
-                          <div className="text-[11px] text-[#71877b]">Zero Collateral</div>
-                        </div>
+                        <div className="text-xs text-[#8fa799] mt-1">{t.minScore} · {t.discount}</div>
                       </div>
-                    ))}
-                  </div>
+                      <div className="sm:text-right shrink-0">
+                        <div className="text-emerald-400 font-bold font-mono tabular-nums">{t.line}</div>
+                        <div className="text-[11px] text-[#71877b]">Zero Collateral</div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
 
-              {/* Dynamic Score Simulator */}
-              <div className="lg:col-span-6 p-8 md:p-10 rounded-3xl bg-gradient-to-br from-[#15241b] to-[#0f1b13] border border-[#263e30] shadow-xl flex flex-col justify-between">
-                <div>
-                  <div className="flex items-center justify-between pb-4 border-b border-[#203328]">
-                    <div className="flex items-center gap-2.5">
-                      <span className="p-1.5 rounded-lg bg-amber-950/80 border border-amber-800/40 text-amber-400">
-                        <SlidersHorizontal size={16} />
-                      </span>
-                      <h3 className="text-lg font-bold text-white uppercase tracking-wide">Score Boost Simulator</h3>
-                    </div>
-                    <span className="text-xs font-mono text-amber-300">Simulate Actions</span>
+              {/* Dynamic Score Simulator — amber accent */}
+              <div className="p-6 sm:p-8 rounded-2xl bg-gradient-to-br from-[#201a0e] to-[#0c1611] border border-[#3a2e1c] shadow-xl flex flex-col gap-6">
+                <div className="flex items-center justify-between pb-5 border-b border-[#3a2e1c]">
+                  <div className="flex items-center gap-2.5">
+                    <span className="p-2.5 rounded-xl bg-amber-950/80 border border-amber-800/40 text-amber-400"><SlidersHorizontal size={16} /></span>
+                    <h3 className="text-lg font-bold text-white uppercase tracking-wide">Score Boost Simulator</h3>
                   </div>
-
-                  <div className="mt-6 flex flex-col gap-5">
+                  <span className="text-xs font-mono text-amber-300">Simulate Actions</span>
+                </div>
+                <div className="flex flex-col gap-4">
+                  <div className="p-4 rounded-xl bg-[#140f05] border border-[#3a2e1c]">
+                    <div className="flex justify-between items-center text-xs font-semibold uppercase text-[#8fa799] mb-2">
+                      <span>Early Repayment Simulation</span>
+                      <span className="text-white font-bold font-mono tabular-nums">${simRepay.toLocaleString()} USDC</span>
+                    </div>
+                    <input type="range" min="0" max="50000" step="5000" value={simRepay} onChange={(e) => setSimRepay(Number(e.target.value))} className="w-full accent-emerald-500 cursor-pointer" />
+                  </div>
+                  <div className="p-4 rounded-xl bg-[#140f05] border border-[#3a2e1c]">
+                    <div className="flex justify-between items-center text-xs font-semibold uppercase text-[#8fa799] mb-2">
+                      <span>FDX Reserve Staking</span>
+                      <span className="text-white font-bold font-mono tabular-nums">{simStake.toLocaleString()} FDX</span>
+                    </div>
+                    <input type="range" min="0" max="25000" step="2500" value={simStake} onChange={(e) => setSimStake(Number(e.target.value))} className="w-full accent-amber-500 cursor-pointer" />
+                  </div>
+                  <div className="p-4 rounded-xl bg-[#140f05] border border-[#3a2e1c] flex items-center justify-between">
                     <div>
-                      <div className="flex justify-between items-center text-xs font-semibold uppercase text-[#8fa799] mb-2">
-                        <span>Early Repayment Simulation</span>
-                        <span className="text-white font-bold font-mono tabular-nums">${simRepay.toLocaleString()} USDC</span>
-                      </div>
-                      <input
-                        type="range"
-                        min="0"
-                        max="50000"
-                        step="5000"
-                        value={simRepay}
-                        onChange={(e) => setSimRepay(Number(e.target.value))}
-                        className="w-full accent-emerald-500 cursor-pointer h-2 bg-[#1b2d24] rounded-lg"
-                      />
+                      <div className="text-xs text-[#8fa799] uppercase font-semibold">Projected Score Impact</div>
+                      <div className="text-2xl font-bold text-amber-400 mt-1 tabular-nums">785 → {785 + Math.round(simRepay / 2500) + Math.round(simStake / 1000)} PTS</div>
                     </div>
-
-                    <div>
-                      <div className="flex justify-between items-center text-xs font-semibold uppercase text-[#8fa799] mb-2">
-                        <span>FDX Reserve Staking</span>
-                        <span className="text-white font-bold font-mono tabular-nums">{simStake.toLocaleString()} FDX</span>
-                      </div>
-                      <input
-                        type="range"
-                        min="0"
-                        max="25000"
-                        step="2500"
-                        value={simStake}
-                        onChange={(e) => setSimStake(Number(e.target.value))}
-                        className="w-full accent-teal-500 cursor-pointer h-2 bg-[#1b2d24] rounded-lg"
-                      />
-                    </div>
-
-                    <div className="p-4 rounded-2xl bg-[#0c1611] border border-[#22362a] flex items-center justify-between">
-                      <div>
-                        <div className="text-xs text-[#8fa799] uppercase font-semibold">Projected Score Impact</div>
-                        <div className="text-2xl font-bold text-emerald-400 mt-1 tabular-nums">
-                          785 → {785 + Math.round(simRepay / 2500) + Math.round(simStake / 1000)} PTS
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <span className="px-3 py-1 rounded-full text-xs font-semibold bg-emerald-950 text-emerald-300 border border-emerald-800/40">
-                          +{Math.round(simRepay / 2500) + Math.round(simStake / 1000)} PTS Projected
-                        </span>
-                      </div>
-                    </div>
+                    <span className="px-3 py-1 rounded-full text-xs font-semibold bg-amber-950 text-amber-300 border border-amber-800/40">+{Math.round(simRepay / 2500) + Math.round(simStake / 1000)} PTS Projected</span>
                   </div>
                 </div>
-
-                <div className="text-xs text-[#71877b] text-center pt-2">
+                <div className="text-xs text-[#71877b] text-center pt-4 border-t border-[#3a2e1c]">
                   Scores recalculate deterministically upon each onchain settlement.
                 </div>
               </div>
             </div>
 
-            {/* Bottom: Immutable Repayment Receipts Ledger with Right-Aligned Amounts */}
-            <div className="p-8 md:p-10 rounded-3xl bg-gradient-to-br from-[#15241b] to-[#0f1b13] border border-[#263e30] shadow-xl">
+            {/* Bottom: Immutable Repayment Receipts Ledger */}
+            <div className="p-6 sm:p-8 lg:p-9 rounded-3xl bg-gradient-to-br from-[#14231a] to-[#0e1912] border border-[#22382b] shadow-xl">
               <div className="flex items-center justify-between pb-6 border-b border-[#203328]">
                 <div className="flex items-center gap-3">
-                  <span className="p-2 rounded-xl bg-teal-950/80 border border-teal-800/40 text-teal-400">
+                  <span className="p-2.5 rounded-xl bg-teal-950/80 border border-teal-800/40 text-teal-400">
                     <ShieldCheck size={18} />
                   </span>
                   <div>
@@ -1337,31 +1317,31 @@ export default function FundryxAppPortal({
                 </div>
                 <span className="text-xs font-mono text-teal-300">Cryptographically Proved</span>
               </div>
-              <div className="mt-6 overflow-x-auto">
-                <table className="portal-table text-sm">
+              <div className="mt-5 rounded-2xl border border-[#1e3226] bg-[#0c1611]/80 overflow-x-auto">
+                <table className="portal-table">
                   <thead>
-                    <tr className="border-b border-[#1c2c22] text-[#8fa799] text-xs font-semibold uppercase">
-                      <th className="pb-3.5 text-left">Receipt ID</th>
-                      <th className="pb-3.5 text-right">Principal Settled</th>
-                      <th className="pb-3.5 text-right">Interest Paid</th>
-                      <th className="pb-3.5 text-left">Completion Date</th>
-                      <th className="pb-3.5 text-left">Verification Hash</th>
-                      <th className="pb-3.5 text-center">Status</th>
+                    <tr>
+                      <th className="text-left">Receipt ID</th>
+                      <th className="text-right">Principal Settled</th>
+                      <th className="text-right">Interest Paid</th>
+                      <th className="text-left">Completion Date</th>
+                      <th className="text-left">Verification Hash</th>
+                      <th className="text-center">Status</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-[#1c2c22]">
+                  <tbody>
                     {[
                       { id: 'RCPT-10492', principal: '50,000 FDX', interest: '762.50 FDX', date: 'Sep 28, 2026', hash: '0x4f8a...9c12' },
                       { id: 'RCPT-10491', principal: '25,000 USDC', interest: '150.00 USDC', date: 'Sep 14, 2026', hash: '0x1c3b...8e44' },
                       { id: 'RCPT-10490', principal: '10,000 EURC', interest: '48.00 EURC', date: 'Aug 30, 2026', hash: '0x99a2...7710' },
                     ].map((rcpt, idx) => (
-                      <tr key={idx} className="hover:bg-[#1a2d22]/50 transition-colors">
-                        <td className="py-4 font-mono text-xs text-[#8fa799] text-left">{rcpt.id}</td>
-                        <td className="py-4 font-bold text-white text-right tabular-nums">{rcpt.principal}</td>
-                        <td className="py-4 text-emerald-400 font-mono text-right tabular-nums">{rcpt.interest}</td>
-                        <td className="py-4 text-[#8fa799] text-left whitespace-nowrap">{rcpt.date}</td>
-                        <td className="py-4 font-mono text-xs text-teal-300 text-left whitespace-nowrap">{rcpt.hash}</td>
-                        <td className="py-4 text-center">
+                      <tr key={idx}>
+                        <td className="font-mono text-xs text-[#8fa799] text-left">{rcpt.id}</td>
+                        <td className="font-bold text-white text-right tabular-nums">{rcpt.principal}</td>
+                        <td className="text-emerald-400 font-mono text-right tabular-nums">{rcpt.interest}</td>
+                        <td className="text-[#8fa799] text-left whitespace-nowrap">{rcpt.date}</td>
+                        <td className="font-mono text-xs text-teal-300 text-left whitespace-nowrap">{rcpt.hash}</td>
+                        <td className="text-center">
                           <span className="px-3 py-1 rounded-full text-xs font-semibold bg-emerald-950 text-emerald-400 border border-emerald-800/40 inline-block whitespace-nowrap">
                             Immutable Proved
                           </span>
@@ -1379,42 +1359,88 @@ export default function FundryxAppPortal({
         {/* TAB 4: AI RISK TELEMETRY & SOLVENCY SUITE                 */}
         {/* ========================================================= */}
         {activeTab === 'risk' && (
-          <div className="flex flex-col gap-10 animate-fade-in">
-            {/* Top 4 Risk Sentinel Health Metrics - Multi-Color Theme */}
-            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
-              <div className="p-6 rounded-2xl bg-gradient-to-br from-[#13281c] via-[#0f2016] to-[#0c1811] border border-emerald-500/30 hover:border-emerald-400/60 shadow-[0_8px_30px_rgba(16,185,129,0.06)] transition-all">
-                <div className="text-xs font-semibold uppercase tracking-wider text-emerald-300/80 mb-1">Sentinel Quorum</div>
-                <div className="text-3xl font-bold text-emerald-400 tracking-tight tabular-nums">3 / 3 Nodes</div>
-                <div className="mt-2 text-xs text-emerald-300 font-mono">Consensus: 100% Active</div>
+          <div className="flex flex-col gap-8 lg:gap-10 animate-fade-in">
+            {/* Section Header */}
+            <div className="flex items-center justify-between gap-4 flex-wrap">
+              <div className="flex items-center gap-3">
+                <span className="p-2.5 rounded-2xl bg-amber-950 border border-amber-700/50 text-amber-400"><Radio size={20} /></span>
+                <div>
+                  <h2 className="text-2xl md:text-3xl font-bold text-white tracking-tight">AI Risk Telemetry Sentinel</h2>
+                  <p className="text-sm text-[#8fa799] mt-0.5">Autonomous multi-node consensus protecting protocol solvency</p>
+                </div>
+              </div>
+              <span className="flex items-center gap-2 text-xs font-mono text-emerald-400 bg-emerald-950/60 px-3.5 py-1.5 rounded-full border border-emerald-800/40">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />Live Guard
+              </span>
+            </div>
+
+            {/* Unified Executive Metric Ribbon */}
+            <div className="rounded-2xl border border-[#203328] bg-[#122018]/90 backdrop-blur-md shadow-lg grid grid-cols-2 lg:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-[#1c2e24] overflow-hidden">
+              <div className="p-5 lg:p-6 flex flex-col justify-between min-h-[140px]">
+                <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-[#8fa799]">
+                  <span>Sentinel Quorum</span>
+                  <Cpu size={15} className="text-emerald-400 opacity-90" />
+                </div>
+                <div className="metric-value text-2xl lg:text-3xl font-bold text-emerald-400 tracking-tight tabular-nums my-2">
+                  3 / 3
+                </div>
+                <div className="flex items-center justify-between text-xs pt-2.5 border-t border-[#1c2e24]/70">
+                  <span className="text-[#71877b]">Consensus Active</span>
+                  <span className="badge-emerald">100% Sync</span>
+                </div>
               </div>
 
-              <div className="p-6 rounded-2xl bg-gradient-to-br from-[#0e2430] via-[#0a1c26] to-[#08151e] border border-cyan-500/30 hover:border-cyan-400/60 shadow-[0_8px_30px_rgba(6,182,212,0.06)] transition-all">
-                <div className="text-xs font-semibold uppercase tracking-wider text-cyan-300/80 mb-1">Solvency Ratio</div>
-                <div className="text-3xl font-bold text-cyan-300 tracking-tight tabular-nums">214.8%</div>
-                <div className="mt-2 text-xs text-cyan-400/80 font-mono">Surplus Headroom Buffer</div>
+              <div className="p-5 lg:p-6 flex flex-col justify-between min-h-[140px]">
+                <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-[#8fa799]">
+                  <span>Solvency Ratio</span>
+                  <ShieldCheck size={15} className="text-teal-400 opacity-90" />
+                </div>
+                <div className="metric-value text-2xl lg:text-3xl font-bold text-teal-300 tracking-tight tabular-nums my-2">
+                  214.8%
+                </div>
+                <div className="flex items-center justify-between text-xs pt-2.5 border-t border-[#1c2e24]/70">
+                  <span className="text-[#71877b]">Surplus Buffer</span>
+                  <span className="badge-cyan">Optimal</span>
+                </div>
               </div>
 
-              <div className="p-6 rounded-2xl bg-gradient-to-br from-[#2a1c12] via-[#20150d] to-[#170e08] border border-amber-500/30 hover:border-amber-400/60 shadow-[0_8px_30px_rgba(245,158,11,0.06)] transition-all">
-                <div className="text-xs font-semibold uppercase tracking-wider text-amber-300/80 mb-1">Single-Pool Max Cap</div>
-                <div className="text-3xl font-bold text-amber-300 tracking-tight tabular-nums">$ 5,000,000</div>
-                <div className="mt-2 text-xs text-amber-400/80 font-mono">Automatic Circuit Breaker</div>
+              <div className="p-5 lg:p-6 flex flex-col justify-between min-h-[140px]">
+                <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-[#8fa799]">
+                  <span>Single-Pool Cap</span>
+                  <Lock size={15} className="text-amber-400 opacity-90" />
+                </div>
+                <div className="metric-value text-2xl lg:text-3xl font-bold text-amber-300 tracking-tight tabular-nums my-2">
+                  $5M
+                </div>
+                <div className="flex items-center justify-between text-xs pt-2.5 border-t border-[#1c2e24]/70">
+                  <span className="text-[#71877b]">Circuit Breaker</span>
+                  <span className="badge-amber">Auto Guard</span>
+                </div>
               </div>
 
-              <div className="p-6 rounded-2xl bg-gradient-to-br from-[#241430] via-[#1a0e24] to-[#12081a] border border-purple-500/30 hover:border-purple-400/60 shadow-[0_8px_30px_rgba(168,85,247,0.06)] transition-all">
-                <div className="text-xs font-semibold uppercase tracking-wider text-purple-300/80 mb-1">Oracle Health</div>
-                <div className="text-3xl font-bold text-purple-300 tracking-tight tabular-nums">100% Sync</div>
-                <div className="mt-2 text-xs text-purple-400/80 font-mono">0.00% Price Variance</div>
+              <div className="p-5 lg:p-6 flex flex-col justify-between min-h-[140px]">
+                <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-[#8fa799]">
+                  <span>Oracle Health</span>
+                  <Activity size={15} className="text-emerald-400 opacity-90" />
+                </div>
+                <div className="metric-value text-2xl lg:text-3xl font-bold text-white tracking-tight tabular-nums my-2">
+                  100% Sync
+                </div>
+                <div className="flex items-center justify-between text-xs pt-2.5 border-t border-[#1c2e24]/70">
+                  <span className="text-[#71877b]">Price Variance</span>
+                  <span className="badge-emerald">0.00%</span>
+                </div>
               </div>
             </div>
 
             {/* Middle Row: Multi-Node Quorum Matrix + Live Stress Test Simulator */}
-            <div className="grid lg:grid-cols-12 gap-8 items-stretch">
+            <div className="grid lg:grid-cols-12 gap-6 xl:gap-8 items-stretch">
               {/* Multi-Node Consensus Matrix */}
-              <div className="lg:col-span-7 p-8 md:p-10 rounded-3xl bg-gradient-to-br from-[#15241b] to-[#0f1b13] border border-[#263e30] shadow-xl flex flex-col justify-between">
+              <div className="lg:col-span-7 p-6 sm:p-8 rounded-2xl bg-gradient-to-br from-[#132219] to-[#0c1611] border border-[#203328] shadow-xl flex flex-col justify-between">
                 <div>
-                  <div className="flex items-center justify-between pb-6 border-b border-[#203328]">
+                  <div className="flex items-center justify-between pb-6 border-b border-[#1c2e24]">
                     <div className="flex items-center gap-3">
-                      <span className="p-2 rounded-xl bg-teal-950/80 border border-teal-800/40 text-teal-400">
+                      <span className="p-2.5 rounded-xl bg-teal-950/80 border border-teal-800/40 text-teal-400">
                         <Cpu size={18} />
                       </span>
                       <div>
@@ -1422,7 +1448,7 @@ export default function FundryxAppPortal({
                         <p className="text-xs text-[#8fa799] mt-0.5">Decentralized offchain AI verification nodes</p>
                       </div>
                     </div>
-                    <span className="px-3.5 py-1.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-xs font-mono font-bold">
+                    <span className="px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-xs font-mono font-bold">
                       3/3 ACTIVE
                     </span>
                   </div>
@@ -1433,7 +1459,7 @@ export default function FundryxAppPortal({
                       { node: 'Sentinel Node Beta', role: 'Cross-Vault Collateralization Ratio', latency: '38ms', status: 'Voting: 214.8% Solvency', sig: '0x1c8b...32fa' },
                       { node: 'Sentinel Node Gamma', role: 'Borrower Repayment Pacing Engine', latency: '49ms', status: 'Voting: Tier 1 Conforming', sig: '0x7a81...49de' },
                     ].map((n, i) => (
-                      <div key={i} className="p-4 rounded-2xl bg-[#0c1611] border border-[#22362a] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div key={i} className="p-4 sm:p-5 rounded-xl bg-[#09120d] border border-[#1c2e24] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                         <div>
                           <div className="flex items-center gap-2">
                             <span className="w-2 h-2 rounded-full bg-emerald-400" />
@@ -1453,11 +1479,11 @@ export default function FundryxAppPortal({
               </div>
 
               {/* Real-Time Stress Testing Simulator */}
-              <div className="lg:col-span-5 p-8 md:p-10 rounded-3xl bg-gradient-to-br from-[#15241b] to-[#0f1b13] border border-[#263e30] shadow-xl flex flex-col justify-between">
+              <div className="lg:col-span-5 p-6 sm:p-8 rounded-2xl bg-gradient-to-br from-[#132219] to-[#0c1611] border border-[#203328] shadow-xl flex flex-col justify-between">
                 <div>
-                  <div className="flex items-center justify-between pb-6 border-b border-[#203328]">
+                  <div className="flex items-center justify-between pb-6 border-b border-[#1c2e24]">
                     <div className="flex items-center gap-2.5">
-                      <span className="p-1.5 rounded-lg bg-amber-950/80 border border-amber-800/40 text-amber-400">
+                      <span className="p-2 rounded-xl bg-amber-950/80 border border-amber-800/40 text-amber-400">
                         <Zap size={16} />
                       </span>
                       <h3 className="text-lg font-bold text-white uppercase tracking-wide">Stress-Test Simulator</h3>
@@ -1466,7 +1492,7 @@ export default function FundryxAppPortal({
                   </div>
 
                   <div className="mt-6 flex flex-col gap-5">
-                    <div>
+                    <div className="p-4 rounded-xl bg-[#09120d] border border-[#1c2e24]">
                       <div className="flex justify-between items-center text-xs font-semibold uppercase text-[#8fa799] mb-2">
                         <span>Market Liquidity Drawdown Shock</span>
                         <span className="text-white font-bold font-mono">{stressShock}% SHOCK</span>
@@ -1478,11 +1504,11 @@ export default function FundryxAppPortal({
                         step="5"
                         value={stressShock}
                         onChange={(e) => setStressShock(Number(e.target.value))}
-                        className="w-full accent-amber-500 cursor-pointer h-2 bg-[#1b2d24] rounded-lg"
+                        className="w-full accent-amber-500 cursor-pointer"
                       />
                     </div>
 
-                    <div className="p-4 rounded-2xl bg-[#0c1611] border border-[#22362a] space-y-3">
+                    <div className="p-5 rounded-xl bg-[#09120d] border border-[#1c2e24] space-y-3">
                       <div className="flex justify-between items-center text-xs text-[#8fa799]">
                         <span>Post-Shock Solvency Buffer</span>
                         <span className="font-bold text-emerald-400 font-mono tabular-nums">{(214.8 - stressShock * 1.8).toFixed(1)}%</span>
@@ -1498,68 +1524,54 @@ export default function FundryxAppPortal({
                   </div>
                 </div>
 
-                <div className="mt-6 p-3 rounded-xl bg-emerald-950/40 border border-emerald-800/40 text-[11px] text-emerald-300 flex items-center gap-2">
-                  <CheckCircle size={14} className="shrink-0" />
+                <div className="mt-6 p-3.5 rounded-xl bg-emerald-950/40 border border-emerald-800/40 text-xs text-emerald-300 flex items-center gap-2.5">
+                  <CheckCircle size={15} className="shrink-0 text-emerald-400" />
                   <span>Protocol resilience verified. Solvency guaranteed above 150% threshold.</span>
                 </div>
               </div>
             </div>
 
             {/* Bottom Row: Live Attestation Log + Governance Guardrails */}
-            <div className="grid lg:grid-cols-12 gap-8 items-stretch">
-              {/* Real-Time Attestation Log */}
-              <div className="lg:col-span-7 p-8 md:p-10 rounded-3xl bg-gradient-to-br from-[#15241b] to-[#0f1b13] border border-[#263e30] shadow-xl flex flex-col justify-between">
-                <div>
-                  <div className="flex items-center justify-between pb-4 border-b border-[#203328]">
-                    <div className="flex items-center gap-2.5">
-                      <span className="p-1.5 rounded-lg bg-teal-950/80 border border-teal-800/40 text-teal-400">
-                        <Radio size={16} />
-                      </span>
-                      <h3 className="text-base font-bold text-white uppercase tracking-wide">Real-Time Attestation Log</h3>
-                    </div>
-                    <span className="text-xs font-mono text-emerald-400">Live Stream</span>
+            <div className="grid lg:grid-cols-12 gap-6 xl:gap-8 items-stretch">
+              {/* Real-Time Attestation Log — teal/dark */}
+              <div className="lg:col-span-7 p-6 sm:p-8 rounded-2xl bg-gradient-to-br from-[#0e1e24] to-[#0c1611] border border-[#1c3040] shadow-xl flex flex-col gap-5">
+                <div className="flex items-center justify-between pb-5 border-b border-[#1c3040]">
+                  <div className="flex items-center gap-2.5">
+                    <span className="p-2.5 rounded-xl bg-teal-950/80 border border-teal-800/40 text-teal-400"><Radio size={16} /></span>
+                    <h3 className="text-base font-bold text-white uppercase tracking-wide">Real-Time Attestation Log</h3>
                   </div>
-
-                  <div className="mt-4 p-5 rounded-2xl bg-[#0c1611] border border-[#22362a] font-mono text-xs text-[#8fa799] space-y-3 leading-relaxed">
-                    <div className="text-emerald-400 font-semibold flex items-center gap-2">
-                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping" />
-                      <span>Live Attestation Consensus Feed</span>
-                    </div>
-                    <p>
-                      [2026-10-14 15:42:01 UTC] Sentinel Node Alpha: Solvency check completed. 0 anomalies detected.
-                      <br />
-                      [2026-10-14 15:42:04 UTC] Sentinel Node Beta: Cross-checked capital reserves against active credit lines.
-                      <br />
-                      [2026-10-14 15:42:08 UTC] Sentinel Node Gamma: Verified repayment hashes. Signature 0x7a81...49de generated.
-                      <br />
-                      [2026-10-14 15:42:15 UTC] Sentinel Node Alpha: Dynamic interest curve re-indexed for USDC vault (8.20% APY).
-                    </p>
+                  <span className="text-xs font-mono text-teal-400 flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-teal-400 animate-pulse" />Live Stream</span>
+                </div>
+                <div className="p-5 rounded-xl border border-[#1c3040] bg-[#091520] font-mono text-xs text-[#8fa799] space-y-3 leading-relaxed">
+                  <div className="text-teal-400 font-semibold flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-teal-400 animate-ping" />
+                    <span>Live Attestation Consensus Feed</span>
+                  </div>
+                  <div className="space-y-1.5">
+                    <div>[2026-10-14 15:42:01 UTC] Sentinel Node Alpha: Solvency check completed. 0 anomalies detected.</div>
+                    <div>[2026-10-14 15:42:04 UTC] Sentinel Node Beta: Cross-checked capital reserves against active credit lines.</div>
+                    <div>[2026-10-14 15:42:08 UTC] Sentinel Node Gamma: Verified repayment hashes. Signature 0x7a81...49de generated.</div>
+                    <div>[2026-10-14 15:42:15 UTC] Sentinel Node Alpha: Dynamic interest curve re-indexed for USDC vault (8.20% APY).</div>
                   </div>
                 </div>
               </div>
-
-              {/* Governance Guardrails */}
-              <div className="lg:col-span-5 p-8 md:p-10 rounded-3xl bg-gradient-to-br from-[#15241b] to-[#0f1b13] border border-[#263e30] shadow-xl flex flex-col justify-between">
-                <div>
-                  <div className="flex items-center justify-between pb-4 border-b border-[#203328]">
-                    <div className="flex items-center gap-2.5">
-                      <span className="p-1.5 rounded-lg bg-purple-950/80 border border-purple-800/40 text-purple-400">
-                        <ShieldAlert size={16} />
-                      </span>
-                      <h3 className="text-base font-bold text-white uppercase tracking-wide">Governance Guardrails</h3>
-                    </div>
-                    <span className="text-xs font-mono text-purple-300">Safety Boundaries</span>
+              {/* Governance Guardrails — purple accent */}
+              <div className="lg:col-span-5 p-6 sm:p-8 rounded-2xl bg-gradient-to-br from-[#180f24] to-[#0c1611] border border-[#2d1e40] shadow-xl flex flex-col gap-5">
+                <div className="flex items-center justify-between pb-5 border-b border-[#2d1e40]">
+                  <div className="flex items-center gap-2.5">
+                    <span className="p-2.5 rounded-xl bg-purple-950/80 border border-purple-800/40 text-purple-400"><ShieldAlert size={16} /></span>
+                    <h3 className="text-base font-bold text-white uppercase tracking-wide">Governance Guardrails</h3>
                   </div>
-
-                  <div className="mt-4 space-y-3 text-xs text-[#9eb5a7] leading-relaxed">
-                    <div className="p-4 rounded-2xl bg-[#0c1611] border border-[#22362a]">
-                      <span className="text-sm text-white font-bold block mb-1">Non-Authoritative AI</span>
-                      <p>AI models only monitor and attest. Models have zero direct authority to disburse, seize, or reallocate treasury capital.</p>
-                    </div>
-                    <div className="p-4 rounded-2xl bg-[#0c1611] border border-[#22362a]">
-                      <span className="text-sm text-white font-bold block mb-1">Deterministic Settlement</span>
-                      <p>Loan creation, repayment, and interest calculation are governed purely by deterministic, versioned credit rules.</p>
-                    </div>
+                  <span className="text-xs font-mono text-purple-300">Safety Boundaries</span>
+                </div>
+                <div className="flex flex-col gap-3 text-xs text-[#9eb5a7] leading-relaxed">
+                  <div className="p-4 rounded-xl bg-[#12092a] border border-[#2d1e40]">
+                    <span className="text-sm text-white font-bold block mb-1.5">Non-Authoritative AI</span>
+                    <p>AI models only monitor and attest. Models have zero direct authority to disburse, seize, or reallocate treasury capital.</p>
+                  </div>
+                  <div className="p-4 rounded-xl bg-[#12092a] border border-[#2d1e40]">
+                    <span className="text-sm text-white font-bold block mb-1.5">Deterministic Settlement</span>
+                    <p>Loan creation, repayment, and interest calculation are governed purely by deterministic, versioned credit rules.</p>
                   </div>
                 </div>
               </div>
@@ -1571,7 +1583,7 @@ export default function FundryxAppPortal({
         {/* TAB 5: CAPITAL MARKETS & LIQUIDITY SWAP                   */}
         {/* ========================================================= */}
         {activeTab === 'markets' && (
-          <div className="flex flex-col gap-10 animate-fade-in">
+          <div className="flex flex-col gap-8 lg:gap-10 animate-fade-in">
             {swapSuccess && (
               <div className="p-5 rounded-2xl bg-gradient-to-r from-emerald-900/60 to-[#12281b] border border-emerald-500/50 text-emerald-200 text-sm font-semibold flex items-center justify-between shadow-lg">
                 <span>✓ Successfully swapped {Number(swapAmount).toLocaleString()} {swapFrom} for {swapTo}! Instant liquidity filled.</span>
@@ -1579,207 +1591,202 @@ export default function FundryxAppPortal({
               </div>
             )}
 
-            {/* Top Market Ticker Bar */}
-            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
-              <div className="p-6 rounded-2xl bg-gradient-to-br from-[#12281c] to-[#0c1811] border border-emerald-500/30 shadow-lg shadow-emerald-950/20">
-                <div className="text-xs font-semibold uppercase tracking-wider text-emerald-400/80 mb-1">FDX / USDC Price</div>
-                <div className="text-3xl font-bold text-white tracking-tight tabular-nums">$ 1.0004</div>
-                <div className="mt-2 text-xs text-emerald-400 font-mono">▲ +0.04% (Pegged)</div>
+            {/* Section Header */}
+            <div className="flex items-center gap-3">
+              <span className="p-2.5 rounded-2xl bg-purple-950 border border-purple-700/50 text-purple-400"><BarChart3 size={20} /></span>
+              <div>
+                <h2 className="text-2xl md:text-3xl font-bold text-white tracking-tight">Capital Markets — Federated Vaults</h2>
+                <p className="text-sm text-[#8fa799] mt-0.5">Live order book, institutional swap facility, and multi-asset liquidity management</p>
+              </div>
+            </div>
+
+            {/* Unified Executive Metric Ribbon */}
+            <div className="rounded-2xl border border-[#203328] bg-[#122018]/90 backdrop-blur-md shadow-lg grid grid-cols-2 lg:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-[#1c2e24] overflow-hidden">
+              <div className="p-5 lg:p-6 flex flex-col justify-between min-h-[140px]">
+                <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-[#8fa799]">
+                  <span>FDX / USDC Price</span>
+                  <DollarSign size={15} className="text-emerald-400 opacity-90" />
+                </div>
+                <div className="metric-value text-2xl lg:text-3xl font-bold text-white tracking-tight tabular-nums my-2">
+                  $&thinsp;1.0004
+                </div>
+                <div className="flex items-center justify-between text-xs pt-2.5 border-t border-[#1c2e24]/70">
+                  <span className="text-[#71877b]">Stable Peg</span>
+                  <span className="badge-emerald">▲ +0.04%</span>
+                </div>
               </div>
 
-              <div className="p-6 rounded-2xl bg-gradient-to-br from-[#10242e] to-[#0a171d] border border-cyan-500/30 shadow-lg shadow-cyan-950/20">
-                <div className="text-xs font-semibold uppercase tracking-wider text-cyan-400/80 mb-1">24h Market Volume</div>
-                <div className="text-3xl font-bold text-cyan-300 tracking-tight tabular-nums">$ 4,820,900</div>
-                <div className="mt-2 text-xs text-cyan-400 font-mono">Zero Slippage Pool</div>
+              <div className="p-5 lg:p-6 flex flex-col justify-between min-h-[140px]">
+                <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-[#8fa799]">
+                  <span>24h Market Volume</span>
+                  <TrendingUp size={15} className="text-teal-400 opacity-90" />
+                </div>
+                <div className="metric-value text-2xl lg:text-3xl font-bold text-teal-300 tracking-tight tabular-nums my-2">
+                  $&thinsp;4.82M
+                </div>
+                <div className="flex items-center justify-between text-xs pt-2.5 border-t border-[#1c2e24]/70">
+                  <span className="text-[#71877b]">Zero Slippage</span>
+                  <span className="badge-cyan">Active Pool</span>
+                </div>
               </div>
 
-              <div className="p-6 rounded-2xl bg-gradient-to-br from-[#292014] to-[#18130b] border border-amber-500/30 shadow-lg shadow-amber-950/20">
-                <div className="text-xs font-semibold uppercase tracking-wider text-amber-400/80 mb-1">Order Book Spread</div>
-                <div className="text-3xl font-bold text-amber-300 tracking-tight tabular-nums">0.06% Spread</div>
-                <div className="mt-2 text-xs text-amber-400 font-mono">Tight Institutional Book</div>
+              <div className="p-5 lg:p-6 flex flex-col justify-between min-h-[140px]">
+                <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-[#8fa799]">
+                  <span>Order Book Spread</span>
+                  <BarChart3 size={15} className="text-amber-400 opacity-90" />
+                </div>
+                <div className="metric-value text-2xl lg:text-3xl font-bold text-amber-300 tracking-tight tabular-nums my-2">
+                  0.06%
+                </div>
+                <div className="flex items-center justify-between text-xs pt-2.5 border-t border-[#1c2e24]/70">
+                  <span className="text-[#71877b]">Market Depth</span>
+                  <span className="badge-amber">Institutional</span>
+                </div>
               </div>
 
-              <div className="p-6 rounded-2xl bg-gradient-to-br from-[#24172e] to-[#140b1b] border border-purple-500/30 shadow-lg shadow-purple-950/20">
-                <div className="text-xs font-semibold uppercase tracking-wider text-purple-400/80 mb-1">Settlement Finality</div>
-                <div className="text-3xl font-bold text-purple-300 tracking-tight tabular-nums">Sub-Second</div>
-                <div className="mt-2 text-xs text-purple-400 font-mono">Deterministic Atomic Swap</div>
+              <div className="p-5 lg:p-6 flex flex-col justify-between min-h-[140px]">
+                <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-[#8fa799]">
+                  <span>Settlement Finality</span>
+                  <Activity size={15} className="text-emerald-400 opacity-90" />
+                </div>
+                <div className="metric-value text-2xl lg:text-3xl font-bold text-emerald-400 tracking-tight tabular-nums my-2">
+                  Sub-Sec
+                </div>
+                <div className="flex items-center justify-between text-xs pt-2.5 border-t border-[#1c2e24]/70">
+                  <span className="text-[#71877b]">Atomic Swaps</span>
+                  <span className="badge-emerald">Deterministic</span>
+                </div>
               </div>
             </div>
 
             {/* Middle Row: Order Book & Instant Liquidity Swap */}
-            <div className="grid lg:grid-cols-12 gap-8 items-stretch">
-              {/* Order Book */}
-              <div className="lg:col-span-7 p-8 md:p-10 rounded-3xl bg-gradient-to-br from-[#15241b] to-[#0f1b13] border border-[#263e30] shadow-xl flex flex-col justify-between">
-                <div>
-                  <div className="flex items-center justify-between pb-6 border-b border-[#203328]">
-                    <div className="flex items-center gap-3">
-                      <span className="p-2 rounded-xl bg-emerald-950/80 border border-emerald-800/40 text-emerald-400">
-                        <BarChart3 size={18} />
-                      </span>
-                      <div>
-                        <h3 className="text-lg font-bold text-white uppercase tracking-wide">Live Capital Order Book</h3>
-                        <p className="text-xs text-[#8fa799] mt-0.5">USDC / FDX Market Depth</p>
-                      </div>
+            <div className="grid lg:grid-cols-12 gap-6 xl:gap-8 items-stretch">
+              {/* Order Book — purple accent */}
+              <div className="lg:col-span-7 p-6 sm:p-8 rounded-2xl bg-gradient-to-br from-[#180f24] to-[#0c1611] border border-[#2d1e40] shadow-xl flex flex-col gap-6">
+                <div className="flex items-center justify-between pb-5 border-b border-[#2d1e40]">
+                  <div className="flex items-center gap-3">
+                    <span className="p-2.5 rounded-xl bg-purple-950/80 border border-purple-800/40 text-purple-400"><BarChart3 size={18} /></span>
+                    <div>
+                      <h3 className="text-lg font-bold text-white uppercase tracking-wide">Live Capital Order Book</h3>
+                      <p className="text-xs text-[#8fa799] mt-0.5">USDC / FDX Market Depth</p>
                     </div>
-                    <span className="font-mono text-emerald-400 text-xs font-semibold px-2.5 py-1 rounded-md bg-emerald-950/70 border border-emerald-800/40">
-                      Spread: 0.0006 (0.06%)
-                    </span>
                   </div>
-
-                  <div className="mt-6 grid grid-cols-2 gap-5">
-                    {/* Bids */}
-                    <div>
-                      <div className="flex justify-between items-center text-xs uppercase text-emerald-400 mb-3 font-bold">
-                        <span>Bid Price</span>
-                        <span>Size (FDX)</span>
-                      </div>
-                      <div className="space-y-1.5 font-mono text-xs">
-                        {orderBookBids.map((bid, i) => (
-                          <div key={i} className="flex justify-between items-center py-2 px-3 rounded-lg bg-emerald-950/30 text-emerald-300 border border-emerald-900/30 tabular-nums">
-                            <span>{bid.price.toFixed(4)}</span>
-                            <span className="font-bold">{bid.size}</span>
-                          </div>
-                        ))}
-                      </div>
+                  <span className="font-mono text-purple-300 text-xs font-semibold px-3 py-1 rounded-full bg-purple-950/70 border border-purple-800/40">Spread: 0.0006 (0.06%)</span>
+                </div>
+                <div className="grid grid-cols-2 gap-5">
+                  <div>
+                    <div className="flex justify-between items-center text-xs uppercase text-emerald-400 mb-3 font-bold">
+                      <span>Bid Price</span><span>Size (FDX)</span>
                     </div>
-
-                    {/* Asks */}
-                    <div>
-                      <div className="flex justify-between items-center text-xs uppercase text-rose-400 mb-3 font-bold">
-                        <span>Ask Price</span>
-                        <span>Size (FDX)</span>
-                      </div>
-                      <div className="space-y-1.5 font-mono text-xs">
-                        {orderBookAsks.map((ask, i) => (
-                          <div key={i} className="flex justify-between items-center py-2 px-3 rounded-lg bg-rose-950/30 text-rose-300 border border-rose-900/30 tabular-nums">
-                            <span>{ask.price.toFixed(4)}</span>
-                            <span className="font-bold">{ask.size}</span>
-                          </div>
-                        ))}
-                      </div>
+                    <div className="space-y-2 font-mono text-xs">
+                      {orderBookBids.map((bid, i) => (
+                        <div key={i} className="flex justify-between items-center py-2 px-3 rounded-lg bg-emerald-950/30 text-emerald-300 border border-emerald-900/40 tabular-nums">
+                          <span>{bid.price.toFixed(4)}</span><span className="font-bold">{bid.size}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="flex justify-between items-center text-xs uppercase text-rose-400 mb-3 font-bold">
+                      <span>Ask Price</span><span>Size (FDX)</span>
+                    </div>
+                    <div className="space-y-2 font-mono text-xs">
+                      {orderBookAsks.map((ask, i) => (
+                        <div key={i} className="flex justify-between items-center py-2 px-3 rounded-lg bg-rose-950/30 text-rose-300 border border-rose-900/40 tabular-nums">
+                          <span>{ask.price.toFixed(4)}</span><span className="font-bold">{ask.size}</span>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 </div>
               </div>
 
-              {/* Instant Liquidity Swap Widget */}
-              <div className="lg:col-span-5 p-8 md:p-10 rounded-3xl bg-gradient-to-br from-[#15241b] to-[#0f1b13] border border-[#263e30] shadow-xl flex flex-col justify-between">
-                <div>
-                  <div className="flex items-center justify-between pb-6 border-b border-[#203328]">
-                    <div className="flex items-center gap-2.5">
-                      <span className="p-1.5 rounded-lg bg-teal-950/80 border border-teal-800/40 text-teal-400">
-                        <RefreshCw size={16} />
-                      </span>
-                      <h3 className="text-lg font-bold text-white uppercase tracking-wide">Instant Liquidity Swap</h3>
-                    </div>
-                    <span className="text-xs font-mono text-teal-300">0.05% Fee</span>
+              {/* Instant Liquidity Swap Widget — teal accent */}
+              <div className="lg:col-span-5 p-6 sm:p-8 rounded-2xl bg-gradient-to-br from-[#0e1e24] to-[#0c1611] border border-[#1c3040] shadow-xl flex flex-col gap-6">
+                <div className="flex items-center justify-between pb-5 border-b border-[#1c3040]">
+                  <div className="flex items-center gap-2.5">
+                    <span className="p-2.5 rounded-xl bg-teal-950/80 border border-teal-800/40 text-teal-400"><RefreshCw size={16} /></span>
+                    <h3 className="text-lg font-bold text-white uppercase tracking-wide">Instant Liquidity Swap</h3>
                   </div>
-
-                  <div className="mt-8 flex flex-col gap-5">
-                    <div>
-                      <label className="text-xs font-semibold uppercase text-[#8fa799] block mb-2">Pay Asset</label>
-                      <div className="flex items-center gap-3">
-                        <input
-                          type="number"
-                          value={swapAmount}
-                          onChange={(e) => setSwapAmount(e.target.value)}
-                          className="flex-1 bg-[#0c1611] border border-[#22362a] rounded-2xl px-5 py-3.5 text-white text-lg font-bold focus:outline-hidden focus:border-emerald-500 tabular-nums"
-                        />
-                        <select
-                          value={swapFrom}
-                          onChange={(e) => setSwapFrom(e.target.value)}
-                          className="bg-[#0c1611] border border-[#22362a] rounded-2xl px-4 py-3.5 text-white text-sm font-bold cursor-pointer"
-                        >
-                          <option>USDC</option>
-                          <option>EURC</option>
-                          <option>FDX</option>
-                        </select>
-                      </div>
+                  <span className="text-xs font-mono text-teal-300 bg-teal-950/70 px-2.5 py-0.5 rounded-full border border-teal-800/50">0.05% Fee</span>
+                </div>
+                <div className="flex flex-col gap-4">
+                  <div className="p-4 rounded-xl bg-[#091520] border border-[#1c3040]">
+                    <label className="text-xs font-semibold uppercase text-[#8fa799] block mb-2">Pay Asset</label>
+                    <div className="flex items-center gap-2.5">
+                      <input type="number" value={swapAmount} onChange={(e) => setSwapAmount(e.target.value)} className="flex-1 bg-[#091520] border border-[#1c3040] rounded-xl px-4 py-3 text-white text-lg font-bold focus:outline-hidden focus:border-teal-500 tabular-nums" />
+                      <select value={swapFrom} onChange={(e) => setSwapFrom(e.target.value)} className="bg-[#091520] border border-[#1c3040] rounded-xl px-3.5 py-3 text-white text-sm font-bold cursor-pointer">
+                        <option>USDC</option><option>EURC</option><option>FDX</option>
+                      </select>
                     </div>
-
-                    <div>
-                      <label className="text-xs font-semibold uppercase text-[#8fa799] block mb-2">Receive Estimate</label>
-                      <div className="flex items-center gap-3">
-                        <div className="flex-1 bg-[#0c1611] border border-[#22362a] rounded-2xl px-5 py-3.5 text-emerald-400 text-lg font-bold tabular-nums">
-                          {(Number(swapAmount) * 0.9995).toFixed(2)}
-                        </div>
-                        <select
-                          value={swapTo}
-                          onChange={(e) => setSwapTo(e.target.value)}
-                          className="bg-[#0c1611] border border-[#22362a] rounded-2xl px-4 py-3.5 text-white text-sm font-bold cursor-pointer"
-                        >
-                          <option>FDX</option>
-                          <option>USDC</option>
-                          <option>EURC</option>
-                        </select>
-                      </div>
+                  </div>
+                  <div className="p-4 rounded-xl bg-[#091520] border border-[#1c3040]">
+                    <label className="text-xs font-semibold uppercase text-[#8fa799] block mb-2">Receive Estimate</label>
+                    <div className="flex items-center gap-2.5">
+                      <div className="flex-1 bg-[#091520] border border-[#1c3040] rounded-xl px-4 py-3 text-teal-400 text-lg font-bold tabular-nums">{(Number(swapAmount) * 0.9995).toFixed(2)}</div>
+                      <select value={swapTo} onChange={(e) => setSwapTo(e.target.value)} className="bg-[#091520] border border-[#1c3040] rounded-xl px-3.5 py-3 text-white text-sm font-bold cursor-pointer">
+                        <option>FDX</option><option>USDC</option><option>EURC</option>
+                      </select>
                     </div>
-
-                    <div className="p-4 rounded-2xl bg-[#0c1611] border border-[#22362a] text-xs flex flex-col gap-2 text-[#8fa799]">
-                      <div className="flex justify-between items-center">
-                        <span>Guaranteed Rate</span>
-                        <span className="text-white font-mono">1 {swapFrom} ≈ 0.9995 {swapTo}</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span>Slippage Tolerance</span>
-                        <span className="text-teal-300 font-mono font-semibold">0.10% (Auto)</span>
-                      </div>
+                  </div>
+                  <div className="p-4 rounded-xl bg-[#091520] border border-[#1c3040] text-xs flex flex-col gap-2 text-[#8fa799]">
+                    <div className="flex justify-between items-center">
+                      <span>Guaranteed Rate</span>
+                      <span className="text-white font-mono">1 {swapFrom} ≈ 0.9995 {swapTo}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span>Slippage Tolerance</span>
+                      <span className="text-teal-300 font-mono font-semibold">0.10% (Auto)</span>
                     </div>
                   </div>
                 </div>
-
-                <button
-                  onClick={handleExecuteSwap}
-                  className="mt-8 w-full py-4 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold uppercase tracking-wider shadow-lg transition cursor-pointer"
-                >
-                  Execute Capital Swap
-                </button>
+                <div className="pt-5 border-t border-[#1c3040]">
+                  <button onClick={handleExecuteSwap} className="w-full py-4 px-6 rounded-xl bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-500 hover:to-cyan-500 text-white text-sm font-bold uppercase tracking-wider shadow-lg hover:shadow-teal-900/50 transition cursor-pointer">
+                    Execute Capital Swap
+                  </button>
+                </div>
               </div>
             </div>
 
-            {/* Bottom: Recent Market Trades Table with Right-Aligned Values */}
-            <div className="p-8 md:p-10 rounded-3xl bg-gradient-to-br from-[#15241b] to-[#0f1b13] border border-[#263e30] shadow-xl">
-              <div className="flex items-center justify-between pb-6 border-b border-[#203328]">
+            {/* Bottom: Recent Market Trades Table — amber accent */}
+            <div className="p-6 sm:p-8 rounded-2xl bg-gradient-to-br from-[#201a0e] to-[#0c1611] border border-[#3a2e1c] shadow-xl">
+              <div className="flex items-center justify-between pb-5 border-b border-[#3a2e1c]">
                 <div className="flex items-center gap-3">
-                  <span className="p-2 rounded-xl bg-teal-950/80 border border-teal-800/40 text-teal-400">
-                    <TrendingUp size={18} />
-                  </span>
+                  <span className="p-2.5 rounded-xl bg-amber-950/80 border border-amber-800/40 text-amber-400"><TrendingUp size={18} /></span>
                   <div>
                     <h3 className="text-lg font-bold text-white uppercase tracking-wide">Recent Executed Market Trades</h3>
                     <p className="text-xs text-[#8fa799] mt-0.5">Live filled market orders across protocol liquidity pairs</p>
                   </div>
                 </div>
-                <span className="text-xs font-mono text-emerald-400">Deterministic Atomic Settlement</span>
+                <span className="text-xs font-mono text-amber-400">Deterministic Atomic Settlement</span>
               </div>
-              <div className="mt-6 overflow-x-auto">
-                <table className="portal-table text-sm">
+              <div className="mt-5 rounded-xl border border-[#3a2e1c] bg-[#140f05]/80 overflow-x-auto">
+                <table className="portal-table">
                   <thead>
-                    <tr className="border-b border-[#1c2c22] text-[#8fa799] text-xs font-semibold uppercase">
-                      <th className="pb-3.5 text-left">Trade ID</th>
-                      <th className="pb-3.5 text-left">Market Pair</th>
-                      <th className="pb-3.5 text-center">Side</th>
-                      <th className="pb-3.5 text-right">Execution Price</th>
-                      <th className="pb-3.5 text-right">Volume</th>
-                      <th className="pb-3.5 text-right">Time</th>
-                      <th className="pb-3.5 text-right font-mono">Settlement Hash</th>
+                    <tr>
+                      <th className="text-left">Trade ID</th>
+                      <th className="text-left">Market Pair</th>
+                      <th className="text-center">Side</th>
+                      <th className="text-right">Execution Price</th>
+                      <th className="text-right">Volume</th>
+                      <th className="text-right">Time</th>
+                      <th className="text-right">Settlement Hash</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-[#1c2c22]">
+                  <tbody>
                     {marketTrades.map((t, idx) => (
-                      <tr key={idx} className="hover:bg-[#1a2d22]/50 transition-colors">
-                        <td className="py-4 font-mono text-xs text-[#8fa799] text-left">{t.id}</td>
-                        <td className="py-4 font-bold text-white text-left">{t.pair}</td>
-                        <td className="py-4 text-center">
+                      <tr key={idx}>
+                        <td className="font-mono text-xs text-[#8fa799] text-left">{t.id}</td>
+                        <td className="font-bold text-white text-left">{t.pair}</td>
+                        <td className="text-center">
                           <span className={`px-2.5 py-0.5 rounded-md text-xs font-semibold inline-block ${
                             t.type === 'Buy' ? 'bg-emerald-950 text-emerald-400 border border-emerald-800/40' : 'bg-rose-950 text-rose-400 border border-rose-800/40'
-                          }`}>
-                            {t.type}
-                          </span>
+                          }`}>{t.type}</span>
                         </td>
-                        <td className="py-4 font-mono text-white text-right tabular-nums">{t.price}</td>
-                        <td className="py-4 font-mono text-[#8fa799] text-right tabular-nums">{t.size}</td>
-                        <td className="py-4 text-[#8fa799] text-right">{t.time}</td>
-                        <td className="py-4 text-right font-mono text-xs text-teal-300">{t.hash}</td>
+                        <td className="font-mono text-white text-right tabular-nums">{t.price}</td>
+                        <td className="font-mono text-[#8fa799] text-right tabular-nums">{t.size}</td>
+                        <td className="text-[#8fa799] text-right">{t.time}</td>
+                        <td className="text-right font-mono text-xs text-amber-300">{t.hash}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -1793,50 +1800,50 @@ export default function FundryxAppPortal({
         {/* TAB 6: LEGAL & TERMS                                      */}
         {/* ========================================================= */}
         {activeTab === 'terms' && (
-          <div className="w-full p-8 md:p-10 rounded-3xl bg-gradient-to-br from-[#15241b] to-[#0f1b13] border border-[#263e30] shadow-xl flex flex-col gap-8 animate-fade-in">
+          <div className="flex flex-col gap-8 lg:gap-10 animate-fade-in">
             <div className="flex items-center gap-3 pb-6 border-b border-[#203328]">
-              <span className="p-2 rounded-xl bg-emerald-950/80 border border-emerald-800/40 text-emerald-400">
-                <FileText size={20} />
-              </span>
+              <span className="p-2.5 rounded-2xl bg-sky-950/80 border border-sky-800/40 text-sky-400"><FileText size={20} /></span>
               <div>
-                <h2 className="text-2xl font-bold text-white uppercase tracking-wide">
-                  Institutional Terms of Service & Compliance
-                </h2>
+                <h2 className="text-2xl md:text-3xl font-bold text-white uppercase tracking-wide">Institutional Terms of Service &amp; Compliance</h2>
                 <p className="text-xs text-[#8fa799] mt-0.5">Deterministic governance and capital pool legal disclosures</p>
               </div>
             </div>
-
-            <div className="grid md:grid-cols-2 gap-6 text-sm text-[#9eb5a7] leading-relaxed">
-              <div className="p-6 rounded-2xl bg-gradient-to-br from-[#12241a] to-[#0b1610] border border-emerald-500/30 flex flex-col justify-between shadow-[0_4px_20px_rgba(16,185,129,0.06)]">
-                <strong className="text-white text-base block mb-1.5 flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
-                  1. Non-Custodial Operation
-                </strong>
-                Fundryx operates as a non-custodial capital protocol. All borrower credit assessments, loan disbursements, and interest settlements are processed according to deterministic, versioned credit policies.
+            <div className="grid md:grid-cols-2 gap-6">
+              <div className="p-7 sm:p-8 rounded-2xl bg-gradient-to-br from-[#132219] to-[#0c1611] border border-emerald-500/30 flex flex-col gap-4 shadow-[0_4px_24px_rgba(16,185,129,0.08)]">
+                <div className="flex items-center gap-3">
+                  <span className="w-10 h-10 rounded-xl bg-emerald-950/80 border border-emerald-800/40 flex items-center justify-center shrink-0">
+                    <span className="w-3 h-3 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.8)]" />
+                  </span>
+                  <strong className="text-white text-base">1. Non-Custodial Operation</strong>
+                </div>
+                <p className="text-sm text-[#8fa799] leading-relaxed">Fundryx operates as a non-custodial capital protocol. All borrower credit assessments, loan disbursements, and interest settlements are processed according to deterministic, versioned credit policies.</p>
               </div>
-
-              <div className="p-6 rounded-2xl bg-gradient-to-br from-[#0e212b] to-[#08151b] border border-cyan-500/30 flex flex-col justify-between shadow-[0_4px_20px_rgba(6,182,212,0.06)]">
-                <strong className="text-white text-base block mb-1.5 flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(6,182,212,0.8)]" />
-                  2. Credit Scoring Disclosures
-                </strong>
-                Repayment history records and deterministic credit scores are mathematically derived without subjective human intervention or third-party marketing brokers.
+              <div className="p-7 sm:p-8 rounded-2xl bg-gradient-to-br from-[#0e1e24] to-[#0c1611] border border-cyan-500/30 flex flex-col gap-4 shadow-[0_4px_24px_rgba(6,182,212,0.08)]">
+                <div className="flex items-center gap-3">
+                  <span className="w-10 h-10 rounded-xl bg-cyan-950/80 border border-cyan-800/40 flex items-center justify-center shrink-0">
+                    <span className="w-3 h-3 rounded-full bg-cyan-400 shadow-[0_0_10px_rgba(6,182,212,0.8)]" />
+                  </span>
+                  <strong className="text-white text-base">2. Credit Scoring Disclosures</strong>
+                </div>
+                <p className="text-sm text-[#8fa799] leading-relaxed">Repayment history records and deterministic credit scores are mathematically derived without subjective human intervention or third-party marketing brokers.</p>
               </div>
-
-              <div className="p-6 rounded-2xl bg-gradient-to-br from-[#241c12] to-[#15100a] border border-amber-500/30 flex flex-col justify-between shadow-[0_4px_20px_rgba(245,158,11,0.06)]">
-                <strong className="text-white text-base block mb-1.5 flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-amber-400 shadow-[0_0_8px_rgba(245,158,11,0.8)]" />
-                  3. Risk Telemetry
-                </strong>
-                AI Risk Telemetry operates in advisory shadow mode. It provides early warning notifications to risk committees but has no autonomous transfer authority over treasury funds.
+              <div className="p-7 sm:p-8 rounded-2xl bg-gradient-to-br from-[#201a0e] to-[#0c1611] border border-amber-500/30 flex flex-col gap-4 shadow-[0_4px_24px_rgba(245,158,11,0.08)]">
+                <div className="flex items-center gap-3">
+                  <span className="w-10 h-10 rounded-xl bg-amber-950/80 border border-amber-800/40 flex items-center justify-center shrink-0">
+                    <span className="w-3 h-3 rounded-full bg-amber-400 shadow-[0_0_10px_rgba(245,158,11,0.8)]" />
+                  </span>
+                  <strong className="text-white text-base">3. Risk Telemetry</strong>
+                </div>
+                <p className="text-sm text-[#8fa799] leading-relaxed">AI Risk Telemetry operates in advisory shadow mode. It provides early warning notifications to risk committees but has no autonomous transfer authority over treasury funds.</p>
               </div>
-
-              <div className="p-6 rounded-2xl bg-gradient-to-br from-[#20142b] to-[#130b1b] border border-purple-500/30 flex flex-col justify-between shadow-[0_4px_20px_rgba(168,85,247,0.06)]">
-                <strong className="text-white text-base block mb-1.5 flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-purple-400 shadow-[0_0_8px_rgba(168,85,247,0.8)]" />
-                  4. Data Privacy & Zero-Knowledge Verification
-                </strong>
-                Fundryx does not harvest, distribute, or broker confidential borrower data. Cryptographic attestations verify eligibility while preserving borrower privacy.
+              <div className="p-7 sm:p-8 rounded-2xl bg-gradient-to-br from-[#180f24] to-[#0c1611] border border-purple-500/30 flex flex-col gap-4 shadow-[0_4px_24px_rgba(168,85,247,0.08)]">
+                <div className="flex items-center gap-3">
+                  <span className="w-10 h-10 rounded-xl bg-purple-950/80 border border-purple-800/40 flex items-center justify-center shrink-0">
+                    <span className="w-3 h-3 rounded-full bg-purple-400 shadow-[0_0_10px_rgba(168,85,247,0.8)]" />
+                  </span>
+                  <strong className="text-white text-base">4. Data Privacy &amp; Zero-Knowledge Verification</strong>
+                </div>
+                <p className="text-sm text-[#8fa799] leading-relaxed">Fundryx does not harvest, distribute, or broker confidential borrower data. Cryptographic attestations verify eligibility while preserving borrower privacy.</p>
               </div>
             </div>
           </div>
@@ -1863,3 +1870,4 @@ export default function FundryxAppPortal({
   </div>
 );
 }
+
