@@ -1,7 +1,7 @@
 import React from 'react';
-import { X, ShieldCheck } from 'lucide-react';
+import { X } from 'lucide-react';
 
-const MetaMaskIcon = ({ size = 48 }) => (
+const MetaMaskIcon = ({ size = 56 }) => (
   <svg width={size} height={size} viewBox="0 0 318 318" fill="none">
     <path d="M274.1 35.5L174.6 109.4L193 65.8L274.1 35.5Z" fill="#E17726" stroke="#E17726" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
     <path d="M43.9 35.5L142.3 109.4L124.9 65.8L43.9 35.5Z" fill="#E27625" stroke="#E27625" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
@@ -21,17 +21,16 @@ const MetaMaskIcon = ({ size = 48 }) => (
   </svg>
 );
 
-const CoinbaseIcon = ({ size = 48 }) => (
+const CoinbaseIcon = ({ size = 56 }) => (
   <svg width={size} height={size} viewBox="0 0 100 100" fill="none">
-    <circle cx="50" cy="50" r="50" fill="#0052FF" />
-    <rect x="32" y="32" width="36" height="36" rx="8" fill="white" />
-    <rect x="42" y="42" width="16" height="16" rx="3.5" fill="#0052FF" />
+    <rect width="100" height="100" rx="22" fill="#0052FF" />
+    <path fillRule="evenodd" clipRule="evenodd" d="M50 20C33.4315 20 20 33.4315 20 50C20 66.5685 33.4315 80 50 80C66.5685 80 80 66.5685 80 50C80 33.4315 66.5685 20 50 20ZM42.5 38.5C40.2909 38.5 38.5 40.2909 38.5 42.5V57.5C38.5 59.7091 40.2909 61.5 42.5 61.5H57.5C59.7091 61.5 61.5 59.7091 61.5 57.5V42.5C61.5 40.2909 59.7091 38.5 57.5 38.5H42.5Z" fill="white"/>
   </svg>
 );
 
-const WalletConnectIcon = ({ size = 48 }) => (
+const WalletConnectIcon = ({ size = 56 }) => (
   <svg width={size} height={size} viewBox="0 0 100 100" fill="none">
-    <circle cx="50" cy="50" r="50" fill="#3B99FC" />
+    <rect width="100" height="100" rx="22" fill="#3B99FC" />
     <path
       d="M28 39C40.15 27 59.85 27 72 39L74.4 41.4C75.2 42.2 75.2 43.4 74.4 44.2L68.8 49.8C68.4 50.2 67.8 50.2 67.4 49.8L63.8 46.2C56.2 38.6 43.8 38.6 36.2 46.2L32.4 50C32 50.4 31.4 50.4 31 50L25.4 44.4C24.6 43.6 24.6 42.4 25.4 41.6L28 39ZM79.6 51.4L84.4 56.2C85.2 57 85.2 58.2 84.4 59L63.8 79.6C63 80.4 61.8 80.4 61 79.6L46.8 65.4C46.4 65 45.8 65 45.4 65.4L32.2 78.6C31.4 79.4 30.2 79.4 29.4 78.6L8.8 58C8 57.2 8 56 8.8 55.2L13.6 50.4C14.4 49.6 15.6 49.6 16.4 50.4L29.8 63.8C30.2 64.2 30.8 64.2 31.2 63.8L44.4 50.6C45.2 49.8 46.4 49.8 47.2 50.6L60.4 63.8C60.8 64.2 61.4 64.2 61.8 63.8L76.8 51.4C77.6 50.6 78.8 50.6 79.6 51.4Z"
       fill="white"
@@ -39,15 +38,15 @@ const WalletConnectIcon = ({ size = 48 }) => (
   </svg>
 );
 
-const PhantomIcon = ({ size = 48 }) => (
+const PhantomIcon = ({ size = 56 }) => (
   <svg width={size} height={size} viewBox="0 0 100 100" fill="none">
-    <circle cx="50" cy="50" r="50" fill="#AB9FF2" />
+    <rect width="100" height="100" rx="22" fill="#534BAE" />
     <path
-      d="M72 50C72 61.0457 63.0457 70 52 70C47.95 70 44.2 68.75 41.1 66.6L33 70L34.7 61.8C31.6 58.4 29.7 54 29.7 49.3C29.7 38.2543 38.6543 29.3 49.7 29.3C62.0163 29.3 72 38.5817 72 50Z"
-      fill="#534BAE"
+      d="M74 50C74 61.05 65.05 70 54 70C49.95 70 46.2 68.75 43.1 66.6L35 70L36.7 61.8C33.6 58.4 31.7 54 31.7 49.3C31.7 38.25 40.65 29.3 51.7 29.3C64.02 29.3 74 38.58 74 50Z"
+      fill="#AB9FF2"
     />
-    <circle cx="44" cy="48" r="4.5" fill="white" />
-    <circle cx="56" cy="48" r="4.5" fill="white" />
+    <circle cx="46" cy="48" r="4.5" fill="white" />
+    <circle cx="58" cy="48" r="4.5" fill="white" />
   </svg>
 );
 
@@ -58,42 +57,34 @@ export default function WalletModal({ isOpen, onClose, onSelectWallet }) {
     {
       id: 'metamask',
       name: 'MetaMask',
-      icon: <MetaMaskIcon size={52} />,
+      icon: <MetaMaskIcon size={60} />,
       hoverBorder: 'hover:border-[#E2761B]',
       hoverBg: 'hover:bg-[#E2761B]/10',
       glowColor: 'group-hover:shadow-[0_0_24px_rgba(226,118,27,0.3)]',
-      tag: 'Popular',
-      tagColor: 'bg-[#E2761B]/20 text-[#F6851B] border-[#E2761B]/40',
     },
     {
       id: 'coinbase',
       name: 'Coinbase',
-      icon: <CoinbaseIcon size={52} />,
+      icon: <CoinbaseIcon size={60} />,
       hoverBorder: 'hover:border-[#0052FF]',
       hoverBg: 'hover:bg-[#0052FF]/10',
       glowColor: 'group-hover:shadow-[0_0_24px_rgba(0,82,255,0.3)]',
-      tag: 'EVM',
-      tagColor: 'bg-[#0052FF]/20 text-[#3B99FC] border-[#0052FF]/40',
     },
     {
       id: 'walletconnect',
       name: 'WalletConnect',
-      icon: <WalletConnectIcon size={52} />,
+      icon: <WalletConnectIcon size={60} />,
       hoverBorder: 'hover:border-[#3B99FC]',
       hoverBg: 'hover:bg-[#3B99FC]/10',
       glowColor: 'group-hover:shadow-[0_0_24px_rgba(59,153,252,0.3)]',
-      tag: 'QR Mobile',
-      tagColor: 'bg-[#3B99FC]/20 text-[#60A5FA] border-[#3B99FC]/40',
     },
     {
       id: 'phantom',
       name: 'Phantom',
-      icon: <PhantomIcon size={52} />,
+      icon: <PhantomIcon size={60} />,
       hoverBorder: 'hover:border-[#AB9FF2]',
       hoverBg: 'hover:bg-[#AB9FF2]/10',
       glowColor: 'group-hover:shadow-[0_0_24px_rgba(171,159,242,0.3)]',
-      tag: 'Multi-Chain',
-      tagColor: 'bg-[#AB9FF2]/20 text-[#C4B5FD] border-[#AB9FF2]/40',
     },
   ];
 
@@ -104,24 +95,17 @@ export default function WalletModal({ isOpen, onClose, onSelectWallet }) {
         <div className="absolute -top-24 -right-24 w-52 h-52 bg-emerald-500/15 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute -bottom-24 -left-24 w-52 h-52 bg-[#0052FF]/10 rounded-full blur-3xl pointer-events-none" />
 
-        {/* Header with Fundryx Brand Logo */}
+        {/* Header with Fundryx Brand Emblem Only (No text, No Polygon Amoy) */}
         <div className="flex items-center justify-between pb-5 border-b border-[#1b2f23]">
           <div className="flex items-center gap-3">
-            <div className="h-10 px-2.5 py-1.5 rounded-xl bg-[#142319] border border-[#233c2c] flex items-center justify-center shadow-inner">
-              <img
-                src="/fundryx-logo.png"
-                alt="Fundryx"
-                className="h-6 w-auto object-contain"
-              />
+            <div className="w-10 h-10 rounded-xl bg-[#142319] border border-[#233c2c] flex items-center justify-center shadow-inner text-emerald-400">
+              <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current" aria-hidden="true">
+                <path d="M12 2a1 1 0 0 1 1 1v6.2l4.4-4.4a1 1 0 1 1 1.4 1.4L14.4 10.6H21a1 1 0 1 1 0 2h-6.6l4.4 4.4a1 1 0 1 1-1.4 1.4L13 14v6.2a1 1 0 1 1-2 0V14l-4.4 4.4a1 1 0 1 1-1.4-1.4l4.4-4.4H3a1 1 0 1 1 0-2h6.6L5.2 6.2a1 1 0 1 1 1.4-1.4L11 9.2V3a1 1 0 0 1 1-1z" />
+              </svg>
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-base sm:text-lg font-bold text-white tracking-tight">Connect Wallet</h2>
-                <span className="text-[10px] uppercase font-mono px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-                  Polygon Amoy
-                </span>
-              </div>
-              <p className="text-xs text-[#7e9988] mt-0.5">Select your institutional Web3 provider</p>
+              <h2 className="text-base sm:text-lg font-bold text-white tracking-tight">Connect Wallet</h2>
+              <p className="text-xs text-[#7e9988] mt-0.5">Select your institutional web provider</p>
             </div>
           </div>
 
@@ -134,23 +118,14 @@ export default function WalletModal({ isOpen, onClose, onSelectWallet }) {
           </button>
         </div>
 
-        {/* 2x2 Grid of Big Wallet Tiles */}
+        {/* 2x2 Grid of Big Wallet Tiles (Original logos, No descriptions) */}
         <div className="grid grid-cols-2 gap-3.5 sm:gap-4 my-6">
           {walletOptions.map((w) => (
             <button
               key={w.id}
               onClick={() => onSelectWallet(w.id)}
-              className={`group relative flex flex-col items-center justify-center p-5 sm:p-6 rounded-2xl bg-[#111c15] border border-[#213829] ${w.hoverBorder} ${w.hoverBg} transition-all duration-200 cursor-pointer text-center hover:-translate-y-1 hover:scale-[1.02] shadow-md ${w.glowColor}`}
+              className={`group relative flex flex-col items-center justify-center p-6 sm:p-7 rounded-2xl bg-[#111c15] border border-[#213829] ${w.hoverBorder} ${w.hoverBg} transition-all duration-200 cursor-pointer text-center hover:-translate-y-1 hover:scale-[1.02] shadow-md ${w.glowColor}`}
             >
-              {/* Optional tag badge */}
-              {w.tag && (
-                <span
-                  className={`absolute top-2.5 right-2.5 text-[10px] font-medium uppercase px-2 py-0.5 rounded-full border ${w.tagColor}`}
-                >
-                  {w.tag}
-                </span>
-              )}
-
               {/* Big authentic official icon */}
               <div className="mb-3.5 transform group-hover:scale-110 transition-transform duration-200">
                 {w.icon}
@@ -169,13 +144,9 @@ export default function WalletModal({ isOpen, onClose, onSelectWallet }) {
           ))}
         </div>
 
-        {/* Security Footer Note */}
-        <div className="pt-3.5 border-t border-[#1b2f23] flex items-center justify-between text-[11px] text-[#6d8475]">
-          <span className="flex items-center gap-1.5 font-medium">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-            <span>Non-custodial connection</span>
-          </span>
-          <span className="font-mono text-[#526659]">Chain ID: 80002</span>
+        {/* Footer Note */}
+        <div className="pt-3.5 border-t border-[#1b2f23] flex items-center justify-center text-xs text-[#7e9988]">
+          <span>Select your wallet</span>
         </div>
       </div>
     </div>

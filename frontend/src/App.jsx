@@ -43,7 +43,7 @@ export default function App() {
           }));
         }
       })
-      .catch((e) => console.log('Backend sync offline, using onchain Amoy provider:', e.message));
+      .catch((e) => console.log('Backend sync offline, using onchain provider:', e.message));
   }, []);
 
   // Initialize Lenis Smooth Scrolling for Landing View
@@ -72,11 +72,19 @@ export default function App() {
     };
   }, [currentView]);
 
+  // Track wallet ref to prevent race condition during navigation
+  const walletRef = React.useRef(wallet);
+  useEffect(() => {
+    walletRef.current = wallet;
+  }, [wallet]);
+
   // Connect Wallet handler
   const handleConnectWallet = async (walletType = 'metamask') => {
     try {
       const conn = await connectWallet(walletType);
+      walletRef.current = conn;
       setWallet(conn);
+      setIsWalletModalOpen(false);
       fetchLivePoolData(conn.provider);
       setCurrentView('app');
       window.location.hash = '#app';
@@ -94,14 +102,16 @@ export default function App() {
   };
 
   const handleDisconnect = () => {
-    setWallet({
+    const emptyWallet = {
       address: null,
       signer: null,
       provider: null,
       balance: '0',
       chainId: null,
       isDemo: false,
-    });
+    };
+    walletRef.current = emptyWallet;
+    setWallet(emptyWallet);
     setCurrentView('landing');
     window.location.hash = '';
   };
@@ -137,9 +147,9 @@ export default function App() {
       if (hash === '#wallet-login' || hash === '#login' || hash.includes('choose-crypto-wallet')) {
         setCurrentView('wallet-login');
       } else if (hash.startsWith('#app') || hash === '#borrow' || hash === '#lending' || hash === '#credit' || hash === '#risk') {
-        if (!wallet.address) {
+        const activeAddr = walletRef.current?.address;
+        if (!activeAddr) {
           setCurrentView('landing');
-          setIsWalletModalOpen(true);
         } else {
           setCurrentView('app');
           if (hash.includes('lend') || hash.includes('borrow')) {
@@ -164,7 +174,7 @@ export default function App() {
     handleHash();
     window.addEventListener('hashchange', handleHash);
     return () => window.removeEventListener('hashchange', handleHash);
-  }, [wallet.address]);
+  }, []);
 
   const openAppTab = (tabName) => {
     if (!wallet.address) {

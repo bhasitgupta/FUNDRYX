@@ -65,7 +65,7 @@ export default function Hero({ wallet, poolStats, onExplore }) {
               <path d="M10 3L4.5 8.5 2 6" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </span>
-          <span className="text-[#111614] font-semibold font-title tracking-wider text-[11px]">Polygon Amoy Smart Contracts</span>
+          <span className="text-[#111614] font-semibold font-title tracking-wider text-[11px]">Institutional Smart Contracts</span>
         </div>
 
         {/* Hero Headline: Proportional, Elegant Didone Serif */}
@@ -178,7 +178,7 @@ export default function Hero({ wallet, poolStats, onExplore }) {
                 <span>▼</span>
               </span>
             </div>
-            <div className="text-[9px] text-[#698072] mb-1.5 font-mono">Polygon Amoy Borrows</div>
+            <div className="text-[9px] text-[#698072] mb-1.5 font-mono">Institutional Borrows</div>
 
             <div className="text-base font-title font-bold tracking-tight text-white mb-1.5">
               $ {poolStats.totalBorrowed ? poolStats.totalBorrowed.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '48,210.40'}

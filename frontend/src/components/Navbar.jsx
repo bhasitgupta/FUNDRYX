@@ -105,7 +105,7 @@ export default function Navbar({ wallet, onConnect, onDisconnect, activeTab, set
             onClick={() => { setActiveTab('contracts'); setMobileMenuOpen(false); }}
             className="text-left py-1 text-[#111614] hover:text-emerald-700 font-medium"
           >
-            Amoy Contract Transparency
+            Institutional Contract Transparency
           </button>
         </div>
       )}

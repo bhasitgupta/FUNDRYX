@@ -75,7 +75,7 @@ export default function ContractsTransparency() {
           Verified Onchain Deployment
         </h2>
         <p className="font-body text-sm text-[#9da59f] mt-2">
-          Deployed on Polygon Amoy Testnet (Chain ID: 80002). Every transaction, event, and credit record is immutable and publicly verifiable.
+          Deployed on institutional smart contracts. Every transaction, event, and credit record is immutable and publicly verifiable.
         </p>
       </div>
 

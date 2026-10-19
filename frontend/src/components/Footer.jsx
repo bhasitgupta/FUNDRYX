@@ -49,7 +49,7 @@ export default function Footer({ onAction }) {
               <span className="text-sm font-semibold tracking-tight text-white font-title">fundryx.</span>
             </div>
             <p className="font-body text-xs text-[#718579] max-w-xs leading-relaxed">
-              Bank-grade risk scoring. SOC 2 Type II compliant on Polygon Amoy.
+              Bank-grade risk scoring. SOC 2 Type II compliant onchain settlement.
             </p>
           </div>
 
@@ -84,7 +84,7 @@ export default function Footer({ onAction }) {
         {/* Copyright subtext */}
         <div className="w-full mt-12 pt-6 flex flex-col md:flex-row items-center justify-between text-[11px] text-[#55695d] font-body">
           <span>© 2026 Fundryx Protocol. All rights reserved.</span>
-          <span className="mt-2 md:mt-0 font-mono">Chain ID: 80002 (Polygon Amoy)</span>
+          <span className="mt-2 md:mt-0 font-mono">Institutional EVM Settlement</span>
         </div>
       </div>
     </footer>

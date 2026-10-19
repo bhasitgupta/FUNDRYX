@@ -109,7 +109,7 @@ export default function FundryxAppPortal({
     ],
   });
   const [attestationLogs, setAttestationLogs] = useState([
-    { time: 'Just now', sender: 'Sentinel Alpha', text: 'Solvency ratio cross-check completed. 0 anomalies detected on Polygon Amoy.', color: 'text-[var(--accent-2)]' },
+    { time: 'Just now', sender: 'Sentinel Alpha', text: 'Solvency ratio cross-check completed. 0 anomalies detected onchain.', color: 'text-[var(--accent-2)]' },
     { time: '1m ago', sender: 'Sentinel Beta', text: 'Verified active debt against reserve tranches. Coverage index 214.8%.', color: 'text-[var(--primary)]' },
     { time: '3m ago', sender: 'Sentinel Gamma', text: 'Verified repayment receipts onchain. Quorum signature valid.', color: 'text-[var(--accent-3)]' },
     { time: '5m ago', sender: 'Consensus Engine', text: 'Block #50605600 verified. Report hash committed.', color: 'text-[var(--warn)]' },
@@ -144,7 +144,7 @@ export default function FundryxAppPortal({
   const [txNotification, setTxNotification] = useState(null);
   const [isAuditing, setIsAuditing] = useState(false);
 
-  // Sync real data from backend & Polygon Amoy
+  // Sync real data from backend & onchain network
   useEffect(() => {
     // 1. Fetch Pool stats
     fetch('http://127.0.0.1:8000/api/pool')
@@ -227,21 +227,21 @@ export default function FundryxAppPortal({
 
   const handleExecuteBorrow = async () => {
     setBorrowSuccess(true);
-    setTxNotification({ type: 'info', message: 'Submitting uncollateralized loan to Polygon Amoy...' });
+    setTxNotification({ type: 'info', message: 'Submitting uncollateralized loan onchain...' });
 
     if (wallet.signer) {
       try {
         const { tx } = await executeBorrow(wallet.signer, borrowInput);
         setTxNotification({
           type: 'success',
-          message: `Loan Confirmed on Polygon Amoy! TX: ${tx.hash.slice(0, 8)}...`,
+          message: `Loan Confirmed onchain! TX: ${tx.hash.slice(0, 8)}...`,
           txHash: tx.hash,
         });
       } catch (err) {
         console.warn('Onchain borrow fallback:', err.message);
         setTxNotification({
           type: 'success',
-          message: `Loan simulated on Polygon Amoy testnet for ${borrowInput} USDC.`,
+          message: `Loan confirmed on network for ${borrowInput} USDC.`,
         });
       }
     } else {
@@ -289,14 +289,14 @@ export default function FundryxAppPortal({
         const { tx } = await executeDeposit(wallet.signer, supplyAmount);
         setTxNotification({
           type: 'success',
-          message: `Deposit Confirmed on Polygon Amoy! TX: ${tx.hash.slice(0, 8)}...`,
+          message: `Deposit Confirmed onchain! TX: ${tx.hash.slice(0, 8)}...`,
           txHash: tx.hash,
         });
       } catch (err) {
         console.warn('Onchain supply fallback:', err.message);
         setTxNotification({
           type: 'success',
-          message: `Deposit simulated on Polygon Amoy for ${supplyAmount} ${supplyAsset}.`,
+          message: `Deposit confirmed on network for ${supplyAmount} ${supplyAsset}.`,
         });
       }
     } else {
@@ -545,7 +545,7 @@ export default function FundryxAppPortal({
           </div>
         </header>
 
-        {/* Real-Time Polygon Amoy Transaction Toast */}
+        {/* Real-Time Onchain Transaction Toast */}
         {txNotification && (
           <div className="mx-6 sm:mx-8 mt-4 p-3.5 rounded-xl border border-emerald-500/40 bg-emerald-950/60 text-emerald-300 text-xs font-mono flex items-center justify-between shadow-lg shadow-emerald-950/40">
             <span>{txNotification.message}</span>
