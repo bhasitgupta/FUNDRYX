@@ -370,7 +370,7 @@ export default function FundryxAppPortal({
 
               {/* Row 1: 3 Summary Cards (Equal Width) */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="portal-card">
+                <div className="portal-card portal-card-top-primary portal-sheen-primary">
                   <div className="portal-card-header">
                     <span className="portal-label">Total Net Worth</span>
                     <span className="portal-badge portal-badge-primary">QTD</span>
@@ -382,7 +382,7 @@ export default function FundryxAppPortal({
                   </div>
                 </div>
 
-                <div className="portal-card">
+                <div className="portal-card portal-card-top-amber portal-sheen-amber">
                   <div className="portal-card-header">
                     <span className="portal-label">Active Credit Line</span>
                     <span className="portal-badge portal-badge-accent">Prime</span>
@@ -393,7 +393,7 @@ export default function FundryxAppPortal({
                   </div>
                 </div>
 
-                <div className="portal-card">
+                <div className="portal-card portal-card-top-cyan">
                   <div className="portal-card-header">
                     <span className="portal-label">Current Borrowed</span>
                     <span className="portal-badge portal-badge-neutral">2 Active</span>
@@ -464,42 +464,45 @@ export default function FundryxAppPortal({
                 </div>
 
                 {/* AI Risk Sentinel Card */}
-                <div className="portal-card flex flex-col justify-between">
+                <div className="portal-card portal-card-top-cyan portal-sheen-cyan flex flex-col justify-between relative">
+                  <div className="portal-scanner-line" />
                   <div>
                     <div className="portal-card-header">
                       <h2 className="portal-card-title">AI Risk Sentinel</h2>
-                      <span className="portal-badge portal-badge-primary">Live Guard</span>
+                      <span className="portal-badge portal-badge-cyan">
+                        <span className="pulse-dot-cyan shrink-0" /> Live Guard
+                      </span>
                     </div>
                     <div className="flex flex-col gap-3">
-                      <div className="p-3.5 rounded-xl bg-[var(--surface-2)] border border-[var(--border)]">
+                      <div className="p-4 rounded-xl bg-[var(--surface-2)] border border-[var(--border)]">
                         <div className="flex items-center justify-between text-xs mb-1">
                           <span className="portal-label">Liquidity Drain Index</span>
-                          <span className="font-mono font-bold text-[var(--primary)]">0.02%</span>
+                          <span className="font-mono font-bold text-[var(--accent-2)]">0.02%</span>
                         </div>
                         <div className="flex items-center gap-2 text-xs text-[var(--text-muted)]">
-                          <span className="w-1.5 h-1.5 rounded-full bg-[var(--primary)] shrink-0" />
+                          <span className="pulse-dot-cyan shrink-0" />
                           <span>Optimal · No anomalous outflow</span>
                         </div>
                       </div>
 
-                      <div className="p-3.5 rounded-xl bg-[var(--surface-2)] border border-[var(--border)]">
+                      <div className="p-4 rounded-xl bg-[var(--surface-2)] border border-[var(--border)]">
                         <div className="flex items-center justify-between text-xs mb-1">
                           <span className="portal-label">Velocity Sensor</span>
                           <span className="font-bold text-white">Conforming</span>
                         </div>
                         <div className="flex items-center gap-2 text-xs text-[var(--text-muted)]">
-                          <span className="w-1.5 h-1.5 rounded-full bg-[var(--primary)] shrink-0" />
+                          <span className="pulse-dot-emerald shrink-0" />
                           <span>Repayment pacing normal</span>
                         </div>
                       </div>
 
-                      <div className="p-3.5 rounded-xl bg-[var(--surface-2)] border border-[var(--border)]">
+                      <div className="p-4 rounded-xl bg-[var(--surface-2)] border border-[var(--border)]">
                         <div className="flex items-center justify-between text-xs mb-1">
                           <span className="portal-label">Quorum Consensus</span>
-                          <span className="font-mono font-bold text-[var(--accent)]">3/3 Nodes</span>
+                          <span className="font-mono font-bold text-[var(--warn)]">3/3 Nodes</span>
                         </div>
                         <div className="flex items-center gap-2 text-xs text-[var(--text-muted)]">
-                          <span className="w-1.5 h-1.5 rounded-full bg-[var(--primary)] shrink-0" />
+                          <span className="pulse-dot-amber shrink-0" />
                           <span>100% Solvency verified</span>
                         </div>
                       </div>
@@ -508,7 +511,7 @@ export default function FundryxAppPortal({
                   <div className="mt-4 pt-4 border-t border-[var(--border)]">
                     <button
                       onClick={() => setActiveTab('risk')}
-                      className="portal-btn-secondary w-full text-xs"
+                      className="portal-btn-cyan w-full text-xs"
                     >
                       Open Risk Telemetry
                     </button>
@@ -524,15 +527,15 @@ export default function FundryxAppPortal({
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                   {[
-                    { name: 'USDC Vault', amount: '$912,400', apy: '8.20% APY', alloc: 48 },
-                    { name: 'EURC Vault', amount: '€228,900', apy: '7.10% APY', alloc: 22 },
-                    { name: 'USD Liquid', amount: '$540,000', apy: '6.50% APY', alloc: 18 },
-                    { name: 'FDX Native', amount: '9,820,000', apy: '9.40% APY', alloc: 12 },
+                    { name: 'USDC Vault', amount: '$912,400', apy: '8.20% APY', alloc: 48, topClass: 'portal-card-top-primary', badgeClass: 'portal-badge-primary', barColor: 'bg-[var(--primary)]' },
+                    { name: 'EURC Vault', amount: '€228,900', apy: '7.10% APY', alloc: 22, topClass: 'portal-card-top-cyan', badgeClass: 'portal-badge-cyan', barColor: 'bg-[var(--accent-2)]' },
+                    { name: 'USD Liquid', amount: '$540,000', apy: '6.50% APY', alloc: 18, topClass: 'portal-card-top-amber', badgeClass: 'portal-badge-accent', barColor: 'bg-[var(--warn)]' },
+                    { name: 'FDX Native', amount: '9,820,000', apy: '9.40% APY', alloc: 12, topClass: 'portal-card-top-purple', badgeClass: 'portal-badge-purple', barColor: 'bg-[var(--accent-3)]' },
                   ].map((vault, i) => (
-                    <div key={i} className="portal-card">
+                    <div key={i} className={`portal-card ${vault.topClass}`}>
                       <div className="portal-card-header">
                         <span className="text-sm font-semibold text-white">{vault.name}</span>
-                        <span className="portal-badge portal-badge-primary">{vault.apy}</span>
+                        <span className={`portal-badge ${vault.badgeClass}`}>{vault.apy}</span>
                       </div>
                       <div className="portal-stat-num text-white mb-4">{vault.amount}</div>
                       <div className="flex justify-between text-xs text-[var(--text-muted)] mb-1.5">
@@ -540,7 +543,7 @@ export default function FundryxAppPortal({
                         <span className="font-mono font-semibold text-white">{vault.alloc}%</span>
                       </div>
                       <div className="w-full h-1.5 bg-[var(--surface-2)] rounded-full overflow-hidden">
-                        <div className="h-full bg-[var(--primary)] rounded-full" style={{ width: `${vault.alloc}%` }} />
+                        <div className={`h-full ${vault.barColor} rounded-full`} style={{ width: `${vault.alloc}%` }} />
                       </div>
                     </div>
                   ))}
@@ -560,12 +563,14 @@ export default function FundryxAppPortal({
                         <span className={`portal-badge shrink-0 ${
                           ev.type === 'Repayment' ? 'portal-badge-primary' :
                           ev.type === 'Disbursement' ? 'portal-badge-accent' :
-                          ev.type === 'Yield Compound' ? 'portal-badge-primary' :
+                          ev.type === 'Yield Compound' ? 'portal-badge-yield' :
+                          ev.type === 'Risk Consensus' ? 'portal-badge-cyan' :
+                          ev.type === 'Capital Supply' ? 'portal-badge-purple' :
                           'portal-badge-neutral'
                         }`}>
                           {ev.type}
                         </span>
-                        <span className="font-mono text-xs text-[var(--text-muted)] truncate">{ev.borrower}</span>
+                        <span className="font-mono text-xs text-[var(--text-muted)] truncate max-w-[140px]">{ev.borrower}</span>
                         <span className="text-xs text-[var(--text-dim)] font-mono hidden md:inline">({ev.score})</span>
                       </div>
                       <div className="flex items-center gap-4 shrink-0">
@@ -591,7 +596,7 @@ export default function FundryxAppPortal({
 
               {/* Row 1: 4 Stat Cards */}
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
-                <div className="portal-card">
+                <div className="portal-card portal-card-top-primary">
                   <div className="portal-card-header">
                     <span className="portal-label">Available Liquidity</span>
                     <span className="portal-badge portal-badge-primary">Buffer</span>
@@ -600,7 +605,7 @@ export default function FundryxAppPortal({
                   <div className="text-xs text-[var(--text-muted)] mt-3">Solvency reserve 100%</div>
                 </div>
 
-                <div className="portal-card">
+                <div className="portal-card portal-card-top-cyan">
                   <div className="portal-card-header">
                     <span className="portal-label">Active Borrow Volume</span>
                     <span className="portal-badge portal-badge-neutral">12 Repaid</span>
@@ -609,7 +614,7 @@ export default function FundryxAppPortal({
                   <div className="text-xs text-[var(--text-muted)] mt-3">100% verified settlement</div>
                 </div>
 
-                <div className="portal-card">
+                <div className="portal-card portal-card-top-amber">
                   <div className="portal-card-header">
                     <span className="portal-label">Prime Borrow Rate</span>
                     <span className="portal-badge portal-badge-accent">Fixed</span>
@@ -618,12 +623,12 @@ export default function FundryxAppPortal({
                   <div className="text-xs text-[var(--text-muted)] mt-3">Tier 1 Prime rate curve</div>
                 </div>
 
-                <div className="portal-card">
+                <div className="portal-card portal-card-top-yield portal-sheen-yield">
                   <div className="portal-card-header">
                     <span className="portal-label">Weighted Supply APY</span>
-                    <span className="portal-badge portal-badge-primary">Auto</span>
+                    <span className="portal-badge portal-badge-yield">Auto</span>
                   </div>
-                  <div className="portal-stat-num">7.80%</div>
+                  <div className="portal-stat-num text-[var(--accent-1)]">7.80%</div>
                   <div className="text-xs text-[var(--text-muted)] mt-3">Continuous compounding</div>
                 </div>
               </div>
@@ -632,7 +637,7 @@ export default function FundryxAppPortal({
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
                 
                 {/* Borrow Card */}
-                <div className="portal-card flex flex-col justify-between">
+                <div className="portal-card portal-card-top-primary portal-sheen-primary flex flex-col justify-between">
                   <div>
                     <div className="portal-card-header">
                       <h2 className="portal-card-title">Request Uncollateralized Loan</h2>
@@ -668,7 +673,7 @@ export default function FundryxAppPortal({
                           <button
                             key={days}
                             onClick={() => setBorrowTerm(days)}
-                            className={`portal-segmented-btn ${borrowTerm === days ? 'active' : ''}`}
+                            className={`portal-segmented-btn ${borrowTerm === days ? 'active border-[var(--primary)] text-white' : ''}`}
                           >
                             {days} Days
                           </button>
@@ -707,11 +712,11 @@ export default function FundryxAppPortal({
                 </div>
 
                 {/* Supply Card */}
-                <div className="portal-card flex flex-col justify-between">
+                <div className="portal-card portal-card-top-yield portal-sheen-yield flex flex-col justify-between">
                   <div>
                     <div className="portal-card-header">
                       <h2 className="portal-card-title">Supply Liquidity Vaults</h2>
-                      <span className="portal-badge portal-badge-primary">7.80% APY</span>
+                      <span className="portal-badge portal-badge-yield">7.80% APY</span>
                     </div>
 
                     {/* Asset Segmented Control */}
@@ -726,7 +731,7 @@ export default function FundryxAppPortal({
                           <button
                             key={v.symbol}
                             onClick={() => setSupplyAsset(v.symbol)}
-                            className={`portal-segmented-btn ${supplyAsset === v.symbol ? 'active' : ''}`}
+                            className={`portal-segmented-btn ${supplyAsset === v.symbol ? 'active border-[var(--accent-1)] text-[var(--accent-1)]' : ''}`}
                           >
                             {v.symbol} ({v.apy})
                           </button>
@@ -745,12 +750,12 @@ export default function FundryxAppPortal({
                           type="number"
                           value={supplyAmount}
                           onChange={(e) => setSupplyAmount(e.target.value)}
-                          className="w-full h-11 px-3.5 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] font-mono text-white text-base outline-none focus:border-[var(--primary)] transition"
+                          className="w-full h-11 px-4 pr-16 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] font-mono text-white text-base outline-none focus:border-[var(--accent-1)] transition"
                           placeholder="0.00"
                         />
                         <button
                           onClick={() => setSupplyAmount('148250')}
-                          className="absolute right-3 top-2.5 text-xs font-bold text-[var(--primary)] uppercase cursor-pointer"
+                          className="absolute right-3.5 top-2.5 text-xs font-bold text-[var(--accent-1)] uppercase cursor-pointer hover:brightness-125 transition"
                         >
                           Max
                         </button>
@@ -769,7 +774,7 @@ export default function FundryxAppPortal({
                       </div>
                       <div className="flex justify-between items-center">
                         <span className="text-[var(--text-muted)]">Loss Protection Buffer</span>
-                        <span className="portal-badge portal-badge-primary">100% Solvency Reserve</span>
+                        <span className="portal-badge portal-badge-yield">100% Solvency Reserve</span>
                       </div>
                     </div>
                   </div>
@@ -778,7 +783,7 @@ export default function FundryxAppPortal({
                   <div className="mt-4 pt-4 border-t border-[var(--border)]">
                     <button
                       onClick={handleExecuteSupply}
-                      className="portal-btn-primary w-full"
+                      className="portal-btn-yield w-full"
                     >
                       {supplySuccess ? 'Deposited Successfully!' : `Deposit & Earn ${supplyAsset} Yield`}
                     </button>
@@ -857,7 +862,7 @@ export default function FundryxAppPortal({
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
                 
                 {/* Score Gauge Card */}
-                <div className="portal-card flex flex-col justify-between">
+                <div className="portal-card portal-card-top-primary portal-sheen-primary flex flex-col justify-between">
                   <div>
                     <div className="portal-card-header">
                       <h2 className="portal-card-title">Deterministic Credit Engine</h2>
@@ -890,11 +895,11 @@ export default function FundryxAppPortal({
 
                   {/* Two Tidy Stat Tiles Under It */}
                   <div className="grid grid-cols-2 gap-3 pt-4 border-t border-[var(--border)]">
-                    <div className="p-3.5 rounded-xl bg-[var(--surface-2)] border border-[var(--border)]">
+                    <div className="p-4 rounded-xl bg-[var(--surface-2)] border border-[var(--border)]">
                       <span className="portal-label block mb-1">Max Credit Line</span>
                       <span className="font-mono text-lg font-bold text-white">$250,000</span>
                     </div>
-                    <div className="p-3.5 rounded-xl bg-[var(--surface-2)] border border-[var(--border)]">
+                    <div className="p-4 rounded-xl bg-[var(--surface-2)] border border-[var(--border)]">
                       <span className="portal-label block mb-1">Fee Multiplier</span>
                       <span className="font-mono text-lg font-bold text-[var(--primary)]">0.85x</span>
                     </div>
@@ -902,7 +907,7 @@ export default function FundryxAppPortal({
                 </div>
 
                 {/* Score Breakdown Card */}
-                <div className="portal-card flex flex-col justify-between">
+                <div className="portal-card portal-card-top-cyan flex flex-col justify-between">
                   <div>
                     <div className="portal-card-header">
                       <h2 className="portal-card-title">Score Breakdown</h2>
@@ -911,11 +916,11 @@ export default function FundryxAppPortal({
                     
                     <div className="flex flex-col gap-4">
                       {[
-                        { label: 'On-Time Repayment Consistency', pts: '+220 pts', pct: 98 },
-                        { label: 'Capital Velocity & Turnaround', pts: '+180 pts', pct: 92 },
-                        { label: 'Reserve Staking Commitment', pts: '+150 pts', pct: 85 },
-                        { label: 'Protocol Longevity & History', pts: '+135 pts', pct: 80 },
-                        { label: 'Historical Default Rate', pts: '0.00%', pct: 100 },
+                        { label: 'On-Time Repayment Consistency', pts: '+220 pts', pct: 98, color: 'bg-[var(--primary)]' },
+                        { label: 'Capital Velocity & Turnaround', pts: '+180 pts', pct: 92, color: 'bg-[var(--accent-1)]' },
+                        { label: 'Reserve Staking Commitment', pts: '+150 pts', pct: 85, color: 'bg-[var(--accent-3)]' },
+                        { label: 'Protocol Longevity & History', pts: '+135 pts', pct: 80, color: 'bg-[var(--accent-2)]' },
+                        { label: 'Historical Default Rate', pts: '0.00%', pct: 100, color: 'bg-[var(--warn)]' },
                       ].map((item, i) => (
                         <div key={i}>
                           <div className="flex justify-between items-center text-xs mb-1.5">
@@ -923,7 +928,7 @@ export default function FundryxAppPortal({
                             <span className="font-mono font-semibold text-white">{item.pts}</span>
                           </div>
                           <div className="w-full h-1.5 bg-[var(--surface-2)] rounded-full overflow-hidden">
-                            <div className="h-full bg-[var(--primary)] rounded-full" style={{ width: `${item.pct}%` }} />
+                            <div className={`h-full ${item.color} rounded-full`} style={{ width: `${item.pct}%` }} />
                           </div>
                         </div>
                       ))}
@@ -941,7 +946,7 @@ export default function FundryxAppPortal({
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
                 
                 {/* 3 Stacked Tier Cards */}
-                <div className="portal-card flex flex-col justify-between">
+                <div className="portal-card portal-card-top-primary flex flex-col justify-between">
                   <div>
                     <div className="portal-card-header">
                       <h2 className="portal-card-title">Credit Tier Progression</h2>
@@ -989,7 +994,7 @@ export default function FundryxAppPortal({
                 </div>
 
                 {/* Score Boost Simulator */}
-                <div className="portal-card flex flex-col justify-between">
+                <div className="portal-card portal-card-top-amber portal-sheen-amber flex flex-col justify-between">
                   <div>
                     <div className="portal-card-header">
                       <h2 className="portal-card-title">Score Boost Simulator</h2>
@@ -1009,7 +1014,7 @@ export default function FundryxAppPortal({
                           step="1000"
                           value={simRepay}
                           onChange={(e) => setSimRepay(Number(e.target.value))}
-                          className="portal-slider"
+                          className="portal-slider portal-slider-amber"
                         />
                       </div>
 
@@ -1025,7 +1030,7 @@ export default function FundryxAppPortal({
                           step="500"
                           value={simStake}
                           onChange={(e) => setSimStake(Number(e.target.value))}
-                          className="portal-slider"
+                          className="portal-slider portal-slider-amber"
                         />
                       </div>
                     </div>
@@ -1068,9 +1073,9 @@ export default function FundryxAppPortal({
                         <tr key={r.id}>
                           <td className="font-mono text-xs text-[var(--text-muted)]">{r.id}</td>
                           <td className="text-right font-mono tabular-nums font-semibold text-white">{r.principal}</td>
-                          <td className="text-right font-mono tabular-nums text-[var(--primary)]">{r.interest}</td>
+                          <td className="text-right font-mono tabular-nums text-[var(--accent-1)]">{r.interest}</td>
                           <td className="text-xs text-[var(--text-muted)]">{r.date}</td>
-                          <td className="font-mono text-xs text-[var(--accent)]">{r.hash}</td>
+                          <td className="font-mono text-xs text-[var(--accent-2)] truncate max-w-[130px]">{r.hash}</td>
                           <td className="text-center">
                             <span className="portal-badge portal-badge-primary">Immutable Proved</span>
                           </td>
@@ -1095,16 +1100,18 @@ export default function FundryxAppPortal({
 
               {/* Row 1: 4 Stat Cards */}
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
-                <div className="portal-card">
+                <div className="portal-card portal-card-top-cyan portal-sheen-cyan">
                   <div className="portal-card-header">
                     <span className="portal-label">Sentinel Quorum</span>
-                    <span className="portal-badge portal-badge-primary">3/3</span>
+                    <span className="portal-badge portal-badge-cyan">
+                      <span className="pulse-dot-cyan shrink-0" /> 3/3
+                    </span>
                   </div>
-                  <div className="portal-stat-num">3/3 Active</div>
+                  <div className="portal-stat-num text-[var(--accent-2)]">3/3 Active</div>
                   <div className="text-xs text-[var(--text-muted)] mt-3">100% consensus sync</div>
                 </div>
 
-                <div className="portal-card">
+                <div className="portal-card portal-card-top-primary">
                   <div className="portal-card-header">
                     <span className="portal-label">Solvency Ratio</span>
                     <span className="portal-badge portal-badge-primary">Optimal</span>
@@ -1113,7 +1120,7 @@ export default function FundryxAppPortal({
                   <div className="text-xs text-[var(--text-muted)] mt-3">Surplus headroom buffer</div>
                 </div>
 
-                <div className="portal-card">
+                <div className="portal-card portal-card-top-amber">
                   <div className="portal-card-header">
                     <span className="portal-label">Single-Pool Cap</span>
                     <span className="portal-badge portal-badge-accent">Circuit</span>
@@ -1122,10 +1129,10 @@ export default function FundryxAppPortal({
                   <div className="text-xs text-[var(--text-muted)] mt-3">Auto circuit breaker limit</div>
                 </div>
 
-                <div className="portal-card">
+                <div className="portal-card portal-card-top-cyan">
                   <div className="portal-card-header">
                     <span className="portal-label">Oracle Health</span>
-                    <span className="portal-badge portal-badge-primary">Live</span>
+                    <span className="portal-badge portal-badge-cyan">Live</span>
                   </div>
                   <div className="portal-stat-num">100% Sync</div>
                   <div className="text-xs text-[var(--text-muted)] mt-3">0.00% price deviation</div>
@@ -1135,22 +1142,22 @@ export default function FundryxAppPortal({
               {/* Row 2: Sentinel Nodes (3 Cards in a Row) */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {[
-                  { name: 'Sentinel Node Alpha', latency: '42ms', vote: 'Optimal', sig: '0x9d4a...c77b', desc: 'Liquidity Velocity & Outflow Tracker' },
-                  { name: 'Sentinel Node Beta', latency: '38ms', vote: '214.8% Solvency', sig: '0x1c8b...32fa', desc: 'Cross-Vault Collateralization Ratio' },
-                  { name: 'Sentinel Node Gamma', latency: '49ms', vote: 'Tier 1 Conforming', sig: '0x7a81...49de', desc: 'Borrower Repayment Pacing Engine' },
+                  { name: 'Sentinel Node Alpha', latency: '42ms', vote: 'Optimal', sig: '0x9d4a...c77b', desc: 'Liquidity Velocity & Outflow Tracker', topClass: 'portal-card-top-cyan portal-sheen-cyan', dotClass: 'pulse-dot-cyan', badgeClass: 'portal-badge-cyan', voteColor: 'text-[var(--accent-2)]' },
+                  { name: 'Sentinel Node Beta', latency: '38ms', vote: '214.8% Solvency', sig: '0x1c8b...32fa', desc: 'Cross-Vault Collateralization Ratio', topClass: 'portal-card-top-primary portal-sheen-primary', dotClass: 'pulse-dot-emerald', badgeClass: 'portal-badge-primary', voteColor: 'text-[var(--primary)]' },
+                  { name: 'Sentinel Node Gamma', latency: '49ms', vote: 'Tier 1 Conforming', sig: '0x7a81...49de', desc: 'Borrower Repayment Pacing Engine', topClass: 'portal-card-top-purple portal-sheen-purple', dotClass: 'pulse-dot-purple', badgeClass: 'portal-badge-purple', voteColor: 'text-[var(--accent-3)]' },
                 ].map((node, i) => (
-                  <div key={i} className="portal-card">
+                  <div key={i} className={`portal-card ${node.topClass}`}>
                     <div className="portal-card-header">
                       <div className="flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full bg-[var(--primary)] animate-pulse" />
+                        <span className={`${node.dotClass} shrink-0`} />
                         <span className="text-sm font-semibold text-white">{node.name}</span>
                       </div>
-                      <span className="portal-badge portal-badge-neutral font-mono">{node.latency}</span>
+                      <span className={`portal-badge ${node.badgeClass} font-mono`}>{node.latency}</span>
                     </div>
                     <div className="text-xs text-[var(--text-muted)] mb-3">{node.desc}</div>
                     <div className="pt-3 border-t border-[var(--border)] flex justify-between items-center text-xs">
-                      <span className="font-semibold text-[var(--primary)]">{node.vote}</span>
-                      <span className="font-mono text-[var(--text-dim)]">{node.sig}</span>
+                      <span className={`font-semibold ${node.voteColor}`}>{node.vote}</span>
+                      <span className="font-mono text-[var(--text-dim)] truncate max-w-[120px]">{node.sig}</span>
                     </div>
                   </div>
                 ))}
@@ -1160,7 +1167,7 @@ export default function FundryxAppPortal({
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
                 
                 {/* Stress-Test Simulator */}
-                <div className="portal-card flex flex-col justify-between">
+                <div className="portal-card portal-card-top-amber portal-sheen-amber flex flex-col justify-between">
                   <div>
                     <div className="portal-card-header">
                       <h2 className="portal-card-title">Stress-Test Simulator</h2>
@@ -1179,18 +1186,18 @@ export default function FundryxAppPortal({
                         step="5"
                         value={stressShock}
                         onChange={(e) => setStressShock(Number(e.target.value))}
-                        className="portal-slider"
+                        className="portal-slider portal-slider-amber"
                       />
                     </div>
 
                     <div className="grid grid-cols-2 gap-3">
-                      <div className="p-3.5 rounded-xl bg-[var(--surface-2)] border border-[var(--border)]">
+                      <div className="p-4 rounded-xl bg-[var(--surface-2)] border border-[var(--border)]">
                         <span className="portal-label block mb-1">Post-Shock Solvency</span>
-                        <span className="font-mono text-lg font-bold text-[var(--primary)]">
+                        <span className="font-mono text-lg font-bold text-[var(--accent-2)]">
                           {(214.8 - stressShock * 1.8).toFixed(1)}%
                         </span>
                       </div>
-                      <div className="p-3.5 rounded-xl bg-[var(--surface-2)] border border-[var(--border)]">
+                      <div className="p-4 rounded-xl bg-[var(--surface-2)] border border-[var(--border)]">
                         <span className="portal-label block mb-1">Default Probability</span>
                         <span className="font-mono text-lg font-bold text-white">
                           {(0.05 + stressShock * 0.009).toFixed(2)}%
@@ -1200,13 +1207,13 @@ export default function FundryxAppPortal({
                   </div>
 
                   <div className="pt-4 border-t border-[var(--border)] mt-4 flex items-center gap-2 text-xs text-[var(--text-muted)]">
-                    <span className="w-2 h-2 rounded-full bg-[var(--primary)]" />
+                    <span className="pulse-dot-emerald shrink-0" />
                     <span>Protocol resilience verified above 150% threshold.</span>
                   </div>
                 </div>
 
                 {/* Governance Guardrails: 2 Small Cards */}
-                <div className="portal-card flex flex-col justify-between">
+                <div className="portal-card portal-card-top-cyan flex flex-col justify-between">
                   <div>
                     <div className="portal-card-header">
                       <h2 className="portal-card-title">Governance Guardrails</h2>
@@ -1216,7 +1223,7 @@ export default function FundryxAppPortal({
                     <div className="flex flex-col gap-3">
                       <div className="p-4 rounded-xl bg-[var(--surface-2)] border border-[var(--border)]">
                         <div className="flex items-center gap-2.5 mb-1.5">
-                          <Cpu size={16} className="text-[var(--primary)]" />
+                          <Cpu size={16} className="text-[var(--accent-2)]" />
                           <span className="text-sm font-semibold text-white">Non-Authoritative AI</span>
                         </div>
                         <p className="text-xs text-[var(--text-muted)] leading-relaxed">
@@ -1226,7 +1233,7 @@ export default function FundryxAppPortal({
 
                       <div className="p-4 rounded-xl bg-[var(--surface-2)] border border-[var(--border)]">
                         <div className="flex items-center gap-2.5 mb-1.5">
-                          <Scale size={16} className="text-[var(--accent)]" />
+                          <Scale size={16} className="text-[var(--warn)]" />
                           <span className="text-sm font-semibold text-white">Deterministic Settlement</span>
                         </div>
                         <p className="text-xs text-[var(--text-muted)] leading-relaxed">
@@ -1239,17 +1246,20 @@ export default function FundryxAppPortal({
               </div>
 
               {/* Row 4: Attestation Log (Max 280px Height, Wrapping) */}
-              <div className="portal-card">
+              <div className="portal-card portal-card-top-cyan portal-sheen-cyan relative">
+                <div className="portal-scanner-line" />
                 <div className="portal-card-header">
                   <h2 className="portal-card-title">Real-Time Attestation Log</h2>
-                  <span className="portal-badge portal-badge-primary">Live Consensus Stream</span>
+                  <span className="portal-badge portal-badge-cyan">
+                    <span className="pulse-dot-cyan shrink-0" /> Live Consensus Stream
+                  </span>
                 </div>
-                <div className="h-[280px] overflow-y-auto rounded-xl bg-[var(--surface-2)] border border-[var(--border)] p-4 font-mono text-xs text-[var(--text-muted)] flex flex-col gap-2.5">
-                  <div><span className="text-[var(--text-dim)]">[2026-10-18 18:24:01 UTC]</span> <span className="text-[var(--primary)] font-semibold">Sentinel Alpha:</span> Solvency ratio cross-check completed. 0 anomalies detected.</div>
+                <div className="h-[280px] overflow-y-auto rounded-xl bg-[var(--surface-2)] border border-[var(--border)] p-4 font-mono text-xs text-[var(--text-muted)] flex flex-col gap-2.5 break-words">
+                  <div><span className="text-[var(--text-dim)]">[2026-10-18 18:24:01 UTC]</span> <span className="text-[var(--accent-2)] font-semibold">Sentinel Alpha:</span> Solvency ratio cross-check completed. 0 anomalies detected.</div>
                   <div><span className="text-[var(--text-dim)]">[2026-10-18 18:24:04 UTC]</span> <span className="text-[var(--primary)] font-semibold">Sentinel Beta:</span> Verified active debt against reserve tranches. Coverage index 214.8%.</div>
-                  <div><span className="text-[var(--text-dim)]">[2026-10-18 18:24:08 UTC]</span> <span className="text-[var(--accent)] font-semibold">Sentinel Gamma:</span> Verified 12 repayment receipts onchain. Quorum signature generated.</div>
-                  <div><span className="text-[var(--text-dim)]">[2026-10-18 18:24:15 UTC]</span> <span className="text-[var(--primary)] font-semibold">Consensus Engine:</span> Block #4,192 verified. Hash 0x9d4a82...c77b committed.</div>
-                  <div><span className="text-[var(--text-dim)]">[2026-10-18 18:24:22 UTC]</span> <span className="text-[var(--primary)] font-semibold">Sentinel Alpha:</span> Real-time outflow rate: 0.02% (below 1.00% warning trigger).</div>
+                  <div><span className="text-[var(--text-dim)]">[2026-10-18 18:24:08 UTC]</span> <span className="text-[var(--accent-3)] font-semibold">Sentinel Gamma:</span> Verified 12 repayment receipts onchain. Quorum signature generated.</div>
+                  <div><span className="text-[var(--text-dim)]">[2026-10-18 18:24:15 UTC]</span> <span className="text-[var(--warn)] font-semibold">Consensus Engine:</span> Block #4,192 verified. Hash 0x9d4a82...c77b committed.</div>
+                  <div><span className="text-[var(--text-dim)]">[2026-10-18 18:24:22 UTC]</span> <span className="text-[var(--accent-2)] font-semibold">Sentinel Alpha:</span> Real-time outflow rate: 0.02% (below 1.00% warning trigger).</div>
                   <div><span className="text-[var(--text-dim)]">[2026-10-18 18:24:30 UTC]</span> <span className="text-[var(--primary)] font-semibold">Sentinel Beta:</span> Treasury asset reserves re-indexed across USDC, EURC, and FDX vaults.</div>
                 </div>
               </div>
@@ -1268,7 +1278,7 @@ export default function FundryxAppPortal({
 
               {/* Row 1: 4 Stat Cards */}
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
-                <div className="portal-card">
+                <div className="portal-card portal-card-top-primary">
                   <div className="portal-card-header">
                     <span className="portal-label">FDX / USDC Price</span>
                     <span className="portal-badge portal-badge-primary">+0.04%</span>
@@ -1277,16 +1287,16 @@ export default function FundryxAppPortal({
                   <div className="text-xs text-[var(--text-muted)] mt-3">Stable parity maintained</div>
                 </div>
 
-                <div className="portal-card">
+                <div className="portal-card portal-card-top-purple portal-sheen-purple">
                   <div className="portal-card-header">
                     <span className="portal-label">24h Market Volume</span>
-                    <span className="portal-badge portal-badge-neutral">Pool</span>
+                    <span className="portal-badge portal-badge-purple">Pool</span>
                   </div>
-                  <div className="portal-stat-num">$4.82M</div>
+                  <div className="portal-stat-num text-[var(--accent-3)]">$4.82M</div>
                   <div className="text-xs text-[var(--text-muted)] mt-3">Zero slippage protocol trades</div>
                 </div>
 
-                <div className="portal-card">
+                <div className="portal-card portal-card-top-amber">
                   <div className="portal-card-header">
                     <span className="portal-label">Order Book Spread</span>
                     <span className="portal-badge portal-badge-accent">Tight</span>
@@ -1295,10 +1305,10 @@ export default function FundryxAppPortal({
                   <div className="text-xs text-[var(--text-muted)] mt-3">Institutional market depth</div>
                 </div>
 
-                <div className="portal-card">
+                <div className="portal-card portal-card-top-cyan">
                   <div className="portal-card-header">
                     <span className="portal-label">Settlement Finality</span>
-                    <span className="portal-badge portal-badge-primary">Atomic</span>
+                    <span className="portal-badge portal-badge-cyan">Atomic</span>
                   </div>
                   <div className="portal-stat-num">Sub-Sec</div>
                   <div className="text-xs text-[var(--text-muted)] mt-3">Deterministic onchain swaps</div>
@@ -1309,11 +1319,11 @@ export default function FundryxAppPortal({
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
                 
                 {/* Order Book Card */}
-                <div className="portal-card flex flex-col justify-between">
+                <div className="portal-card portal-card-top-purple flex flex-col justify-between">
                   <div>
                     <div className="portal-card-header">
                       <h2 className="portal-card-title">Live Capital Order Book</h2>
-                      <span className="portal-badge portal-badge-neutral font-mono">Spread: 0.0006 (0.06%)</span>
+                      <span className="portal-badge portal-badge-purple font-mono">Spread: 0.0006 (0.06%)</span>
                     </div>
 
                     <div className="portal-table-wrapper">
@@ -1349,16 +1359,16 @@ export default function FundryxAppPortal({
                 </div>
 
                 {/* Instant Liquidity Swap Card */}
-                <div className="portal-card flex flex-col justify-between">
+                <div className="portal-card portal-card-top-purple portal-sheen-purple flex flex-col justify-between">
                   <div>
                     <div className="portal-card-header">
                       <h2 className="portal-card-title">Instant Liquidity Swap</h2>
-                      <span className="portal-badge portal-badge-primary">0.05% Fee</span>
+                      <span className="portal-badge portal-badge-purple">0.05% Fee</span>
                     </div>
 
                     <div className="flex flex-col gap-4">
                       {/* Pay Input */}
-                      <div className="p-3.5 rounded-xl bg-[var(--surface-2)] border border-[var(--border)]">
+                      <div className="p-4 rounded-xl bg-[var(--surface-2)] border border-[var(--border)]">
                         <div className="flex justify-between items-center mb-1.5">
                           <span className="portal-label">You Pay</span>
                           <span className="text-xs text-[var(--text-dim)] font-mono">Balance: 10,000 USDC</span>
@@ -1376,16 +1386,16 @@ export default function FundryxAppPortal({
                       </div>
 
                       {/* Receive Output */}
-                      <div className="p-3.5 rounded-xl bg-[var(--surface-2)] border border-[var(--border)]">
+                      <div className="p-4 rounded-xl bg-[var(--surface-2)] border border-[var(--border)]">
                         <div className="flex justify-between items-center mb-1.5">
                           <span className="portal-label">You Receive (Estimated)</span>
                           <span className="text-xs text-[var(--text-dim)] font-mono">Rate: 1 USDC ≈ 0.9995 FDX</span>
                         </div>
                         <div className="flex justify-between items-center">
-                          <span className="font-mono text-xl font-bold text-[var(--primary)]">
+                          <span className="font-mono text-xl font-bold text-[var(--accent-3)]">
                             {(Number(swapAmount || 0) * 0.9995).toFixed(2)}
                           </span>
-                          <span className="portal-badge portal-badge-primary font-bold">{swapTo}</span>
+                          <span className="portal-badge portal-badge-purple font-bold">{swapTo}</span>
                         </div>
                       </div>
 
@@ -1397,7 +1407,7 @@ export default function FundryxAppPortal({
                         </div>
                         <div className="flex justify-between">
                           <span>Slippage Tolerance</span>
-                          <span className="font-mono text-[var(--primary)]">0.10% (Auto)</span>
+                          <span className="font-mono text-[var(--accent-3)]">0.10% (Auto)</span>
                         </div>
                       </div>
                     </div>
@@ -1406,7 +1416,7 @@ export default function FundryxAppPortal({
                   <div className="mt-4 pt-4 border-t border-[var(--border)]">
                     <button
                       onClick={handleExecuteSwap}
-                      className="portal-btn-primary w-full"
+                      className="portal-btn-purple w-full"
                     >
                       {swapSuccess ? 'Swap Executed!' : 'Execute Capital Swap'}
                     </button>
@@ -1446,7 +1456,7 @@ export default function FundryxAppPortal({
                           <td className="font-mono text-right tabular-nums text-white">{t.price}</td>
                           <td className="font-mono text-right tabular-nums text-[var(--text-muted)]">{t.size}</td>
                           <td className="text-right text-xs text-[var(--text-muted)]">{t.time}</td>
-                          <td className="font-mono text-xs text-[var(--accent)]">{t.hash}</td>
+                          <td className="font-mono text-xs text-[var(--accent-3)] truncate max-w-[130px]">{t.hash}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -1468,7 +1478,7 @@ export default function FundryxAppPortal({
 
               {/* 2x2 Grid of Cards with Icons, Short Titles, and 2-3 Lines */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="portal-card">
+                <div className="portal-card portal-card-top-primary">
                   <div className="portal-card-header">
                     <div className="flex items-center gap-2.5">
                       <ShieldCheck size={18} className="text-[var(--primary)]" />
@@ -1481,10 +1491,10 @@ export default function FundryxAppPortal({
                   </p>
                 </div>
 
-                <div className="portal-card">
+                <div className="portal-card portal-card-top-amber">
                   <div className="portal-card-header">
                     <div className="flex items-center gap-2.5">
-                      <Sparkles size={18} className="text-[var(--accent)]" />
+                      <Sparkles size={18} className="text-[var(--warn)]" />
                       <h2 className="portal-card-title">2. Credit Scoring Disclosures</h2>
                     </div>
                     <span className="portal-badge portal-badge-accent">Mathematical</span>
@@ -1494,26 +1504,26 @@ export default function FundryxAppPortal({
                   </p>
                 </div>
 
-                <div className="portal-card">
+                <div className="portal-card portal-card-top-cyan">
                   <div className="portal-card-header">
                     <div className="flex items-center gap-2.5">
-                      <Radio size={18} className="text-[var(--warn)]" />
+                      <Radio size={18} className="text-[var(--accent-2)]" />
                       <h2 className="portal-card-title">3. AI Risk Telemetry Bounds</h2>
                     </div>
-                    <span className="portal-badge portal-badge-neutral">Advisory</span>
+                    <span className="portal-badge portal-badge-cyan">Advisory</span>
                   </div>
                   <p className="text-sm text-[var(--text-muted)] leading-relaxed">
                     AI Sentinel nodes operate in an advisory shadow mode. Telemetry alerts inform risk parameters but hold zero direct custody or unilateral transfer authority.
                   </p>
                 </div>
 
-                <div className="portal-card">
+                <div className="portal-card portal-card-top-purple">
                   <div className="portal-card-header">
                     <div className="flex items-center gap-2.5">
-                      <ShieldAlert size={18} className="text-[var(--primary)]" />
+                      <ShieldAlert size={18} className="text-[var(--accent-3)]" />
                       <h2 className="portal-card-title">4. Zero-Knowledge Privacy</h2>
                     </div>
-                    <span className="portal-badge portal-badge-primary">zkSNARK</span>
+                    <span className="portal-badge portal-badge-purple">zkSNARK</span>
                   </div>
                   <p className="text-sm text-[var(--text-muted)] leading-relaxed">
                     Institutional identity attestations verify credit eligibility through cryptographic zero-knowledge proofs without exposing underlying balance sheets or wallet histories.
@@ -1522,7 +1532,7 @@ export default function FundryxAppPortal({
               </div>
 
               {/* Last Updated Line */}
-              <div className="flex items-center justify-between text-xs text-[var(--text-muted)] py-3 px-4 rounded-xl bg-[var(--surface-2)] border border-[var(--border)]">
+              <div className="flex items-center justify-between text-xs text-[var(--text-muted)] p-4 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] flex-wrap gap-2">
                 <span>Last audited &amp; verified: October 18, 2026</span>
                 <span className="font-mono text-[var(--text-dim)]">Quorum Consensus Hash: 0x9d4a82...c77b</span>
               </div>

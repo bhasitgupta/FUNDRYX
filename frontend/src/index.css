@@ -6,23 +6,61 @@
    PORTAL DESIGN TOKENS (Extracted from Landing 'forest' palette)
    ==================================================== */
 :root {
+  /* Landing page 'forest' palette unified variables */
   --bg: #0e1814;
   --surface: #15231c;
   --surface-2: #1c2e24;
   --surface-3: #22382b;
   --border: #263e34;
   --border-subtle: rgba(236, 235, 225, 0.08);
+  
+  /* Brand action / Borrowing primary */
   --primary: #10b981;
   --primary-hover: #059669;
   --primary-tint: rgba(16, 185, 129, 0.12);
+  --primary-border: rgba(16, 185, 129, 0.3);
+  
+  /* Accent 1: Supply / Yield / APY / Positive compounding */
+  --accent-1: #34d399;
+  --accent-1-hover: #10b981;
+  --accent-1-tint: rgba(52, 211, 153, 0.12);
+  --accent-1-border: rgba(52, 211, 153, 0.3);
+  
+  /* Accent 2: AI Risk Telemetry / Sentinel / Scanning cyan */
+  --accent-2: #06b6d4;
+  --accent-2-hover: #0891b2;
+  --accent-2-tint: rgba(6, 182, 212, 0.12);
+  --accent-2-border: rgba(6, 182, 212, 0.3);
+  
+  /* Accent 3: Capital Markets / Order book / Swaps highlight purple */
+  --accent-3: #a855f7;
+  --accent-3-hover: #9333ea;
+  --accent-3-tint: rgba(168, 85, 247, 0.12);
+  --accent-3-border: rgba(168, 85, 247, 0.3);
+  
+  /* Amber / Gold / Warnings / Fees from landing glow (#f5b84c) */
   --accent: #f5b84c;
-  --accent-tint: rgba(245, 184, 76, 0.12);
+  --warn: #f5b84c;
+  --warn-hover: #d97706;
+  --warn-tint: rgba(245, 184, 76, 0.12);
+  --warn-border: rgba(245, 184, 76, 0.3);
+  
+  /* Danger / Sells / Errors from landing flag red (#cf3b3b / #ef4444) */
+  --danger: #ef4444;
+  --danger-hover: #dc2626;
+  --danger-tint: rgba(239, 68, 68, 0.12);
+  --danger-border: rgba(239, 68, 68, 0.3);
+  
+  /* Text colors */
   --text: #ecebe1;
   --text-muted: #8fa799;
   --text-dim: #657c70;
-  --warn: #f5b84c;
-  --danger: #ef4444;
-  --danger-tint: rgba(239, 68, 68, 0.12);
+  
+  /* Landing page glows */
+  --glow-gold: #f5b84c;
+  --glow-emerald: #10b981;
+  --glow-cyan: #06b6d4;
+  --glow-purple: #a855f7;
 }
 
 *, *::before, *::after {
@@ -110,17 +148,93 @@
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
   min-width: 0;
   position: relative;
+  overflow: hidden;
   transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
 }
 .portal-card:hover {
-  border-color: rgba(245, 184, 76, 0.25);
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
 }
 
-.portal-card-hero {
-  background: linear-gradient(135deg, rgba(38, 62, 52, 0.35) 0%, rgba(21, 35, 28, 0.95) 100%);
-  border: 1px solid rgba(245, 184, 76, 0.3);
-  box-shadow: 0 0 32px -8px rgba(245, 184, 76, 0.12);
+/* Featured Card Highlights & Glows */
+.portal-card-top-primary {
+  border-top: 2px solid var(--primary);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.25), 0 0 24px -8px rgba(16, 185, 129, 0.15);
+}
+.portal-card-top-primary:hover {
+  border-color: rgba(16, 185, 129, 0.45);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35), 0 0 32px -4px rgba(16, 185, 129, 0.22);
+}
+
+.portal-card-top-yield {
+  border-top: 2px solid var(--accent-1);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.25), 0 0 24px -8px rgba(52, 211, 153, 0.15);
+}
+.portal-card-top-yield:hover {
+  border-color: rgba(52, 211, 153, 0.45);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35), 0 0 32px -4px rgba(52, 211, 153, 0.22);
+}
+
+.portal-card-top-cyan {
+  border-top: 2px solid var(--accent-2);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.25), 0 0 28px -6px rgba(6, 182, 212, 0.18);
+}
+.portal-card-top-cyan:hover {
+  border-color: rgba(6, 182, 212, 0.45);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35), 0 0 36px -4px rgba(6, 182, 212, 0.25);
+}
+
+.portal-card-top-purple {
+  border-top: 2px solid var(--accent-3);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.25), 0 0 24px -8px rgba(168, 85, 247, 0.15);
+}
+.portal-card-top-purple:hover {
+  border-color: rgba(168, 85, 247, 0.45);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35), 0 0 32px -4px rgba(168, 85, 247, 0.22);
+}
+
+.portal-card-top-amber {
+  border-top: 2px solid var(--warn);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.25), 0 0 24px -8px rgba(245, 184, 76, 0.15);
+}
+.portal-card-top-amber:hover {
+  border-color: rgba(245, 184, 76, 0.45);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35), 0 0 32px -4px rgba(245, 184, 76, 0.22);
+}
+
+/* Subtle featured background sheen */
+.portal-sheen-primary {
+  background: radial-gradient(circle at 85% 15%, rgba(16, 185, 129, 0.08) 0%, transparent 60%), var(--surface);
+}
+.portal-sheen-yield {
+  background: radial-gradient(circle at 85% 15%, rgba(52, 211, 153, 0.08) 0%, transparent 60%), var(--surface);
+}
+.portal-sheen-cyan {
+  background: radial-gradient(circle at 85% 15%, rgba(6, 182, 212, 0.09) 0%, transparent 60%), var(--surface);
+}
+.portal-sheen-purple {
+  background: radial-gradient(circle at 85% 15%, rgba(168, 85, 247, 0.08) 0%, transparent 60%), var(--surface);
+}
+.portal-sheen-amber {
+  background: radial-gradient(circle at 85% 15%, rgba(245, 184, 76, 0.08) 0%, transparent 60%), var(--surface);
+}
+
+/* Scanning Radar Effect for Sentinel */
+@keyframes sentinel-scan {
+  0% { transform: translateY(-100%); opacity: 0; }
+  20% { opacity: 0.25; }
+  80% { opacity: 0.25; }
+  100% { transform: translateY(320px); opacity: 0; }
+}
+
+.portal-scanner-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--accent-2), transparent);
+  box-shadow: 0 0 12px var(--accent-2);
+  pointer-events: none;
+  animation: sentinel-scan 4s linear infinite;
 }
 
 .portal-card-header {
@@ -170,37 +284,87 @@
   color: var(--text-muted);
 }
 
-/* Badges */
+/* Badges - 10-12px horizontal padding, no collision with corners */
 .portal-badge {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   height: 24px;
-  padding: 0 10px;
+  padding: 0 11px;
   border-radius: 9999px;
-  font-size: 12px;
-  font-weight: 500;
+  font-size: 11px;
+  font-weight: 600;
   white-space: nowrap;
+  letter-spacing: 0.02em;
 }
 .portal-badge-primary {
-  background: rgba(16, 185, 129, 0.12);
+  background: var(--primary-tint);
   color: #34d399;
-  border: 1px solid rgba(16, 185, 129, 0.25);
+  border: 1px solid var(--primary-border);
+}
+.portal-badge-yield {
+  background: var(--accent-1-tint);
+  color: #6ee7b7;
+  border: 1px solid var(--accent-1-border);
+}
+.portal-badge-cyan {
+  background: var(--accent-2-tint);
+  color: #38bdf8;
+  border: 1px solid var(--accent-2-border);
+}
+.portal-badge-purple {
+  background: var(--accent-3-tint);
+  color: #c084fc;
+  border: 1px solid var(--accent-3-border);
 }
 .portal-badge-accent {
-  background: rgba(245, 184, 76, 0.12);
+  background: var(--warn-tint);
   color: #fcd34d;
-  border: 1px solid rgba(245, 184, 76, 0.25);
+  border: 1px solid var(--warn-border);
 }
 .portal-badge-danger {
-  background: rgba(239, 68, 68, 0.12);
+  background: var(--danger-tint);
   color: #f87171;
-  border: 1px solid rgba(239, 68, 68, 0.25);
+  border: 1px solid var(--danger-border);
 }
 .portal-badge-neutral {
   background: rgba(143, 167, 153, 0.12);
   color: var(--text-muted);
-  border: 1px solid rgba(143, 167, 153, 0.2);
+  border: 1px solid rgba(143, 167, 153, 0.22);
+}
+
+/* Pulse Dots */
+.pulse-dot-emerald {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background-color: var(--primary);
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.6);
+  animation: pulse-ring 2s infinite ease-in-out;
+}
+.pulse-dot-cyan {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background-color: var(--accent-2);
+  box-shadow: 0 0 8px rgba(6, 182, 212, 0.7);
+  animation: pulse-ring 2s infinite ease-in-out;
+}
+.pulse-dot-amber {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background-color: var(--warn);
+  box-shadow: 0 0 8px rgba(245, 184, 76, 0.6);
+  animation: pulse-ring 2s infinite ease-in-out;
+}
+.pulse-dot-purple {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background-color: var(--accent-3);
+  box-shadow: 0 0 8px rgba(168, 85, 247, 0.6);
+  animation: pulse-ring 2s infinite ease-in-out;
 }
 
 /* Buttons */
@@ -210,7 +374,7 @@
   justify-content: center;
   gap: 8px;
   height: 40px;
-  padding: 0 16px;
+  padding: 0 18px;
   border-radius: 10px;
   background: var(--primary);
   color: #ffffff;
@@ -224,7 +388,78 @@
 .portal-btn-primary:hover {
   background: var(--primary-hover);
   transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);
 }
+
+.portal-btn-yield {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 18px;
+  border-radius: 10px;
+  background: var(--accent-1);
+  color: #0b1510;
+  font-size: 14px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  box-shadow: 0 2px 8px rgba(52, 211, 153, 0.25);
+}
+.portal-btn-yield:hover {
+  background: #6ee7b7;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(52, 211, 153, 0.35);
+}
+
+.portal-btn-cyan {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 18px;
+  border-radius: 10px;
+  background: var(--accent-2);
+  color: #041014;
+  font-size: 14px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  box-shadow: 0 2px 8px rgba(6, 182, 212, 0.25);
+}
+.portal-btn-cyan:hover {
+  background: #38bdf8;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(6, 182, 212, 0.35);
+}
+
+.portal-btn-purple {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 18px;
+  border-radius: 10px;
+  background: var(--accent-3);
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  box-shadow: 0 2px 8px rgba(168, 85, 247, 0.25);
+}
+.portal-btn-purple:hover {
+  background: #c084fc;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(168, 85, 247, 0.35);
+}
+
 .portal-btn-secondary {
   display: inline-flex;
   align-items: center;
@@ -233,7 +468,7 @@
   height: 40px;
   padding: 0 16px;
   border-radius: 10px;
-  background: transparent;
+  background: var(--surface-2);
   color: var(--text);
   border: 1px solid var(--border);
   font-size: 14px;
@@ -242,7 +477,7 @@
   transition: all 0.18s ease;
 }
 .portal-btn-secondary:hover {
-  background: var(--surface-2);
+  background: var(--surface-3);
   border-color: rgba(245, 184, 76, 0.3);
   color: #ffffff;
 }
@@ -348,6 +583,24 @@
 .portal-slider::-webkit-slider-thumb:hover {
   transform: scale(1.15);
   background: var(--primary-hover);
+}
+
+.portal-slider-cyan::-webkit-slider-thumb {
+  background: var(--accent-2);
+  border: 2px solid var(--bg);
+  box-shadow: 0 0 10px rgba(6, 182, 212, 0.4);
+}
+.portal-slider-cyan::-webkit-slider-thumb:hover {
+  background: #38bdf8;
+}
+
+.portal-slider-amber::-webkit-slider-thumb {
+  background: var(--warn);
+  border: 2px solid var(--bg);
+  box-shadow: 0 0 10px rgba(245, 184, 76, 0.4);
+}
+.portal-slider-amber::-webkit-slider-thumb:hover {
+  background: #fcd34d;
 }
 
 /* ====================================================
