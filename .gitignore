@@ -50,6 +50,7 @@ htmlcov/
 venv/
 .venv/
 
-# Local Office Templates
+# Local planning notes
+*implementation_plan*.md
 *.dotm
 *.docm
