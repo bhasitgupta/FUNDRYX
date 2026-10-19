@@ -1,42 +1,53 @@
 import React from 'react';
 import { X, ShieldCheck } from 'lucide-react';
 
-const MetaMaskIcon = () => (
-  <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
-    <path d="M29.07 4.23L17.7 12.63 20.07 6.87 29.07 4.23z" fill="#E2761B" />
-    <path d="M2.93 4.23L11.8 6.83 14.3 12.63 2.93 4.23z" fill="#E4761B" />
-    <path d="M25.03 22.47L22.2 26.83 28.2 28.5 29.83 22.63 25.03 22.47z" fill="#E4761B" />
-    <path d="M2.17 22.63L3.8 28.5 9.8 26.83 6.97 22.47 2.17 22.63z" fill="#E4761B" />
-    <path d="M9.53 14.37L7.47 17.5 13.57 17.8 13.37 11.23 9.53 14.37z" fill="#E4761B" />
-    <path d="M22.47 14.37L18.57 11.17 18.43 17.8 24.53 17.5 22.47 14.37z" fill="#E4761B" />
-    <path d="M9.8 26.83L13.23 25.1 10.37 22.6 9.8 26.83z" fill="#D7C1B3" />
-    <path d="M22.2 26.83L21.63 22.6 18.77 25.1 22.2 26.83z" fill="#D7C1B3" />
-    <path d="M13.23 25.1L18.77 25.1 16 28.93 13.23 25.1z" fill="#233447" />
-    <path d="M18.77 25.1L21.63 22.6 18.43 17.8 13.57 17.8 10.37 22.6 13.23 25.1 18.77 25.1z" fill="#CD6116" />
+const MetaMaskIcon = ({ size = 48 }) => (
+  <svg width={size} height={size} viewBox="0 0 318 318" fill="none">
+    <path d="M274.1 35.5L174.6 109.4L193 65.8L274.1 35.5Z" fill="#E17726" stroke="#E17726" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+    <path d="M43.9 35.5L142.3 109.4L124.9 65.8L43.9 35.5Z" fill="#E27625" stroke="#E27625" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+    <path d="M238.3 206.8L211.8 247.4L268.5 263L284.8 207.7L238.3 206.8Z" fill="#E27625" stroke="#E27625" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+    <path d="M33.2 207.7L49.5 263L106.2 247.4L79.7 206.8L33.2 207.7Z" fill="#E27625" stroke="#E27625" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+    <path d="M96.8 136.2L74.8 169.6L130.8 172.1L128.9 111.4L96.8 136.2Z" fill="#E27625" stroke="#E27625" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+    <path d="M221.2 136.2L188.7 110.8L187.2 172.1L243.2 169.6L221.2 136.2Z" fill="#E27625" stroke="#E27625" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+    <path d="M106.2 247.4L138.8 230.9L111.6 208.1L106.2 247.4Z" fill="#D5BFB2" stroke="#D5BFB2" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+    <path d="M211.8 247.4L206.4 208.1L179.2 230.9L211.8 247.4Z" fill="#D5BFB2" stroke="#D5BFB2" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+    <path d="M179.2 230.9L206.4 208.1L187.2 172.1L174.6 230.9H179.2Z" fill="#233447" stroke="#233447" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+    <path d="M111.6 208.1L138.8 230.9H143.4L130.8 172.1L111.6 208.1Z" fill="#233447" stroke="#233447" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+    <path d="M138.8 230.9L106.2 247.4L144.9 268.4L143.4 230.9H138.8Z" fill="#CC6228" stroke="#CC6228" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+    <path d="M174.6 230.9L173.1 268.4L211.8 247.4L179.2 230.9H174.6Z" fill="#CC6228" stroke="#CC6228" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+    <path d="M211.8 247.4L173.1 268.4L177.7 289.4L211.8 247.4Z" fill="#E27525" stroke="#E27525" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+    <path d="M106.2 247.4L140.3 289.4L144.9 268.4L106.2 247.4Z" fill="#E27525" stroke="#E27525" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+    <path d="M144.9 268.4L140.3 289.4L159 299.9L177.7 289.4L173.1 268.4L159 275.9L144.9 268.4Z" fill="#F5841F" stroke="#F5841F" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
   </svg>
 );
 
-const CoinbaseIcon = () => (
-  <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
-    <circle cx="16" cy="16" r="16" fill="#0052FF"/>
-    <rect x="10.5" y="10.5" width="11" height="11" rx="2.5" fill="white"/>
-    <rect x="13.5" y="13.5" width="5" height="5" rx="1" fill="#0052FF"/>
+const CoinbaseIcon = ({ size = 48 }) => (
+  <svg width={size} height={size} viewBox="0 0 100 100" fill="none">
+    <circle cx="50" cy="50" r="50" fill="#0052FF" />
+    <rect x="32" y="32" width="36" height="36" rx="8" fill="white" />
+    <rect x="42" y="42" width="16" height="16" rx="3.5" fill="#0052FF" />
   </svg>
 );
 
-const WalletConnectIcon = () => (
-  <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
-    <rect width="32" height="32" rx="16" fill="#3B99FC"/>
-    <path d="M9.5 12.5C13.09 8.91 18.91 8.91 22.5 12.5L23.2 13.2C23.4 13.4 23.4 13.7 23.2 13.9L21.6 15.5C21.5 15.6 21.3 15.6 21.2 15.5L20.2 14.5C17.88 12.18 14.12 12.18 11.8 14.5L10.7 15.6C10.6 15.7 10.4 15.7 10.3 15.6L8.7 14C8.5 13.8 8.5 13.5 8.7 13.3L9.5 12.5ZM25.4 15.4L26.8 16.8C27 17 27 17.3 26.8 17.5L20.8 23.5C20.6 23.7 20.3 23.7 20.1 23.5L16 19.4C15.9 19.3 15.8 19.3 15.7 19.4L11.9 23.2C11.7 23.4 11.4 23.4 11.2 23.2L5.2 17.2C5 17 5 16.7 5.2 16.5L6.6 15.1C6.8 14.9 7.1 14.9 7.3 15.1L11.2 19C11.3 19.1 11.4 19.1 11.5 19L15.3 15.2C15.5 15 15.8 15 16 15.2L19.8 19C19.9 19.1 20 19.1 20.1 19L24.7 15.4C24.9 15.2 25.2 15.2 25.4 15.4Z" fill="white"/>
+const WalletConnectIcon = ({ size = 48 }) => (
+  <svg width={size} height={size} viewBox="0 0 100 100" fill="none">
+    <circle cx="50" cy="50" r="50" fill="#3B99FC" />
+    <path
+      d="M28 39C40.15 27 59.85 27 72 39L74.4 41.4C75.2 42.2 75.2 43.4 74.4 44.2L68.8 49.8C68.4 50.2 67.8 50.2 67.4 49.8L63.8 46.2C56.2 38.6 43.8 38.6 36.2 46.2L32.4 50C32 50.4 31.4 50.4 31 50L25.4 44.4C24.6 43.6 24.6 42.4 25.4 41.6L28 39ZM79.6 51.4L84.4 56.2C85.2 57 85.2 58.2 84.4 59L63.8 79.6C63 80.4 61.8 80.4 61 79.6L46.8 65.4C46.4 65 45.8 65 45.4 65.4L32.2 78.6C31.4 79.4 30.2 79.4 29.4 78.6L8.8 58C8 57.2 8 56 8.8 55.2L13.6 50.4C14.4 49.6 15.6 49.6 16.4 50.4L29.8 63.8C30.2 64.2 30.8 64.2 31.2 63.8L44.4 50.6C45.2 49.8 46.4 49.8 47.2 50.6L60.4 63.8C60.8 64.2 61.4 64.2 61.8 63.8L76.8 51.4C77.6 50.6 78.8 50.6 79.6 51.4Z"
+      fill="white"
+    />
   </svg>
 );
 
-const PhantomIcon = () => (
-  <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
-    <rect width="32" height="32" rx="16" fill="#AB9FF2"/>
-    <path d="M22.5 16C22.5 19.59 19.59 22.5 16 22.5C14.7 22.5 13.5 22.1 12.5 21.4L10 22.5L10.5 19.8C9.5 18.7 9 17.4 9 16C9 12.41 11.91 9.5 16 9.5C20.09 9.5 22.5 12.41 22.5 16Z" fill="#534BAE"/>
-    <circle cx="14" cy="15.5" r="1.5" fill="white"/>
-    <circle cx="18" cy="15.5" r="1.5" fill="white"/>
+const PhantomIcon = ({ size = 48 }) => (
+  <svg width={size} height={size} viewBox="0 0 100 100" fill="none">
+    <circle cx="50" cy="50" r="50" fill="#AB9FF2" />
+    <path
+      d="M72 50C72 61.0457 63.0457 70 52 70C47.95 70 44.2 68.75 41.1 66.6L33 70L34.7 61.8C31.6 58.4 29.7 54 29.7 49.3C29.7 38.2543 38.6543 29.3 49.7 29.3C62.0163 29.3 72 38.5817 72 50Z"
+      fill="#534BAE"
+    />
+    <circle cx="44" cy="48" r="4.5" fill="white" />
+    <circle cx="56" cy="48" r="4.5" fill="white" />
   </svg>
 );
 
@@ -47,100 +58,124 @@ export default function WalletModal({ isOpen, onClose, onSelectWallet }) {
     {
       id: 'metamask',
       name: 'MetaMask',
-      desc: 'Connect using MetaMask browser extension',
-      icon: <MetaMaskIcon />,
-      badge: 'Popular',
+      icon: <MetaMaskIcon size={52} />,
+      hoverBorder: 'hover:border-[#E2761B]',
+      hoverBg: 'hover:bg-[#E2761B]/10',
+      glowColor: 'group-hover:shadow-[0_0_24px_rgba(226,118,27,0.3)]',
+      tag: 'Popular',
+      tagColor: 'bg-[#E2761B]/20 text-[#F6851B] border-[#E2761B]/40',
     },
     {
       id: 'coinbase',
-      name: 'Coinbase Wallet',
-      desc: 'Connect via Coinbase app or extension',
-      icon: <CoinbaseIcon />,
+      name: 'Coinbase',
+      icon: <CoinbaseIcon size={52} />,
+      hoverBorder: 'hover:border-[#0052FF]',
+      hoverBg: 'hover:bg-[#0052FF]/10',
+      glowColor: 'group-hover:shadow-[0_0_24px_rgba(0,82,255,0.3)]',
+      tag: 'EVM',
+      tagColor: 'bg-[#0052FF]/20 text-[#3B99FC] border-[#0052FF]/40',
     },
     {
       id: 'walletconnect',
       name: 'WalletConnect',
-      desc: 'Scan QR code with any mobile Web3 wallet',
-      icon: <WalletConnectIcon />,
+      icon: <WalletConnectIcon size={52} />,
+      hoverBorder: 'hover:border-[#3B99FC]',
+      hoverBg: 'hover:bg-[#3B99FC]/10',
+      glowColor: 'group-hover:shadow-[0_0_24px_rgba(59,153,252,0.3)]',
+      tag: 'QR Mobile',
+      tagColor: 'bg-[#3B99FC]/20 text-[#60A5FA] border-[#3B99FC]/40',
     },
     {
       id: 'phantom',
       name: 'Phantom',
-      desc: 'Multi-chain Web3 wallet',
-      icon: <PhantomIcon />,
+      icon: <PhantomIcon size={52} />,
+      hoverBorder: 'hover:border-[#AB9FF2]',
+      hoverBg: 'hover:bg-[#AB9FF2]/10',
+      glowColor: 'group-hover:shadow-[0_0_24px_rgba(171,159,242,0.3)]',
+      tag: 'Multi-Chain',
+      tagColor: 'bg-[#AB9FF2]/20 text-[#C4B5FD] border-[#AB9FF2]/40',
     },
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in font-body">
-      <div className="relative w-full max-w-md bg-[#121d17] border border-[#23382c] rounded-2xl shadow-2xl p-6 text-white overflow-hidden">
-        {/* Glow ambient background */}
-        <div className="absolute -top-24 -right-24 w-48 h-48 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute -bottom-24 -left-24 w-48 h-48 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fade-in font-body">
+      <div className="relative w-full max-w-lg bg-[#0c140f] border border-[#1e3325] rounded-3xl shadow-2xl p-6 sm:p-7 text-white overflow-hidden">
+        {/* Ambient glow backgrounds */}
+        <div className="absolute -top-24 -right-24 w-52 h-52 bg-emerald-500/15 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -bottom-24 -left-24 w-52 h-52 bg-[#0052FF]/10 rounded-full blur-3xl pointer-events-none" />
 
-        {/* Header */}
-        <div className="flex items-center justify-between pb-4 border-b border-[#1f3328]">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-[#1c2e25] border border-[#2b4739] flex items-center justify-center text-emerald-400">
-              <ShieldCheck size={18} />
+        {/* Header with Fundryx Brand Logo */}
+        <div className="flex items-center justify-between pb-5 border-b border-[#1b2f23]">
+          <div className="flex items-center gap-3">
+            <div className="h-10 px-2.5 py-1.5 rounded-xl bg-[#142319] border border-[#233c2c] flex items-center justify-center shadow-inner">
+              <img
+                src="/fundryx-logo.png"
+                alt="Fundryx"
+                className="h-6 w-auto object-contain"
+              />
             </div>
             <div>
-              <h2 className="text-base font-semibold text-white tracking-normal font-body">Connect Wallet</h2>
-              <p className="text-xs text-[#8ca395] font-body">Select your institutional or Web3 provider</p>
+              <div className="flex items-center gap-2">
+                <h2 className="text-base sm:text-lg font-bold text-white tracking-tight">Connect Wallet</h2>
+                <span className="text-[10px] uppercase font-mono px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                  Polygon Amoy
+                </span>
+              </div>
+              <p className="text-xs text-[#7e9988] mt-0.5">Select your institutional Web3 provider</p>
             </div>
           </div>
+
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-lg bg-[#1c2e25] hover:bg-[#263e34] text-[#8ca395] hover:text-white flex items-center justify-center transition cursor-pointer"
+            className="w-9 h-9 rounded-xl bg-[#142319] hover:bg-[#1d3224] text-[#8ca395] hover:text-white flex items-center justify-center transition-colors cursor-pointer border border-[#233c2c]"
+            title="Close modal"
           >
-            <X size={16} />
+            <X size={18} />
           </button>
         </div>
 
-        {/* Wallets List */}
-        <div className="mt-4 space-y-2.5">
-          {walletOptions.map((wallet) => (
+        {/* 2x2 Grid of Big Wallet Tiles */}
+        <div className="grid grid-cols-2 gap-3.5 sm:gap-4 my-6">
+          {walletOptions.map((w) => (
             <button
-              key={wallet.id}
-              onClick={() => onSelectWallet(wallet.id)}
-              className={`w-full flex items-center justify-between p-3.5 rounded-xl border transition-all text-left cursor-pointer group ${
-                wallet.highlight
-                  ? 'bg-gradient-to-r from-[#1c2e25] to-[#15231c] border-emerald-500/40 hover:border-emerald-400 shadow-md'
-                  : 'bg-[#15231c]/60 hover:bg-[#1c2e25] border-[#23382c] hover:border-[#355241]'
-              }`}
+              key={w.id}
+              onClick={() => onSelectWallet(w.id)}
+              className={`group relative flex flex-col items-center justify-center p-5 sm:p-6 rounded-2xl bg-[#111c15] border border-[#213829] ${w.hoverBorder} ${w.hoverBg} transition-all duration-200 cursor-pointer text-center hover:-translate-y-1 hover:scale-[1.02] shadow-md ${w.glowColor}`}
             >
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 flex items-center justify-center shrink-0">
-                  {wallet.icon}
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-semibold text-white group-hover:text-emerald-300 transition-colors font-body">
-                      {wallet.name}
-                    </span>
-                    {wallet.badge && (
-                      <span className="text-[10px] font-medium uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                        {wallet.badge}
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-[11px] text-[#8ca395] mt-0.5 font-body">{wallet.desc}</p>
-                </div>
+              {/* Optional tag badge */}
+              {w.tag && (
+                <span
+                  className={`absolute top-2.5 right-2.5 text-[10px] font-medium uppercase px-2 py-0.5 rounded-full border ${w.tagColor}`}
+                >
+                  {w.tag}
+                </span>
+              )}
+
+              {/* Big authentic official icon */}
+              <div className="mb-3.5 transform group-hover:scale-110 transition-transform duration-200">
+                {w.icon}
               </div>
-              <span className="text-xs text-[#8ca395] group-hover:text-white group-hover:translate-x-1 transition-all">
-                →
+
+              {/* Wallet Name without description */}
+              <span className="text-sm sm:text-base font-semibold text-white tracking-tight group-hover:text-white">
+                {w.name}
+              </span>
+
+              {/* Subtle hover indicator */}
+              <span className="mt-1 text-[11px] font-mono text-[#6c8574] group-hover:text-emerald-400 transition-colors">
+                Connect →
               </span>
             </button>
           ))}
         </div>
 
         {/* Security Footer Note */}
-        <div className="mt-5 pt-3.5 border-t border-[#1f3328] flex items-center justify-between text-[11px] text-[#728579] font-body">
-          <span className="flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+        <div className="pt-3.5 border-t border-[#1b2f23] flex items-center justify-between text-[11px] text-[#6d8475]">
+          <span className="flex items-center gap-1.5 font-medium">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
             <span>Non-custodial connection</span>
           </span>
-          <span>Terms & Disclosures apply</span>
+          <span className="font-mono text-[#526659]">Chain ID: 80002</span>
         </div>
       </div>
     </div>
