@@ -3,7 +3,7 @@
 **Version:** 4.0.0 | **Release:** Hackathon testnet prototype
 
 ## 1. Product vision and USP hypothesis
-AUREX combines verifiable credit history, canonical cross-chain exposure reservations, and AI-assisted monitoring under deterministic onchain enforcement. This is a hypothesis to validate against prior art, not a claim that the components are individually unprecedented.
+Fundryx combines verifiable credit history, canonical cross-chain exposure reservations, and AI-assisted monitoring under deterministic onchain enforcement. This is a hypothesis to validate against prior art, not a claim that the components are individually unprecedented.
 
 The key differentiator to demonstrate: credit eligibility is enforced by contracts; cross-chain capacity is reserved before destination disbursement; AI alerts are traceable but cannot bypass financial rules.
 
@@ -73,4 +73,4 @@ Chains, messaging provider, tokens/oracles, credit formula, attestation model, A
 
 ## V4 scope alignment
 
-This specification serves the organizer's actual challenge: a functional onchain financial mechanism with contract-enforced rules and transparent settlement. AUREX is not a company-launch or broad ecosystem plan. The four market directions are sequential committed milestones: (1) credit-history-aware lending, (2) fully onchain order book, (3) perpetual futures, and (4) onchain market making. Cross-chain coordination and AI monitoring are supporting models, not prerequisites for the first market or authorities over financial state. Copyright recognition, tokenomics, DAO/governance, and unrelated ecosystem features are out of scope.
+This specification serves the organizer's actual challenge: a functional onchain financial mechanism with contract-enforced rules and transparent settlement. Fundryx is not a company-launch or broad ecosystem plan. The four market directions are sequential committed milestones: (1) credit-history-aware lending, (2) fully onchain order book, (3) perpetual futures, and (4) onchain market making. Cross-chain coordination and AI monitoring are supporting models, not prerequisites for the first market or authorities over financial state. Copyright recognition, tokenomics, DAO/governance, and unrelated ecosystem features are out of scope.

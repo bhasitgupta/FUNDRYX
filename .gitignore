@@ -39,12 +39,13 @@ Thumbs.db
 .netlify
 .turbo/
 
-# Internal Tooling & Scratch Directories
-.agents/
-.gemini/
-.system_generated/
-.tempmediaStorage/
-scratch/
-generate_commits.js
-build_history.js
-temp_commit*.js
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+.coverage
+htmlcov/
+venv/
+.venv/

@@ -3,10 +3,10 @@
 **Version:** 4.0.0 | **Status:** Proposed hackathon product
 
 ## 1. Summary
-AUREX is an onchain capital network starting with credit-history-aware lending and designed to extend to an order book, perpetual futures, and market making. Cross-chain coordination aims to prevent the same credit capacity being used independently on multiple chains. AI monitoring produces evidence-linked alerts but has no financial authority.
+Fundryx is an onchain capital network starting with credit-history-aware lending and designed to extend to an order book, perpetual futures, and market making. Cross-chain coordination aims to prevent the same credit capacity being used independently on multiple chains. AI monitoring produces evidence-linked alerts but has no financial authority.
 
 ## 2. Problem
-DeFi credit is often collateral-heavy; onchain history is fragmented; independent deployments can approve debt without shared exposure accounting; monitoring systems may be opaque. AUREX tests whether verifiable repayment history, explicit reservations, and auditable monitoring improve coordination while retaining deterministic limits.
+DeFi credit is often collateral-heavy; onchain history is fragmented; independent deployments can approve debt without shared exposure accounting; monitoring systems may be opaque. Fundryx tests whether verifiable repayment history, explicit reservations, and auditable monitoring improve coordination while retaining deterministic limits.
 
 ## 3. Objectives
 - Demonstrate an end-to-end loan lifecycle on one EVM testnet.
@@ -56,4 +56,4 @@ Credit formula/caps, default loss allocation, supported chains, messaging provid
 
 ## V4 scope alignment
 
-This specification serves the organizer's actual challenge: a functional onchain financial mechanism with contract-enforced rules and transparent settlement. AUREX is not a company-launch or broad ecosystem plan. The four market directions are sequential committed milestones: (1) credit-history-aware lending, (2) fully onchain order book, (3) perpetual futures, and (4) onchain market making. Cross-chain coordination and AI monitoring are supporting models, not prerequisites for the first market or authorities over financial state. Copyright recognition, tokenomics, DAO/governance, and unrelated ecosystem features are out of scope.
+This specification serves the organizer's actual challenge: a functional onchain financial mechanism with contract-enforced rules and transparent settlement. Fundryx is not a company-launch or broad ecosystem plan. The four market directions are sequential committed milestones: (1) credit-history-aware lending, (2) fully onchain order book, (3) perpetual futures, and (4) onchain market making. Cross-chain coordination and AI monitoring are supporting models, not prerequisites for the first market or authorities over financial state. Copyright recognition, tokenomics, DAO/governance, and unrelated ecosystem features are out of scope.

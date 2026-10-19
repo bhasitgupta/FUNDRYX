@@ -1,4 +1,4 @@
-# AUREX V4 Release Checklist
+# Fundryx V4 Release Checklist
 
 **Release:** V4.0.0 — Final pre-development specification  
 **Release intent:** Freeze the product direction and document boundaries before implementation begins. This release is not a software deployment or security audit.

@@ -3,11 +3,12 @@ import Lenis from 'lenis';
 import FundryxLanding from './components/FundryxLanding';
 import FundryxAppPortal from './components/FundryxAppPortal';
 import WalletModal from './components/WalletModal';
+import ChooseCryptoWalletLoginPage from './app/choose-crypto-wallet-login/page';
 import { connectWallet, CONTRACT_ADDRESSES, LENDING_POOL_ABI } from './utils/contracts';
 import { ethers } from 'ethers';
 
 export default function App() {
-  const [currentView, setCurrentView] = useState('landing'); // 'landing' | 'app'
+  const [currentView, setCurrentView] = useState('landing'); // 'landing' | 'app' | 'wallet-login'
   const [activeAppTab, setActiveAppTab] = useState('overview');
   const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
 
@@ -27,6 +28,23 @@ export default function App() {
     utilization: '0.15',
     verifiedRepayments: 12,
   });
+
+  // Fetch live pool stats from backend and blockchain
+  useEffect(() => {
+    fetch('http://127.0.0.1:8000/api/pool')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data && data.totalDeposits !== undefined) {
+          setPoolStats((prev) => ({
+            ...prev,
+            totalDeposits: data.totalDeposits,
+            totalBorrowed: data.totalBorrowed,
+            utilization: data.utilizationRate ? data.utilizationRate.toString() : '0.15',
+          }));
+        }
+      })
+      .catch((e) => console.log('Backend sync offline, using onchain Amoy provider:', e.message));
+  }, []);
 
   // Initialize Lenis Smooth Scrolling for Landing View
   useEffect(() => {
@@ -78,7 +96,7 @@ export default function App() {
         signer: null,
         provider: null,
         balance: '10000.00',
-        chainId: 1337,
+        chainId: 80002,
         isDemo: true,
       });
       // Immediately navigate to the full working app!
@@ -127,7 +145,9 @@ export default function App() {
   useEffect(() => {
     const handleHash = () => {
       const hash = (window.location.hash || '').toLowerCase();
-      if (hash.startsWith('#app') || hash === '#borrow' || hash === '#lending' || hash === '#credit' || hash === '#risk') {
+      if (hash === '#wallet-login' || hash === '#login' || hash.includes('choose-crypto-wallet')) {
+        setCurrentView('wallet-login');
+      } else if (hash.startsWith('#app') || hash === '#borrow' || hash === '#lending' || hash === '#credit' || hash === '#risk') {
         setCurrentView('app');
         if (hash.includes('lend') || hash.includes('borrow')) {
           setActiveAppTab('lending');
@@ -142,7 +162,7 @@ export default function App() {
         } else {
           setActiveAppTab('overview');
         }
-      } else if (hash === '#landing' || hash === '#top') {
+      } else if (hash === '#landing' || hash === '#top' || hash === '') {
         setCurrentView('landing');
       }
     };
@@ -168,13 +188,29 @@ export default function App() {
         onSelectWallet={handleSelectWallet}
       />
 
-      {/* View 1: Full Fundryx Web Application Portal */}
-      {currentView === 'app' ? (
+      {/* View 1: Creative Tim Choose Crypto Wallet Login Page */}
+      {currentView === 'wallet-login' ? (
+        <ChooseCryptoWalletLoginPage
+          onSelectWallet={handleSelectWallet}
+          onBack={() => {
+            setCurrentView('landing');
+            window.location.hash = '';
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
+          connectedAddress={wallet.address}
+        />
+      ) : currentView === 'app' ? (
+        /* View 2: Full Fundryx Web Application Portal */
         <FundryxAppPortal
           wallet={wallet}
           poolStats={poolStats}
           initialTab={activeAppTab}
           onConnect={() => setIsWalletModalOpen(true)}
+          onNavigateWalletLogin={() => {
+            setCurrentView('wallet-login');
+            window.location.hash = '#wallet-login';
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
           onDisconnect={handleDisconnect}
           onBackToLanding={() => {
             setCurrentView('landing');
@@ -183,7 +219,7 @@ export default function App() {
           }}
         />
       ) : (
-        /* View 2: Fundryx Institutional Landing Experience */
+        /* View 3: Fundryx Institutional Landing Experience */
         <FundryxLanding
           brand="fundryx."
           logo={
@@ -203,6 +239,15 @@ export default function App() {
             { label: "Why Fundryx", href: "#about" },
             { label: "Features", href: "#features" },
             { label: "Capital Reserves", href: "#features" },
+            {
+              label: "Wallet Login",
+              href: "#wallet-login",
+              onClick: () => {
+                setCurrentView('wallet-login');
+                window.location.hash = '#wallet-login';
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              },
+            },
             {
               label: "Launch App",
               href: "#app",

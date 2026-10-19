@@ -1,4 +1,4 @@
-# AUREX V4 — Four-Milestone Roadmap
+# Fundryx V4 — Four-Milestone Roadmap
 
 **Release:** V4.0.0  
 **Planning rule:** Four committed market milestones, delivered sequentially. Dates are not fixed; exit gates control progression.

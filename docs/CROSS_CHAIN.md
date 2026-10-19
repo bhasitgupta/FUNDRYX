@@ -3,7 +3,7 @@
 **Version:** 4.0.0 | **Status:** Design; target chains/provider TBD
 
 ## 1. Goal and distinction
-AUREX must distinguish:
+Fundryx must distinguish:
 - **Portable credit history:** a destination verifies a source-chain credential/history record.
 - **Global exposure enforcement:** destination borrowing requires a capacity reservation in a canonical coordinator.
 

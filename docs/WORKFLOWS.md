@@ -1,4 +1,4 @@
-# AUREX End-to-End Workflows
+# Fundryx End-to-End Workflows
 
 **Version:** 4.0.0
 

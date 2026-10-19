@@ -1,4 +1,4 @@
-# AUREX V4 — Master Architecture and Challenge Traceability
+# Fundryx V4 — Master Architecture and Challenge Traceability
 
 **Release:** V4.0.0  
 **Purpose:** Translate the organizer's exact challenge into a buildable system, with all four markets implemented in four sequential milestones.  
@@ -8,7 +8,7 @@
 
 The challenge requires a functional prototype demonstrating how blockchain-native infrastructure can create transparent trading or lending markets without relying on centralized offchain infrastructure for core execution.
 
-AUREX's success is measured by observable protocol behavior:
+Fundryx's success is measured by observable protocol behavior:
 - financial state is held in smart contracts;
 - key rules are enforced by contracts, not trusted to a backend;
 - transactions settle onchain and are independently inspectable;
@@ -19,7 +19,7 @@ The listed directions are possible market mechanisms. This project has committed
 
 ## 2. Problem-to-solution traceability
 
-| Challenge element | AUREX response | Required onchain authority | Acceptance evidence |
+| Challenge element | Fundryx response | Required onchain authority | Acceptance evidence |
 |---|---|---|---|
 | Fully onchain financial product | Contract-enforced markets | Authoritative balances, orders/positions/loans, policy bounds, settlement | Contract state and explorer-verifiable transactions |
 | Fast blockchain settlement | Transactions settle on selected EVM chain | Financial state changes and events | Real testnet transaction; report measured latency only if measured |

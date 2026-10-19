@@ -1,4 +1,4 @@
-# AUREX Storage, Event, and Indexing Schema
+# Fundryx Storage, Event, and Indexing Schema
 
 **Version:** 4.0.0 | **Status:** Logical schema; finalize types and units in implementation
 
@@ -35,7 +35,7 @@ Reservation: `None`, `Requested`, `Confirmed`, `Consumed`, `ReleasePending`, `Re
 {
   "schemaVersion": "1",
   "reportId": "bytes32",
-  "modelId": "aurex-risk-monitor",
+  "modelId": "fundryx-risk-monitor",
   "modelVersion": "0.1.0",
   "ruleSetVersion": 1,
   "sourceChainId": 0,

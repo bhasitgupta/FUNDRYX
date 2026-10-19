@@ -1,4 +1,4 @@
-# AUREX V4 — Scope and Acceptance Matrix
+# Fundryx V4 — Scope and Acceptance Matrix
 
 ## Scope rule
 
