@@ -35,6 +35,7 @@ import {
   executeDeposit,
   executeRepay,
   executeSwap,
+  executeMintTokens,
   fetchRecentEvents,
   fetchWalletData,
   fetchBorrowerLoans,
@@ -88,6 +89,7 @@ export default function FundryxAppPortal({
   // User balances from chain
   const [userFdxBalance, setUserFdxBalance] = useState(null);
   const [userPolBalance, setUserPolBalance] = useState(null);
+  const [isMinting, setIsMinting] = useState(false);
 
   // Stress test simulator state
   const [stressShock, setStressShock] = useState(25);
@@ -348,6 +350,41 @@ export default function FundryxAppPortal({
         message: `Borrow failed: ${reason}`,
       });
       setTimeout(() => setBorrowTxStatus('ready'), 7000);
+    }
+  };
+
+  const handleMintFaucet = async () => {
+    if (!wallet.signer || !wallet.address) {
+      setTxNotification({
+        type: 'danger',
+        message: 'Wallet not connected. Connect your Web3 wallet to mint test FDX.',
+      });
+      return;
+    }
+
+    try {
+      setIsMinting(true);
+      setTxNotification({
+        type: 'info',
+        message: 'Requesting 10,000 FDX from testnet faucet... Confirm in wallet.',
+      });
+
+      const { tx, receipt, newBalance } = await executeMintTokens(wallet.signer, wallet.address, 10000);
+      setUserFdxBalance(Number(newBalance));
+      setTxNotification({
+        type: 'success',
+        message: `Minted 10,000 FDX! New Balance: ${Number(newBalance).toLocaleString()} FDX (Block ${receipt.blockNumber})`,
+        txHash: tx.hash,
+      });
+      setTimeout(() => setIsMinting(false), 3000);
+    } catch (err) {
+      console.error('Faucet mint failed:', err);
+      const reason = parseRevertReason(err);
+      setIsMinting(false);
+      setTxNotification({
+        type: 'danger',
+        message: `Faucet mint failed: ${reason}`,
+      });
     }
   };
 
@@ -1245,9 +1282,20 @@ export default function FundryxAppPortal({
                     <div className="mb-6">
                       <div className="flex justify-between items-center mb-2">
                         <label className="portal-label">Deposit Capital</label>
-                        <span className="text-xs text-[var(--text-dim)] font-mono">
-                          Balance: {userFdxBalance !== null ? Number(userFdxBalance).toFixed(2) : '--'} {supplyAsset}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-[var(--text-dim)] font-mono">
+                            Balance: {userFdxBalance !== null ? Number(userFdxBalance).toFixed(2) : '--'} {supplyAsset}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={handleMintFaucet}
+                            disabled={isMinting}
+                            className="px-2 py-0.5 text-[10px] font-bold rounded bg-[var(--accent-1)]/20 text-[var(--accent-1)] hover:bg-[var(--accent-1)]/30 border border-[var(--accent-1)]/40 transition disabled:opacity-50 cursor-pointer"
+                            title="Mint 10,000 test FDX tokens directly to your wallet"
+                          >
+                            {isMinting ? 'Minting...' : '+ Faucet 10k FDX'}
+                          </button>
+                        </div>
                       </div>
                       <div className="relative">
                         <input
@@ -1896,9 +1944,20 @@ export default function FundryxAppPortal({
                       <div className="p-4 rounded-xl bg-[var(--surface-2)] border border-[var(--border)]">
                         <div className="flex justify-between items-center mb-1.5">
                           <span className="portal-label">You Pay</span>
-                          <span className="text-xs text-[var(--text-dim)] font-mono">
-                            Balance: {userFdxBalance !== null ? Number(userFdxBalance).toFixed(2) : '--'} {swapFrom}
-                          </span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-[var(--text-dim)] font-mono">
+                              Balance: {userFdxBalance !== null ? Number(userFdxBalance).toFixed(2) : '--'} {swapFrom}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={handleMintFaucet}
+                              disabled={isMinting}
+                              className="px-2 py-0.5 text-[10px] font-bold rounded bg-[var(--accent-3)]/20 text-[var(--accent-3)] hover:bg-[var(--accent-3)]/30 border border-[var(--accent-3)]/40 transition disabled:opacity-50 cursor-pointer"
+                              title="Mint 10,000 test FDX tokens"
+                            >
+                              {isMinting ? 'Minting...' : '+ Faucet 10k FDX'}
+                            </button>
+                          </div>
                         </div>
                         <div className="flex justify-between items-center">
                           <input

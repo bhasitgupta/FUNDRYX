@@ -581,6 +581,28 @@ export async function executeDeposit(signer, amount) {
 }
 
 // ─────────────────────────────────────────────────────────────
+// EXECUTE MINT TOKENS — testnet owner faucet
+// ─────────────────────────────────────────────────────────────
+export async function executeMintTokens(signer, toAddress, amount = 10000) {
+  const token = getFundryxToken(signer);
+  const target = toAddress || (await signer.getAddress());
+  const amountWei = ethers.parseEther(amount.toString());
+
+  const tx = await token.mint(target, amountWei).catch((err) => {
+    throw new Error(parseRevertReason(err));
+  });
+  const receipt = await tx.wait();
+  if (!receipt || receipt.status === 0) throw new Error('Mint transaction reverted on-chain.');
+
+  const newBal = await token.balanceOf(target).catch(() => 0n);
+  return {
+    tx,
+    receipt,
+    newBalance: ethers.formatEther(newBal),
+  };
+}
+
+// ─────────────────────────────────────────────────────────────
 // EXECUTE REPAY — real on-chain transaction
 // ─────────────────────────────────────────────────────────────
 export async function executeRepay(signer, loanId, amount) {
