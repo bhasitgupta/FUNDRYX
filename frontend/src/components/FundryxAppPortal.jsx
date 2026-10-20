@@ -134,7 +134,7 @@ export default function FundryxAppPortal({
 
   // Sync real data from backend & onchain network
   useEffect(() => {
-    // 1. Fetch Pool stats
+    // 1. Fetch Pool stats (fallback to onchain query if backend offline)
     fetch('http://127.0.0.1:8000/api/pool')
       .then((r) => r.json())
       .then((data) => {
@@ -142,7 +142,19 @@ export default function FundryxAppPortal({
           setLivePool(data);
         }
       })
-      .catch(() => {});
+      .catch(() => {
+        fetchCreditPreFlight(wallet.address || '0x0000000000000000000000000000000000000000')
+          .then((flight) => {
+            if (flight && flight.availableLiquidity !== undefined) {
+              setLivePool((prev) => ({
+                ...prev,
+                totalDeposits: flight.availableLiquidity,
+                availableLiquidity: flight.availableLiquidity,
+              }));
+            }
+          })
+          .catch(() => {});
+      });
 
     // 2. Fetch Borrower Credit Score, Active Loans & Wallet Balance directly from chain
     const targetAddr = wallet.address;

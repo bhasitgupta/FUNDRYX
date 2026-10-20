@@ -544,6 +544,24 @@ export async function executeBorrow(signer, amount, policyVersion) {
   }
 
   const overrides = await getPolygonFeeOverrides(provider);
+
+  // Role check: Ensure LendingPool has LENDING_POOL_ROLE in AccessManager
+  const accessManager = new ethers.Contract(CONTRACT_ADDRESSES.AccessManager, ACCESS_MANAGER_ABI, signer);
+  const lpRole = await accessManager.LENDING_POOL_ROLE();
+  const poolHasRole = await accessManager.hasRole(lpRole, CONTRACT_ADDRESSES.LendingPool).catch(() => false);
+  if (!poolHasRole) {
+    const adminRole = await accessManager.ADMIN_ROLE();
+    const isUserAdmin = await accessManager.hasRole(adminRole, address).catch(() => false);
+    if (isUserAdmin) {
+      const grantTx = await accessManager.grantRole(lpRole, CONTRACT_ADDRESSES.LendingPool, overrides).catch((err) => {
+        throw new Error(`Role grant rejected: ${parseRevertReason(err)}`);
+      });
+      await grantTx.wait();
+    } else {
+      throw new Error('LendingPool lacks LENDING_POOL_ROLE. Ask the protocol admin to grant it.');
+    }
+  }
+
   const tx = await pool.borrow(amountWei, usedVersion, overrides).catch((err) => {
     throw new Error(parseRevertReason(err));
   });
