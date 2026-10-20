@@ -138,6 +138,29 @@ export function getReadProvider() {
   return new ethers.JsonRpcProvider('https://polygon-amoy-bor-rpc.publicnode.com');
 }
 
+// Polygon Amoy validator rule: minimum tip cap must be >= 25 gwei
+export async function getPolygonFeeOverrides(provider) {
+  try {
+    const feeData = await provider.getFeeData();
+    const minTip = ethers.parseUnits('30', 'gwei');
+    const priorityFee = feeData.maxPriorityFeePerGas && feeData.maxPriorityFeePerGas > minTip
+      ? feeData.maxPriorityFeePerGas
+      : minTip;
+    const maxFee = feeData.maxFeePerGas && feeData.maxFeePerGas > priorityFee + ethers.parseUnits('5', 'gwei')
+      ? feeData.maxFeePerGas
+      : priorityFee + ethers.parseUnits('10', 'gwei');
+    return {
+      maxPriorityFeePerGas: priorityFee,
+      maxFeePerGas: maxFee,
+    };
+  } catch {
+    return {
+      maxPriorityFeePerGas: ethers.parseUnits('30', 'gwei'),
+      maxFeePerGas: ethers.parseUnits('40', 'gwei'),
+    };
+  }
+}
+
 export function getInjectedProvider(walletType = 'metamask') {
   if (typeof window === 'undefined') return null;
 
@@ -520,7 +543,8 @@ export async function executeBorrow(signer, amount, policyVersion) {
     throw new Error(`Insufficient pool liquidity. Available: ${Number(availFmt).toFixed(2)} FDX. Borrowing is paused or pool is empty.`);
   }
 
-  const tx = await pool.borrow(amountWei, usedVersion).catch((err) => {
+  const overrides = await getPolygonFeeOverrides(provider);
+  const tx = await pool.borrow(amountWei, usedVersion, overrides).catch((err) => {
     throw new Error(parseRevertReason(err));
   });
   const receipt = await tx.wait();
@@ -555,17 +579,19 @@ export async function executeDeposit(signer, amount) {
     throw new Error(`Insufficient FDX balance. You have ${Number(fmt).toFixed(4)} FDX. Request testnet tokens via the Faucet tab.`);
   }
 
+  const overrides = await getPolygonFeeOverrides(provider);
+
   // Approval — Step 1: Approve exact amount (avoids phishing/wallet drainer flags)
   const allowance = await token.allowance(address, CONTRACT_ADDRESSES.LendingPool);
   if (allowance < amountWei) {
-    const approveTx = await token.approve(CONTRACT_ADDRESSES.LendingPool, amountWei).catch((err) => {
+    const approveTx = await token.approve(CONTRACT_ADDRESSES.LendingPool, amountWei, overrides).catch((err) => {
       throw new Error(`Approval rejected: ${parseRevertReason(err)}`);
     });
     await approveTx.wait();
   }
 
   // Deposit — Step 2
-  const tx = await pool.deposit(amountWei).catch((err) => {
+  const tx = await pool.deposit(amountWei, overrides).catch((err) => {
     throw new Error(parseRevertReason(err));
   });
   const receipt = await tx.wait();
@@ -594,8 +620,9 @@ export async function executeMintTokens(signer, toAddress, amount = 10000) {
   const token = getFundryxToken(signer);
   const target = toAddress || (await signer.getAddress());
   const amountWei = ethers.parseEther(amount.toString());
+  const overrides = await getPolygonFeeOverrides(signer.provider);
 
-  const tx = await token.mint(target, amountWei).catch((err) => {
+  const tx = await token.mint(target, amountWei, overrides).catch((err) => {
     throw new Error(parseRevertReason(err));
   });
   const receipt = await tx.wait();
@@ -633,16 +660,18 @@ export async function executeRepay(signer, loanId, amount) {
     throw new Error(`Insufficient FDX to repay. You have ${Number(fmt).toFixed(4)} FDX, need ${amount} FDX.`);
   }
 
+  const overrides = await getPolygonFeeOverrides(provider);
+
   // Approval — exact amount
   const allowance = await token.allowance(address, CONTRACT_ADDRESSES.LendingPool);
   if (allowance < amountWei) {
-    const approveTx = await token.approve(CONTRACT_ADDRESSES.LendingPool, amountWei).catch((err) => {
+    const approveTx = await token.approve(CONTRACT_ADDRESSES.LendingPool, amountWei, overrides).catch((err) => {
       throw new Error(`Approval rejected: ${parseRevertReason(err)}`);
     });
     await approveTx.wait();
   }
 
-  const tx = await pool.repay(loanId, amountWei).catch((err) => {
+  const tx = await pool.repay(loanId, amountWei, overrides).catch((err) => {
     throw new Error(parseRevertReason(err));
   });
   const receipt = await tx.wait();
@@ -878,17 +907,19 @@ export async function executeSwap(signer, tokenInAddress, tokenOutAddress, amoun
   const [expectedOut, priceImpact] = await router.getAmountOut(tokenInAddress, tokenOutAddress, amountInWei);
   const minOut = expectedOut * BigInt(10000 - slippageBps) / 10000n;
 
+  const overrides = await getPolygonFeeOverrides(provider);
+
   // Approve router — exact amount
   const allowance = await tokenIn.allowance(address, MOCK_SWAP_ROUTER_ADDRESS);
   if (allowance < amountInWei) {
-    const approveTx = await tokenIn.approve(MOCK_SWAP_ROUTER_ADDRESS, amountInWei).catch((err) => {
+    const approveTx = await tokenIn.approve(MOCK_SWAP_ROUTER_ADDRESS, amountInWei, overrides).catch((err) => {
       throw new Error(`Approval failed: ${parseRevertReason(err)}`);
     });
     await approveTx.wait();
   }
 
   // Deadline: 20 minutes from now (not used in MockSwapRouter but pattern established)
-  const tx = await router.swap(tokenInAddress, tokenOutAddress, amountInWei, minOut, address).catch((err) => {
+  const tx = await router.swap(tokenInAddress, tokenOutAddress, amountInWei, minOut, address, overrides).catch((err) => {
     throw new Error(parseRevertReason(err));
   });
   const receipt = await tx.wait();
