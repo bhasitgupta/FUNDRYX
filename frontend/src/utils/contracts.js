@@ -181,7 +181,62 @@ export function getInjectedProvider(walletType = 'metamask') {
 // ─────────────────────────────────────────────────────────────
 // WALLET CONNECTION
 // ─────────────────────────────────────────────────────────────
+let wcProvider = null;
+
+export async function connectWalletConnect() {
+  const { EthereumProvider } = await import('@walletconnect/ethereum-provider');
+  const projectId = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID || '3a8170812b534d0ff9d794f19a901d64';
+
+  if (!wcProvider) {
+    wcProvider = await EthereumProvider.init({
+      projectId,
+      chains: [80002],
+      optionalChains: [80002, 137, 1],
+      showQrModal: true,
+      rpcMap: {
+        80002: 'https://polygon-amoy-bor-rpc.publicnode.com',
+      },
+      metadata: {
+        name: 'Fundryx',
+        description: 'Institutional Decentralized Credit & Lending',
+        url: window.location.origin,
+        icons: [`${window.location.origin}/wallets/walletconnect.png`],
+      },
+    });
+  }
+
+  if (wcProvider.connected) {
+    try {
+      await wcProvider.disconnect();
+    } catch (e) {
+      console.warn('WalletConnect reset:', e);
+    }
+  }
+
+  await wcProvider.connect();
+
+  const provider = new ethers.BrowserProvider(wcProvider);
+  const signer = await provider.getSigner();
+  const accounts = await provider.listAccounts();
+  const address = accounts[0]?.address || (await signer.getAddress());
+  const balance = await provider.getBalance(address);
+  const network = await provider.getNetwork();
+
+  return {
+    address,
+    signer,
+    provider,
+    balance: ethers.formatEther(balance),
+    chainId: Number(network.chainId),
+    walletType: 'walletconnect',
+  };
+}
+
 export async function connectWallet(walletType = 'metamask') {
+  if (walletType === 'walletconnect') {
+    return await connectWalletConnect();
+  }
+
   const injected = getInjectedProvider(walletType);
 
   if (!injected) {
