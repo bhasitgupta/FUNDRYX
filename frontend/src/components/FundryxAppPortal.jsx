@@ -42,6 +42,7 @@ import {
   fetchCreditPreFlight,
   parseRevertReason,
   CONTRACT_ADDRESSES,
+  TESTNET_TOKENS,
   MOCK_SWAP_ROUTER_ADDRESS,
   CHAIN_ID,
   explorerTxLink,
@@ -612,8 +613,8 @@ export default function FundryxAppPortal({
         message: `Initiating swap of ${swapAmount} ${swapFrom} to ${swapTo}. Confirm in wallet...`,
       });
 
-      const tokenInAddr = CONTRACT_ADDRESSES.FundryxToken;
-      const tokenOutAddr = CONTRACT_ADDRESSES.FundryxToken; // Testnet pair
+      const tokenInAddr = TESTNET_TOKENS[swapFrom] || CONTRACT_ADDRESSES.FundryxToken;
+      const tokenOutAddr = TESTNET_TOKENS[swapTo] || TESTNET_TOKENS.WMATIC;
 
       const res = await executeSwap(wallet.signer, tokenInAddr, tokenOutAddr, swapAmount, 100);
 

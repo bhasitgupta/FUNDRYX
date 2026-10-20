@@ -24,6 +24,13 @@ export const CONTRACT_ADDRESSES = {
   CreditPolicy:            '0x68fC6E11cD8a855849D7788e035BA92E320Db0d2',
   LendingPool:             '0xF35DaC9A5Db13c2b621Aa00288A4996D5d91c07C',
   RiskAttestationRegistry: '0xCa8C5f7AA0717BCc3435cAEbFB96Ff602232dEcC',
+  MockSwapRouter:          '0x460850Fb8495867E526e23B4149D04810d5b4e39',
+};
+
+export const TESTNET_TOKENS = {
+  FDX: '0xdA2631Aadb95AB5Ea6926e431F66fe2a66EF930E',
+  WMATIC: '0x360ad4f9a9A8EFe9A8DCB5f461c4Cc1047E1Dcf9',
+  USDC: '0x41E94Eb019C0762fFF8923a1aF1b3F931818B006',
 };
 
 // ─────────────────────────────────────────────────────────────
@@ -828,9 +835,9 @@ export async function fetchCreditPreFlight(address) {
 // test-only implementation. In production, integrate QuickSwap V3 on mainnet.
 // ─────────────────────────────────────────────────────────────
 
-// MockSwapRouter deployed address — set after deployment
-// If not deployed yet, MOCK_SWAP_ROUTER will be null and swap will show "not available"
-export const MOCK_SWAP_ROUTER_ADDRESS = import.meta.env.VITE_MOCK_SWAP_ROUTER || null;
+// MockSwapRouter deployed address on Polygon Amoy
+export const MOCK_SWAP_ROUTER_ADDRESS =
+  import.meta.env.VITE_MOCK_SWAP_ROUTER || '0x460850Fb8495867E526e23B4149D04810d5b4e39';
 
 export const MOCK_SWAP_ROUTER_ABI = [
   'function swap(address tokenIn, address tokenOut, uint256 amountIn, uint256 minAmountOut, address to) external returns (uint256 amountOut)',
