@@ -722,9 +722,62 @@ export async function executeWithdraw(signer, amount) {
 }
 
 // ─────────────────────────────────────────────────────────────
+// ADMIN ACCESS GATE & ON-CHAIN VERIFICATION
+// ─────────────────────────────────────────────────────────────
+export const ADMIN_WALLETS = [
+  '0xc90A124b741d48a486950F668BfD62D4B5cF96b4'.toLowerCase(),
+  '0x230829f5EC30A1936fDECE13F1179381daaf69e8'.toLowerCase(), // AccessManager Contract
+];
+
+export async function checkIsAdminWallet(address) {
+  if (!address) return false;
+  const lower = address.toLowerCase();
+  if (ADMIN_WALLETS.includes(lower)) return true;
+  try {
+    const provider = getReadProvider();
+    const am = new ethers.Contract(CONTRACT_ADDRESSES.AccessManager, ACCESS_MANAGER_ABI, provider);
+    const adminRole = await am.ADMIN_ROLE();
+    return await am.hasRole(adminRole, address);
+  } catch {
+    return false;
+  }
+}
+
+export async function verifyTxHashOnChain(txHash) {
+  if (!txHash || !txHash.startsWith('0x')) {
+    throw new Error('Invalid transaction hash format. Must begin with 0x.');
+  }
+  const provider = getReadProvider();
+  const [tx, receipt] = await Promise.all([
+    provider.getTransaction(txHash).catch(() => null),
+    provider.getTransactionReceipt(txHash).catch(() => null),
+  ]);
+
+  if (!tx || !receipt) {
+    throw new Error('Transaction hash not found or not yet mined on Polygon Amoy.');
+  }
+
+  const latestBlock = await provider.getBlockNumber().catch(() => receipt.blockNumber);
+  const confirmations = Math.max(1, latestBlock - receipt.blockNumber + 1);
+
+  return {
+    hash: tx.hash,
+    from: tx.from,
+    to: tx.to,
+    status: receipt.status === 1 ? 'SUCCESS' : 'REVERTED',
+    blockNumber: receipt.blockNumber,
+    confirmations,
+    gasUsed: receipt.gasUsed.toString(),
+    effectiveGasPrice: ethers.formatUnits(receipt.gasPrice || 0n, 'gwei'),
+    logsCount: receipt.logs.length,
+    explorerUrl: explorerTxLink(tx.hash),
+  };
+}
+
+// ─────────────────────────────────────────────────────────────
 // FETCH LIVE EVENTS — recent protocol activity from chain
 // ─────────────────────────────────────────────────────────────
-export async function fetchRecentEvents(blockRange = 500) {
+export async function fetchRecentEvents(blockRange = 3000) {
   const provider = getReadProvider();
   const pool = getLendingPool(provider);
 
@@ -742,15 +795,16 @@ export async function fetchRecentEvents(blockRange = 500) {
   for (const log of loanCreatedLogs) {
     events.push({
       id: `EV-${log.transactionHash.slice(2, 6)}`,
-      type: 'Disbursement',
+      type: 'Loan Disbursement',
       borrower: `${log.args.borrower.slice(0, 6)}...${log.args.borrower.slice(-4)}`,
-      amount: `${Number(ethers.formatEther(log.args.principal)).toLocaleString()} FDX`,
+      amount: `${Number(ethers.formatEther(log.args.principal)).toLocaleString()} FDX (Loan #${log.args.loanId.toString()})`,
       score: `Policy v${log.args.policyVersion}`,
       time: `Block ${log.blockNumber}`,
-      hash: `${log.transactionHash.slice(0, 6)}...${log.transactionHash.slice(-4)}`,
+      hash: `${log.transactionHash.slice(0, 8)}...${log.transactionHash.slice(-6)}`,
       txHash: log.transactionHash,
       blockNumber: log.blockNumber,
       timestamp: null,
+      fullBorrower: log.args.borrower,
     });
   }
 
@@ -762,10 +816,11 @@ export async function fetchRecentEvents(blockRange = 500) {
       amount: `${Number(ethers.formatEther(log.args.amountPaid)).toLocaleString()} FDX`,
       score: log.args.isFullRepayment ? '+Credit Boost' : 'Partial',
       time: `Block ${log.blockNumber}`,
-      hash: `${log.transactionHash.slice(0, 6)}...${log.transactionHash.slice(-4)}`,
+      hash: `${log.transactionHash.slice(0, 8)}...${log.transactionHash.slice(-6)}`,
       txHash: log.transactionHash,
       blockNumber: log.blockNumber,
       timestamp: null,
+      fullBorrower: log.args.borrower,
     });
   }
 
@@ -777,16 +832,40 @@ export async function fetchRecentEvents(blockRange = 500) {
       amount: `${Number(ethers.formatEther(log.args.amount)).toLocaleString()} FDX`,
       score: 'Liquidity Deposited',
       time: `Block ${log.blockNumber}`,
-      hash: `${log.transactionHash.slice(0, 6)}...${log.transactionHash.slice(-4)}`,
+      hash: `${log.transactionHash.slice(0, 8)}...${log.transactionHash.slice(-6)}`,
       txHash: log.transactionHash,
       blockNumber: log.blockNumber,
       timestamp: null,
+      fullBorrower: log.args.lender,
     });
+  }
+
+  // Also query MockSwapRouter Swap events if deployed
+  if (MOCK_SWAP_ROUTER_ADDRESS) {
+    try {
+      const router = getMockSwapRouter(provider);
+      const swapLogs = await router.queryFilter(router.filters.Swap(), fromBlock, latest).catch(() => []);
+      for (const log of swapLogs) {
+        events.push({
+          id: `EV-${log.transactionHash.slice(2, 6)}`,
+          type: 'AMM Swap',
+          borrower: `${log.args.sender.slice(0, 6)}...${log.args.sender.slice(-4)}`,
+          amount: `${Number(ethers.formatEther(log.args.amountIn)).toFixed(2)} → ${Number(ethers.formatEther(log.args.amountOut)).toFixed(2)}`,
+          score: 'x*y=k Swap',
+          time: `Block ${log.blockNumber}`,
+          hash: `${log.transactionHash.slice(0, 8)}...${log.transactionHash.slice(-6)}`,
+          txHash: log.transactionHash,
+          blockNumber: log.blockNumber,
+          timestamp: null,
+          fullBorrower: log.args.sender,
+        });
+      }
+    } catch {}
   }
 
   // Sort by block descending
   events.sort((a, b) => b.blockNumber - a.blockNumber);
-  return events.slice(0, 20);
+  return events;
 }
 
 // ─────────────────────────────────────────────────────────────

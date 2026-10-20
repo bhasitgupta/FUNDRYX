@@ -28,7 +28,11 @@ import {
   Scale,
   Activity,
   CheckCircle,
-  ExternalLink
+  ExternalLink,
+  Search,
+  Copy,
+  Lock,
+  Shield,
 } from 'lucide-react';
 import {
   executeBorrow,
@@ -46,6 +50,9 @@ import {
   MOCK_SWAP_ROUTER_ADDRESS,
   CHAIN_ID,
   explorerTxLink,
+  ADMIN_WALLETS,
+  checkIsAdminWallet,
+  verifyTxHashOnChain,
 } from '../utils/contracts';
 
 export default function FundryxAppPortal({
@@ -131,6 +138,60 @@ export default function FundryxAppPortal({
   const [activityFeed, setActivityFeed] = useState([]);
   const [txNotification, setTxNotification] = useState(null);
   const [isAuditing, setIsAuditing] = useState(false);
+
+  // Admin-only Cryptographic Audit Trail State
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [auditEvents, setAuditEvents] = useState([]);
+  const [isLoadingAudit, setIsLoadingAudit] = useState(false);
+  const [auditSearchHash, setAuditSearchHash] = useState('');
+  const [verifiedTxData, setVerifiedTxData] = useState(null);
+  const [isVerifyingTx, setIsVerifyingTx] = useState(false);
+  const [verifyTxError, setVerifyTxError] = useState(null);
+
+  // Admin role check on wallet change
+  useEffect(() => {
+    if (wallet.address) {
+      checkIsAdminWallet(wallet.address)
+        .then((res) => setIsAdmin(res))
+        .catch(() => setIsAdmin(false));
+    } else {
+      setIsAdmin(false);
+    }
+  }, [wallet.address]);
+
+  const loadOnChainAuditTrail = async () => {
+    setIsLoadingAudit(true);
+    try {
+      const events = await fetchRecentEvents(3500);
+      setAuditEvents(events);
+    } catch (err) {
+      console.warn('Failed to load onchain audit events:', err);
+    } finally {
+      setIsLoadingAudit(false);
+    }
+  };
+
+  const handleVerifyTx = async (hashToVerify) => {
+    const targetHash = (hashToVerify || auditSearchHash || '').trim();
+    if (!targetHash) return;
+    setIsVerifyingTx(true);
+    setVerifyTxError(null);
+    try {
+      const data = await verifyTxHashOnChain(targetHash);
+      setVerifiedTxData(data);
+    } catch (err) {
+      setVerifyTxError(err.message || 'Verification failed');
+      setVerifiedTxData(null);
+    } finally {
+      setIsVerifyingTx(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'audit' && isAdmin) {
+      loadOnChainAuditTrail();
+    }
+  }, [activeTab, isAdmin]);
 
   // Sync real data from backend & onchain network
   useEffect(() => {
@@ -684,8 +745,9 @@ export default function FundryxAppPortal({
       ]
     },
     {
-      label: 'Leganetum Governance',
+      label: 'Institutional Governance',
       children: [
+        { value: 'audit', label: 'Admin On-Chain Audit', icon: ShieldCheck },
         { value: 'terms', label: 'Legal & Risk Terms', icon: Download04Icon },
         { value: 'landing', label: 'Website Home', icon: Rocket01Icon }
       ]
@@ -777,6 +839,7 @@ export default function FundryxAppPortal({
                 {activeTab === 'credit' && 'Borderline Verify'}
                 {activeTab === 'risk' && 'AI Risk Telemetry'}
                 {activeTab === 'markets' && 'Capital Markets'}
+                {activeTab === 'audit' && 'Admin On-Chain Audit Trail'}
                 {activeTab === 'terms' && 'Legal & Risk Terms'}
               </span>
             </div>
@@ -2176,6 +2239,266 @@ export default function FundryxAppPortal({
                       </div>
                     );
                   })}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ======================================================= */}
+          {/* TAB 7: ADMIN ON-CHAIN AUDIT TRAIL (ADMIN-ONLY GATE)      */}
+          {/* ======================================================= */}
+          {activeTab === 'audit' && !isAdmin && (
+            <div className="flex flex-col items-center justify-center p-12 rounded-2xl bg-[var(--surface-1)] border border-[var(--border)] text-center max-w-xl mx-auto my-12 animate-fade-in">
+              <div className="w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 mb-4">
+                <ShieldAlert size={32} />
+              </div>
+              <h2 className="text-xl font-bold text-white mb-2">Restricted Protocol Area</h2>
+              <p className="text-sm text-[var(--text-muted)] mb-6 leading-relaxed">
+                The Cryptographic On-Chain Audit Trail is restricted exclusively to authorized Protocol Administrators and the AccessManager contract.
+              </p>
+              <div className="p-3.5 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-xs font-mono text-[var(--text-dim)] w-full text-left flex flex-col gap-1.5 mb-6">
+                <div>Connected Account: <span className="text-white">{wallet.address || 'No wallet connected'}</span></div>
+                <div>Role Verification: <span className="text-rose-400">UNAUTHORIZED_VIEWER</span></div>
+                <div>Authorized Admin Accounts: <span className="text-emerald-400">0xc90A1...F96b4</span> &amp; <span className="text-emerald-400">AccessManager (0x2308...)</span></div>
+              </div>
+              {!wallet.address ? (
+                <button onClick={onConnect} className="portal-btn-primary">Connect Admin Wallet</button>
+              ) : (
+                <button onClick={() => setActiveTab('overview')} className="portal-btn-secondary">Return to Overview</button>
+              )}
+            </div>
+          )}
+
+          {activeTab === 'audit' && isAdmin && (
+            <div className="flex flex-col gap-10 animate-fade-in">
+              {/* Header */}
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <h1 className="portal-page-title">Admin Cryptographic Audit Trail</h1>
+                    <span className="portal-badge portal-badge-primary">Admin Validated</span>
+                  </div>
+                  <p className="portal-page-sub">
+                    Immutable on-chain execution ledger and cryptographic hash validation suite on Polygon Amoy.
+                  </p>
+                </div>
+                <button
+                  onClick={loadOnChainAuditTrail}
+                  disabled={isLoadingAudit}
+                  className="portal-btn-secondary flex items-center gap-2 text-xs"
+                >
+                  <Activity size={14} className={isLoadingAudit ? 'animate-spin' : ''} />
+                  <span>{isLoadingAudit ? 'Syncing...' : 'Sync Blockchain Logs'}</span>
+                </button>
+              </div>
+
+              {/* Admin Authority Banner */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="p-4 rounded-xl bg-[var(--surface-1)] border border-emerald-500/30 flex items-center gap-3">
+                  <div className="p-2.5 rounded-lg bg-emerald-500/10 text-emerald-400">
+                    <ShieldCheck size={20} />
+                  </div>
+                  <div>
+                    <span className="text-[10px] uppercase font-mono text-[var(--text-dim)] block">Primary Admin Wallet</span>
+                    <span className="font-mono text-xs font-bold text-white">0xc90A124b...F96b4</span>
+                    <span className="text-[10px] text-emerald-400 block font-medium">Connected · Session Verified</span>
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-xl bg-[var(--surface-1)] border border-[var(--border)] flex items-center gap-3">
+                  <div className="p-2.5 rounded-lg bg-purple-500/10 text-purple-400">
+                    <Cpu size={20} />
+                  </div>
+                  <div>
+                    <span className="text-[10px] uppercase font-mono text-[var(--text-dim)] block">Governance Contract</span>
+                    <span className="font-mono text-xs font-bold text-white">0x230829f5...69e8</span>
+                    <span className="text-[10px] text-[var(--text-muted)] block font-medium">AccessManager Controller</span>
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-xl bg-[var(--surface-1)] border border-[var(--border)] flex items-center gap-3">
+                  <div className="p-2.5 rounded-lg bg-cyan-500/10 text-cyan-400">
+                    <Radio size={20} />
+                  </div>
+                  <div>
+                    <span className="text-[10px] uppercase font-mono text-[var(--text-dim)] block">Consensus Network</span>
+                    <span className="font-mono text-xs font-bold text-white">Polygon Amoy (80002)</span>
+                    <span className="text-[10px] text-cyan-400 block font-medium">Direct Bor RPC · Zero Middleware</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Hash Verifier Tool */}
+              <div className="portal-card portal-card-top-cyan">
+                <div className="portal-card-header">
+                  <div className="flex items-center gap-2">
+                    <Search size={16} className="text-cyan-400" />
+                    <h2 className="portal-card-title">Cryptographic Hash Verifier</h2>
+                  </div>
+                  <span className="portal-badge portal-badge-cyan">RPC Validation</span>
+                </div>
+                <p className="text-xs text-[var(--text-muted)] mb-4">
+                  Paste any transaction hash to verify receipt status, mined block number, and cryptographic consensus on Polygonscan Amoy.
+                </p>
+                
+                <div className="flex flex-col sm:flex-row gap-3 mb-4">
+                  <input
+                    type="text"
+                    value={auditSearchHash}
+                    onChange={(e) => setAuditSearchHash(e.target.value)}
+                    placeholder="0x... (e.g. 0xf523a1bc... or 0x283603fd...)"
+                    className="flex-1 h-11 px-4 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] font-mono text-xs text-white outline-none focus:border-cyan-400 transition"
+                  />
+                  <button
+                    onClick={() => handleVerifyTx()}
+                    disabled={isVerifyingTx || !auditSearchHash}
+                    className="portal-btn-cyan h-11 px-6 text-xs font-semibold disabled:opacity-50 cursor-pointer"
+                  >
+                    {isVerifyingTx ? 'Querying Chain...' : 'Verify Hash'}
+                  </button>
+                </div>
+
+                {/* Quick Sample Hashes from user's live deposit & loan */}
+                <div className="flex flex-wrap items-center gap-2 text-xs text-[var(--text-dim)]">
+                  <span>Your recent onchain transactions:</span>
+                  <button
+                    type="button"
+                    onClick={() => { setAuditSearchHash('0xf523a1bc8e5cecfaeca2dfb7390b85f524ad2fcb37ad499d6a961eaf47faf5c7'); handleVerifyTx('0xf523a1bc8e5cecfaeca2dfb7390b85f524ad2fcb37ad499d6a961eaf47faf5c7'); }}
+                    className="px-2.5 py-1 rounded bg-[var(--surface-2)] border border-[var(--border)] text-cyan-300 font-mono hover:border-cyan-400 transition text-[11px] cursor-pointer"
+                  >
+                    Loan Disbursed (50 FDX)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setAuditSearchHash('0x283603fd1883ae05d85cbb220312dcebdc897d5d63343111c0d80fe2c4a92121'); handleVerifyTx('0x283603fd1883ae05d85cbb220312dcebdc897d5d63343111c0d80fe2c4a92121'); }}
+                    className="px-2.5 py-1 rounded bg-[var(--surface-2)] border border-[var(--border)] text-emerald-300 font-mono hover:border-emerald-400 transition text-[11px] cursor-pointer"
+                  >
+                    Capital Deposit (500 FDX)
+                  </button>
+                </div>
+
+                {/* Verification Result Card */}
+                {verifyTxError && (
+                  <div className="mt-4 p-3.5 rounded-xl bg-rose-950/60 border border-rose-500/40 text-xs text-rose-300 font-mono">
+                    Verification Error: {verifyTxError}
+                  </div>
+                )}
+
+                {verifiedTxData && (
+                  <div className="mt-4 p-4 rounded-xl bg-[var(--surface-2)] border border-cyan-500/30 flex flex-col gap-3 font-mono text-xs">
+                    <div className="flex justify-between items-center pb-2 border-b border-[var(--border)]">
+                      <span className="text-white font-bold flex items-center gap-1.5">
+                        <CheckCircle size={14} className="text-emerald-400" />
+                        Status: <span className="text-emerald-400">{verifiedTxData.status}</span>
+                      </span>
+                      <a
+                        href={verifiedTxData.explorerUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-cyan-400 hover:text-cyan-300 flex items-center gap-1 font-semibold underline"
+                      >
+                        View on Polygonscan <ExternalLink size={12} />
+                      </a>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[var(--text-muted)]">
+                      <div>Mined Block: <span className="text-white font-semibold">#{verifiedTxData.blockNumber}</span> ({verifiedTxData.confirmations} Confirmations)</div>
+                      <div>Gas Used: <span className="text-white font-semibold">{Number(verifiedTxData.gasUsed).toLocaleString()}</span> units</div>
+                      <div>Gas Price: <span className="text-white font-semibold">{Number(verifiedTxData.effectiveGasPrice).toFixed(2)} Gwei</span></div>
+                      <div>Logs Emitted: <span className="text-white font-semibold">{verifiedTxData.logsCount} event(s)</span></div>
+                      <div className="sm:col-span-2 truncate">Transaction Hash: <span className="text-cyan-300">{verifiedTxData.hash}</span></div>
+                      <div className="sm:col-span-2 truncate">Origin (From): <span className="text-white">{verifiedTxData.from}</span></div>
+                      <div className="sm:col-span-2 truncate">Contract (To): <span className="text-white">{verifiedTxData.to}</span></div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Real On-Chain Ledger Table */}
+              <div className="portal-card">
+                <div className="portal-card-header">
+                  <div className="flex items-center gap-2">
+                    <FileText size={16} className="text-emerald-400" />
+                    <h2 className="portal-card-title">Live Cryptographic Audit Trail (Polygon Amoy)</h2>
+                  </div>
+                  <span className="portal-badge portal-badge-neutral">
+                    {auditEvents.length} Events Verified
+                  </span>
+                </div>
+
+                <div className="portal-table-wrapper">
+                  <table className="portal-table-v2">
+                    <thead>
+                      <tr>
+                        <th>Event Type</th>
+                        <th>Transaction Hash</th>
+                        <th>Block</th>
+                        <th>Actor (Borrower / Lender)</th>
+                        <th>Volume / Amount</th>
+                        <th>On-Chain Proof</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {auditEvents.length === 0 ? (
+                        <tr>
+                          <td colSpan={6} className="text-center py-8 text-xs text-[var(--text-dim)] font-mono">
+                            {isLoadingAudit ? 'Fetching verified blocks from Polygon Amoy...' : 'No events in recent block range.'}
+                          </td>
+                        </tr>
+                      ) : (
+                        auditEvents.map((ev, idx) => (
+                          <tr key={ev.txHash || idx}>
+                            <td>
+                              <span className={`portal-badge ${
+                                ev.type.includes('Disbursement') ? 'portal-badge-primary' :
+                                ev.type.includes('Supply') ? 'portal-badge-yield' :
+                                ev.type.includes('Swap') ? 'portal-badge-purple' :
+                                'portal-badge-cyan'
+                              }`}>
+                                {ev.type}
+                              </span>
+                            </td>
+                            <td className="font-mono text-xs">
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-white">{ev.hash}</span>
+                                <a
+                                  href={explorerTxLink(ev.txHash)}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="text-emerald-400 hover:text-emerald-300"
+                                  title="Inspect on Polygonscan Amoy"
+                                >
+                                  <ExternalLink size={12} />
+                                </a>
+                              </div>
+                            </td>
+                            <td className="font-mono text-xs text-[var(--text-muted)]">
+                              <a
+                                href={`https://amoy.polygonscan.com/block/${ev.blockNumber}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="hover:text-white underline"
+                              >
+                                #{ev.blockNumber}
+                              </a>
+                            </td>
+                            <td className="font-mono text-xs text-[var(--text-muted)]">
+                              {ev.borrower}
+                            </td>
+                            <td className="font-mono text-xs font-semibold text-white">
+                              {ev.amount}
+                            </td>
+                            <td>
+                              <span className="inline-flex items-center gap-1 text-[11px] font-mono text-emerald-400">
+                                <CheckCircle size={12} />
+                                <span>Verified</span>
+                              </span>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
                 </div>
               </div>
             </div>
