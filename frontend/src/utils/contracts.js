@@ -104,8 +104,13 @@ export const ACCESS_MANAGER_ABI = [
   'function OPERATOR_ROLE() view returns (bytes32)',
   'function LENDING_POOL_ROLE() view returns (bytes32)',
   'function MONITOR_SIGNER_ROLE() view returns (bytes32)',
+  'function USER_ROLE() view returns (bytes32)',
   'function grantRole(bytes32 role, address account) external',
   'function revokeRole(bytes32 role, address account) external',
+  'function registerUser() external',
+  'event UserRegistered(address indexed account)',
+  'event RoleGranted(bytes32 indexed role, address indexed account, address indexed grantedBy)',
+  'event RoleRevoked(bytes32 indexed role, address indexed account, address indexed revokedBy)',
 ];
 
 // ─────────────────────────────────────────────────────────────
@@ -259,6 +264,18 @@ export async function connectWallet(walletType = 'metamask') {
   }
 
   const provider = new ethers.BrowserProvider(injected);
+
+  // Always request permissions so wallet shows confirmation popup on reconnect
+  try {
+    await injected.request({
+      method: 'wallet_requestPermissions',
+      params: [{ eth_accounts: {} }],
+    });
+  } catch (permErr) {
+    // User dismissed or wallet doesn't support — fall through to eth_requestAccounts
+    if (permErr.code === 4001) throw new Error('Connection rejected by user.');
+  }
+
   const accounts = await injected.request({ method: 'eth_requestAccounts' });
   if (!accounts || accounts.length === 0) {
     throw new Error('No accounts selected in wallet.');
@@ -580,16 +597,6 @@ export async function fetchRecentEvents(blockRange = 500) {
   // Sort by block descending
   events.sort((a, b) => b.blockNumber - a.blockNumber);
   return events.slice(0, 20);
-}
-
-// ─────────────────────────────────────────────────────────────
-// MINT FDX — testnet helper for devs
-// ─────────────────────────────────────────────────────────────
-export async function mintTestTokens(signer, toAddress, amount) {
-  const token = getFundryxToken(signer);
-  const tx = await token.mint(toAddress, ethers.parseEther(amount.toString()));
-  const receipt = await tx.wait();
-  return { tx, receipt };
 }
 
 // ─────────────────────────────────────────────────────────────

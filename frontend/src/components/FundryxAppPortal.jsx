@@ -35,9 +35,13 @@ import {
   executeDeposit,
   executeRepay,
   fetchRecentEvents,
+  fetchWalletData,
+  fetchBorrowerLoans,
   CONTRACT_ADDRESSES,
   explorerTxLink,
 } from '../utils/contracts';
+
+
 
 export default function FundryxAppPortal({
   wallet,
@@ -85,61 +89,31 @@ export default function FundryxAppPortal({
   const [openTermSection, setOpenTermSection] = useState(0);
 
   // Real data state
-  const [livePool, setLivePool] = useState(poolStats || { totalDeposits: 100000, totalBorrowed: 150, utilizationRate: 0.15 });
+  const [livePool, setLivePool] = useState(poolStats || { totalDeposits: 0, totalBorrowed: 0, utilizationRate: 0 });
   const [creditProfile, setCreditProfile] = useState({
-    borrower: wallet.address || '0x71C94142a59a72F2bB4E7d8DeF0882e88a0349A2',
-    score: 785,
-    tier: 'Tier 1 Prime',
-    maxCredit: 250000,
-    repaymentCount: 12,
+    borrower: wallet.address || null,
+    score: null,
+    tier: null,
+    maxCredit: 0,
+    repaymentCount: 0,
     defaultCount: 0,
-    verifiedRepaidValue: 185000,
-    outstandingExposure: 48210,
+    verifiedRepaidValue: 0,
+    outstandingExposure: 0,
   });
   const [riskData, setRiskData] = useState({
-    systemSolvency: '214.8%',
-    anomalyScore: 0.15,
-    mode: 'ADVISORY_SHADOW',
-    quorumNodes: 3,
-    synchronizedNodes: 3,
-    nodeQuorum: [
-      { node: 'sentinel-01.fundryx.net', status: 'Active', latency: '18ms', weight: '33.3%' },
-      { node: 'sentinel-02.fundryx.net', status: 'Active', latency: '22ms', weight: '33.3%' },
-      { node: 'sentinel-03.fundryx.net', status: 'Active', latency: '15ms', weight: '33.4%' },
-    ],
+    systemSolvency: '--',
+    anomalyScore: null,
+    mode: 'LOADING',
+    quorumNodes: 0,
+    synchronizedNodes: 0,
+    nodeQuorum: [],
   });
-  const [attestationLogs, setAttestationLogs] = useState([
-    { time: 'Just now', sender: 'Sentinel Alpha', text: 'Solvency ratio cross-check completed. 0 anomalies detected onchain.', color: 'text-[var(--accent-2)]' },
-    { time: '1m ago', sender: 'Sentinel Beta', text: 'Verified active debt against reserve tranches. Coverage index 214.8%.', color: 'text-[var(--primary)]' },
-    { time: '3m ago', sender: 'Sentinel Gamma', text: 'Verified repayment receipts onchain. Quorum signature valid.', color: 'text-[var(--accent-3)]' },
-    { time: '5m ago', sender: 'Consensus Engine', text: 'Block #50605600 verified. Report hash committed.', color: 'text-[var(--warn)]' },
-  ]);
-  const [orderBookAsks, setOrderBookAsks] = useState([
-    { price: 1.0035, size: '24,500', total: '24,585.75', depth: 85 },
-    { price: 1.0028, size: '18,200', total: '18,250.96', depth: 65 },
-    { price: 1.0020, size: '35,000', total: '35,070.00', depth: 95 },
-    { price: 1.0012, size: '12,400', total: '12,414.88', depth: 40 },
-    { price: 1.0005, size: '42,000', total: '42,021.00', depth: 100 },
-  ]);
-  const [orderBookBids, setOrderBookBids] = useState([
-    { price: 0.9995, size: '38,100', total: '38,080.95', depth: 90 },
-    { price: 0.9988, size: '15,600', total: '15,581.28', depth: 45 },
-    { price: 0.9980, size: '29,400', total: '29,341.20', depth: 70 },
-    { price: 0.9972, size: '19,800', total: '19,744.56', depth: 55 },
-    { price: 0.9965, size: '51,200', total: '51,020.80', depth: 100 },
-  ]);
-  const [marketTrades, setMarketTrades] = useState([
-    { id: 'TRD-8821', pair: 'POL/USDC', type: 'Buy', price: '0.0928', size: '50,000', time: 'Just now', hash: '0x3f1a...48b9' },
-    { id: 'TRD-8820', pair: 'ETH/USDC', type: 'Buy', price: '2401.16', size: '4.5', time: '2m ago', hash: '0x99c2...51da' },
-    { id: 'TRD-8819', pair: 'USDC/FDX', type: 'Buy', price: '1.0005', size: '25,000', time: '5m ago', hash: '0x2a8b...773e' },
-    { id: 'TRD-8818', pair: 'EURC/USDC', type: 'Sell', price: '1.0820', size: '12,000', time: '9m ago', hash: '0x88f4...11a0' },
-  ]);
-  const [marketTickers, setMarketTickers] = useState({ POL: 0.0928, ETH: 2401.16, BTC: 81935, USDC: 1.00, EURC: 1.082, FDX: 1.00 });
-  const [activeLoans, setActiveLoans] = useState([
-    { id: 'LOAN-8891', asset: 'USDC', amount: 15000, apr: '5.20%', dueDays: 6, progress: 70, status: 'Active', tier: 'Prime Tier 1' },
-    { id: 'LOAN-8842', asset: 'EURC', amount: 33210, apr: '4.80%', dueDays: 12, progress: 45, status: 'Active', tier: 'Prime Tier 1' },
-    { id: 'LOAN-7920', asset: 'FDX', amount: 50000, apr: '6.10%', dueDays: 0, progress: 100, status: 'Settled', tier: 'Prime Tier 1' },
-  ]);
+  const [attestationLogs, setAttestationLogs] = useState([]);
+  const [orderBookAsks, setOrderBookAsks] = useState([]);
+  const [orderBookBids, setOrderBookBids] = useState([]);
+  const [marketTrades, setMarketTrades] = useState([]);
+  const [marketTickers, setMarketTickers] = useState({ POL: null, ETH: null, BTC: null, USDC: 1.00, EURC: null, FDX: null });
+  const [activeLoans, setActiveLoans] = useState([]);
   const [activityFeed, setActivityFeed] = useState([]);
   const [txNotification, setTxNotification] = useState(null);
   const [isAuditing, setIsAuditing] = useState(false);
@@ -156,8 +130,9 @@ export default function FundryxAppPortal({
       })
       .catch(() => {});
 
-    // 2. Fetch Borrower Credit Score
-    const targetAddr = wallet.address || '0x71C94142a59a72F2bB4E7d8DeF0882e88a0349A2';
+    // 2. Fetch Borrower Credit Score & Active Loans
+    const targetAddr = wallet.address;
+    if (!targetAddr) return;
     fetch(`http://127.0.0.1:8000/api/credit/score/${targetAddr}`)
       .then((r) => r.json())
       .then((data) => {
@@ -165,7 +140,23 @@ export default function FundryxAppPortal({
           setCreditProfile((prev) => ({ ...prev, ...data }));
         }
       })
-      .catch(() => {});
+      .catch(async () => {
+        // Fallback: fetch real data directly from chain
+        try {
+          const walletData = await fetchWalletData(targetAddr);
+          setCreditProfile((prev) => ({
+            ...prev,
+            borrower: targetAddr,
+            maxCredit: walletData.maxCredit,
+            repaymentCount: walletData.repaymentCount,
+            outstandingExposure: walletData.outstandingExposure,
+            verifiedRepaidValue: walletData.stats?.verifiedRepaidValue || 0,
+            defaultCount: walletData.stats?.defaultCount || 0,
+          }));
+          const onchainLoans = await fetchBorrowerLoans(targetAddr);
+          if (onchainLoans.length > 0) setActiveLoans(onchainLoans);
+        } catch (_) {}
+      });
 
     // 3. Fetch Risk Telemetry
     fetch('http://127.0.0.1:8000/api/risk/telemetry')
@@ -266,11 +257,11 @@ export default function FundryxAppPortal({
       {
         id: `EV-${Math.floor(1000 + Math.random() * 9000)}`,
         type: 'Disbursement',
-        borrower: wallet.address ? `${wallet.address.slice(0, 6)}...${wallet.address.slice(-4)}` : '0x71c9...49a2',
-        amount: `${Number(borrowInput).toLocaleString()} USDC`,
-        score: `${creditProfile.score} Prime`,
+        borrower: wallet.address ? `${wallet.address.slice(0, 6)}...${wallet.address.slice(-4)}` : 'Unknown',
+        amount: `${Number(borrowInput).toLocaleString()} FDX`,
+        score: creditProfile.tier || 'Protocol',
         time: 'Just now',
-        hash: '0x1c8b...32fa',
+        hash: 'Pending...',
       },
       ...prev,
     ]);

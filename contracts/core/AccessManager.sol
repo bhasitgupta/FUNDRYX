@@ -4,6 +4,7 @@ pragma solidity ^0.8.24;
 /// @title AccessManager
 /// @notice Role-based access control for Fundryx protocol
 /// @dev Admin cannot bypass financial invariants. Monitor key cannot hold admin/pauser/treasury roles.
+///      Connected wallets self-register as USER_ROLE. Admin separation enforced: admins cannot hold USER_ROLE.
 contract AccessManager {
     // ──────────────────────────────────────────────
     // Roles
@@ -12,6 +13,8 @@ contract AccessManager {
     bytes32 public constant OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
     bytes32 public constant LENDING_POOL_ROLE = keccak256("LENDING_POOL_ROLE");
     bytes32 public constant MONITOR_SIGNER_ROLE = keccak256("MONITOR_SIGNER_ROLE");
+    /// @notice Standard user role — granted to every connected wallet via self-registration
+    bytes32 public constant USER_ROLE = keccak256("USER_ROLE");
 
     // ──────────────────────────────────────────────
     // State
@@ -26,6 +29,8 @@ contract AccessManager {
     error ZeroAddress();
     error MonitorCannotBeAdmin(address account);
     error DuplicateAdmin();
+    error AdminCannotSelfRegisterAsUser(address account);
+    error UserAlreadyRegistered(address account);
 
     // ──────────────────────────────────────────────
     // Events
@@ -33,6 +38,7 @@ contract AccessManager {
     event RoleGranted(bytes32 indexed role, address indexed account, address indexed grantedBy);
     event RoleRevoked(bytes32 indexed role, address indexed account, address indexed revokedBy);
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
+    event UserRegistered(address indexed account);
 
     // ──────────────────────────────────────────────
     // Constructor
@@ -61,10 +67,24 @@ contract AccessManager {
     }
 
     // ──────────────────────────────────────────────
+    // User self-registration
+    // ──────────────────────────────────────────────
+
+    /// @notice Any non-admin wallet can register itself as a USER.
+    /// @dev Reverts if already registered. Admins are explicitly excluded — role separation.
+    function registerUser() external {
+        if (_roles[ADMIN_ROLE][msg.sender]) revert AdminCannotSelfRegisterAsUser(msg.sender);
+        if (_roles[USER_ROLE][msg.sender]) revert UserAlreadyRegistered(msg.sender);
+        _roles[USER_ROLE][msg.sender] = true;
+        emit UserRegistered(msg.sender);
+        emit RoleGranted(USER_ROLE, msg.sender, msg.sender);
+    }
+
+    // ──────────────────────────────────────────────
     // External functions
     // ──────────────────────────────────────────────
 
-    /// @notice Grant a role to an account
+    /// @notice Grant a role to an account (admin only)
     /// @dev Monitor signer cannot also hold admin, operator, or lending pool roles
     function grantRole(bytes32 role, address account) external onlyAdmin {
         if (account == address(0)) revert ZeroAddress();
@@ -84,11 +104,16 @@ contract AccessManager {
             revert MonitorCannotBeAdmin(account);
         }
 
+        // Admin cannot be assigned USER_ROLE — role separation
+        if (role == USER_ROLE && _roles[ADMIN_ROLE][account]) {
+            revert AdminCannotSelfRegisterAsUser(account);
+        }
+
         _roles[role][account] = true;
         emit RoleGranted(role, account, msg.sender);
     }
 
-    /// @notice Revoke a role from an account
+    /// @notice Revoke a role from an account (admin only)
     function revokeRole(bytes32 role, address account) external onlyAdmin {
         _roles[role][account] = false;
         emit RoleRevoked(role, account, msg.sender);

@@ -18,15 +18,13 @@ export default function App() {
     provider: null,
     balance: '0',
     chainId: null,
-    isDemo: false,
   });
 
-  // Protocol Stats
   const [poolStats, setPoolStats] = useState({
-    totalDeposits: 100000,
-    totalBorrowed: 150,
-    utilization: '0.15',
-    verifiedRepayments: 12,
+    totalDeposits: 0,
+    totalBorrowed: 0,
+    utilization: '0.00',
+    verifiedRepayments: 0,
   });
 
   // Fetch live pool stats from backend and blockchain
@@ -108,7 +106,6 @@ export default function App() {
       provider: null,
       balance: '0',
       chainId: null,
-      isDemo: false,
     };
     walletRef.current = emptyWallet;
     setWallet(emptyWallet);
@@ -121,8 +118,8 @@ export default function App() {
     try {
       const pool = new ethers.Contract(CONTRACT_ADDRESSES.LendingPool, LENDING_POOL_ABI, provider);
       const [deposits, borrowed] = await Promise.all([
-        pool.totalDeposits().catch(() => 100000n * 10n ** 18n),
-        pool.totalBorrowed().catch(() => 150n * 10n ** 18n),
+        pool.totalDeposits().catch(() => 0n),
+        pool.totalBorrowed().catch(() => 0n),
       ]);
 
       const depNum = Number(ethers.formatEther(deposits));
@@ -300,27 +297,11 @@ export default function App() {
               title: "Cash Out",
               periods: [
                 {
-                  label: "Month",
-                  range: "Sep 01, 2026 - Sep 30, 2026",
-                  amount: poolStats.totalBorrowed || 150,
-                  change: -4.2,
-                  categories: [
-                    { label: "Prime Tier", value: 31200 },
-                    { label: "Short-term", value: 6810.4 },
-                    { label: "Working Cap", value: 4200 },
-                    { label: "Micro-loans", value: 6000 },
-                  ],
-                },
-                {
-                  label: "Week",
-                  range: "Sep 24, 2026 - Sep 30, 2026",
-                  amount: 9020,
-                  change: 2.1,
-                  categories: [
-                    { label: "Prime Tier", value: 2820 },
-                    { label: "Short-term", value: 1200 },
-                    { label: "Working Cap", value: 5000 },
-                  ],
+                  label: "On-Chain",
+                  range: "Live from blockchain",
+                  amount: poolStats.totalBorrowed || 0,
+                  change: null,
+                  categories: [],
                 },
               ],
             },
@@ -328,15 +309,11 @@ export default function App() {
               title: "Cash In",
               periods: [
                 {
-                  label: "Month",
-                  range: "Sep 01, 2026 - Sep 30, 2026",
-                  amount: poolStats.totalDeposits || 100000,
-                  change: 11.8,
-                  categories: [
-                    { label: "Liquidity TVL", value: 98400 },
-                    { label: "Reserve Staking", value: 21000 },
-                    { label: "Protocol Fees", value: 7000 },
-                  ],
+                  label: "On-Chain",
+                  range: "Live from blockchain",
+                  amount: poolStats.totalDeposits || 0,
+                  change: null,
+                  categories: [],
                 },
               ],
             },
@@ -359,13 +336,13 @@ export default function App() {
           }}
           wallet={{
             title: "Multi-Currency Capital Reserves",
-            description: "Click a reserve asset to inspect real-time lending allocation and utilization.",
-            growth: "+11.8% · This quarter",
+            description: "Illustrative reserve allocation. Connect your wallet to view live balances.",
+            growth: "Protocol Live · Polygon Amoy",
             wallets: [
-              { code: "USDC", symbol: "$", balance: 912400, perUsd: 1 },
-              { code: "EURC", symbol: "€ ", balance: 228900, perUsd: 0.92 },
-              { code: "USD", symbol: "$", balance: 540000, perUsd: 1 },
-              { code: "FDX", symbol: "✦ ", balance: 9820000, perUsd: 151 },
+              { code: "USDC", symbol: "$", balance: poolStats.totalDeposits > 0 ? poolStats.totalDeposits : 0, perUsd: 1 },
+              { code: "FDX", symbol: "✦ ", balance: 0, perUsd: 1 },
+              { code: "EURC", symbol: "€ ", balance: 0, perUsd: 0.92 },
+              { code: "USD", symbol: "$", balance: 0, perUsd: 1 },
             ],
           }}
           spending={{
