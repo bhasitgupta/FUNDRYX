@@ -444,80 +444,194 @@ export async function fetchBorrowerLoans(address, provider) {
     loanIds.map(id => pool.getLoan(id).catch(() => null))
   );
 
-  return loans.filter(Boolean).map(l => ({
-    loanId: Number(l.loanId),
-    borrower: l.borrower,
-    principalInitial: Number(ethers.formatEther(l.principalInitial)),
-    principalOutstanding: Number(ethers.formatEther(l.principalOutstanding)),
-    feeAmount: Number(ethers.formatEther(l.feeAmount)),
-    createdAt: Number(l.createdAt),
-    dueAt: Number(l.dueAt),
-    status: LOAN_STATUS[l.status] ?? 'Unknown',
-    statusCode: Number(l.status),
-    policyVersion: Number(l.policyVersion),
-    dueDays: Math.ceil((Number(l.dueAt) - Date.now() / 1000) / 86400),
-  }));
+  return loans.filter(Boolean).map(l => {
+    const init = Number(ethers.formatEther(l.principalInitial));
+    const out = Number(ethers.formatEther(l.principalOutstanding));
+    const isSettled = Number(l.status) === 2 || out === 0;
+    return {
+      id: `LOAN-${l.loanId}`,
+      loanId: Number(l.loanId),
+      borrower: l.borrower,
+      asset: 'FDX',
+      amount: init,
+      principalInitial: init,
+      principalOutstanding: out,
+      feeAmount: Number(ethers.formatEther(l.feeAmount)),
+      apr: '5.20%',
+      createdAt: Number(l.createdAt),
+      dueAt: Number(l.dueAt),
+      status: isSettled ? 'Settled' : (LOAN_STATUS[l.status] ?? 'Active'),
+      statusCode: Number(l.status),
+      policyVersion: Number(l.policyVersion),
+      dueDays: Math.max(0, Math.ceil((Number(l.dueAt) - Date.now() / 1000) / 86400)),
+      progress: isSettled ? 100 : (init > 0 ? Math.max(10, Math.round(((init - out) / init) * 100)) : 10),
+    };
+  });
 }
 
 // ─────────────────────────────────────────────────────────────
 // EXECUTE BORROW — real on-chain transaction
 // ─────────────────────────────────────────────────────────────
 export async function executeBorrow(signer, amount, policyVersion) {
+  const provider = signer.provider;
   const pool = getLendingPool(signer);
   const token = getFundryxToken(signer);
   const amountWei = ethers.parseEther(amount.toString());
 
-  // Check allowance first
-  const address = await signer.getAddress();
-  const allowance = await token.allowance(address, CONTRACT_ADDRESSES.LendingPool);
-  if (allowance < amountWei) {
-    const approveTx = await token.approve(CONTRACT_ADDRESSES.LendingPool, ethers.MaxUint256);
-    await approveTx.wait();
+  // Chain guard
+  const network = await provider.getNetwork();
+  if (Number(network.chainId) !== CHAIN_ID) {
+    throw new Error(`Wrong network. Switch to Polygon Amoy (chain ${CHAIN_ID}). Current: ${network.chainId}.`);
   }
 
-  const tx = await pool.borrow(amountWei, policyVersion);
+  const address = await signer.getAddress();
+
+  // FDX balance check — borrowing transfers FDX OUT of pool, but borrower needs POL for gas
+  const polBalance = await provider.getBalance(address);
+  if (polBalance < ethers.parseEther('0.001')) {
+    throw new Error('Insufficient POL for gas. Get testnet POL from the Polygon Amoy faucet.');
+  }
+
+  // Read actual policyVersion from chain if not provided
+  const policy = getCreditPolicy(provider);
+  const chainPolicyVersion = Number(await policy.policyVersion().catch(() => 1n));
+  const usedVersion = (policyVersion !== undefined && policyVersion !== null)
+    ? Number(policyVersion)
+    : chainPolicyVersion;
+
+  // Credit eligibility pre-flight
+  const [eligible] = await policy.eligibleCredit(address, ethers.ZeroHash).catch(() => [0n]);
+  if (amountWei > eligible) {
+    const eligibleFmt = ethers.formatEther(eligible);
+    throw new Error(`Borrow amount (${amount} FDX) exceeds credit limit (${Number(eligibleFmt).toFixed(2)} FDX). Build credit history by repaying previous loans.`);
+  }
+
+  // Liquidity check
+  const available = await pool.availableLiquidity().catch(() => 0n);
+  if (amountWei > available) {
+    const availFmt = ethers.formatEther(available);
+    throw new Error(`Insufficient pool liquidity. Available: ${Number(availFmt).toFixed(2)} FDX. Borrowing is paused or pool is empty.`);
+  }
+
+  const tx = await pool.borrow(amountWei, usedVersion).catch((err) => {
+    throw new Error(parseRevertReason(err));
+  });
   const receipt = await tx.wait();
-  return { tx, receipt };
+  if (!receipt || receipt.status === 0) throw new Error('Borrow transaction reverted on-chain.');
+
+  // Read updated FDX balance after confirmation
+  const newFdxBalance = await token.balanceOf(address).catch(() => 0n);
+  return { tx, receipt, newFdxBalance: ethers.formatEther(newFdxBalance) };
 }
 
 // ─────────────────────────────────────────────────────────────
 // EXECUTE DEPOSIT — real on-chain transaction
 // ─────────────────────────────────────────────────────────────
 export async function executeDeposit(signer, amount) {
+  const provider = signer.provider;
   const pool = getLendingPool(signer);
   const token = getFundryxToken(signer);
   const amountWei = ethers.parseEther(amount.toString());
 
+  // Chain guard
+  const network = await provider.getNetwork();
+  if (Number(network.chainId) !== CHAIN_ID) {
+    throw new Error(`Wrong network. Switch to Polygon Amoy (chain ${CHAIN_ID}). Current: ${network.chainId}.`);
+  }
+
   const address = await signer.getAddress();
+
+  // FDX balance check
+  const fdxBalance = await token.balanceOf(address).catch(() => 0n);
+  if (fdxBalance < amountWei) {
+    const fmt = ethers.formatEther(fdxBalance);
+    throw new Error(`Insufficient FDX balance. You have ${Number(fmt).toFixed(4)} FDX. Request testnet tokens via the Faucet tab.`);
+  }
+
+  // Approval — Step 1
   const allowance = await token.allowance(address, CONTRACT_ADDRESSES.LendingPool);
   if (allowance < amountWei) {
-    const approveTx = await token.approve(CONTRACT_ADDRESSES.LendingPool, ethers.MaxUint256);
+    const approveTx = await token.approve(CONTRACT_ADDRESSES.LendingPool, ethers.MaxUint256).catch((err) => {
+      throw new Error(`Approval rejected: ${parseRevertReason(err)}`);
+    });
     await approveTx.wait();
   }
 
-  const tx = await pool.deposit(amountWei);
+  // Deposit — Step 2
+  const tx = await pool.deposit(amountWei).catch((err) => {
+    throw new Error(parseRevertReason(err));
+  });
   const receipt = await tx.wait();
-  return { tx, receipt };
+  if (!receipt || receipt.status === 0) throw new Error('Deposit transaction reverted on-chain.');
+
+  // Read updated balances
+  const [newFdxBal, newLenderBal, newPoolDeposits] = await Promise.all([
+    token.balanceOf(address).catch(() => 0n),
+    pool.lenderBalances(address).catch(() => 0n),
+    pool.totalDeposits().catch(() => 0n),
+  ]);
+
+  return {
+    tx,
+    receipt,
+    newFdxBalance: ethers.formatEther(newFdxBal),
+    newLenderBalance: ethers.formatEther(newLenderBal),
+    newTotalDeposits: ethers.formatEther(newPoolDeposits),
+  };
 }
 
 // ─────────────────────────────────────────────────────────────
 // EXECUTE REPAY — real on-chain transaction
 // ─────────────────────────────────────────────────────────────
 export async function executeRepay(signer, loanId, amount) {
+  const provider = signer.provider;
   const pool = getLendingPool(signer);
   const token = getFundryxToken(signer);
   const amountWei = ethers.parseEther(amount.toString());
 
+  // Chain guard
+  const network = await provider.getNetwork();
+  if (Number(network.chainId) !== CHAIN_ID) {
+    throw new Error(`Wrong network. Switch to Polygon Amoy (chain ${CHAIN_ID}).`);
+  }
+
   const address = await signer.getAddress();
+
+  // FDX balance check
+  const fdxBalance = await token.balanceOf(address).catch(() => 0n);
+  if (fdxBalance < amountWei) {
+    const fmt = ethers.formatEther(fdxBalance);
+    throw new Error(`Insufficient FDX to repay. You have ${Number(fmt).toFixed(4)} FDX, need ${amount} FDX.`);
+  }
+
+  // Approval
   const allowance = await token.allowance(address, CONTRACT_ADDRESSES.LendingPool);
   if (allowance < amountWei) {
-    const approveTx = await token.approve(CONTRACT_ADDRESSES.LendingPool, ethers.MaxUint256);
+    const approveTx = await token.approve(CONTRACT_ADDRESSES.LendingPool, ethers.MaxUint256).catch((err) => {
+      throw new Error(`Approval rejected: ${parseRevertReason(err)}`);
+    });
     await approveTx.wait();
   }
 
-  const tx = await pool.repay(loanId, amountWei);
+  const tx = await pool.repay(loanId, amountWei).catch((err) => {
+    throw new Error(parseRevertReason(err));
+  });
   const receipt = await tx.wait();
-  return { tx, receipt };
+  if (!receipt || receipt.status === 0) throw new Error('Repay transaction reverted on-chain.');
+
+  // Read updated loan state and balances
+  const [loan, newFdxBal] = await Promise.all([
+    pool.getLoan(loanId).catch(() => null),
+    token.balanceOf(address).catch(() => 0n),
+  ]);
+
+  return {
+    tx,
+    receipt,
+    loanStatus: loan ? LOAN_STATUS[Number(loan.status)] : 'Unknown',
+    remainingOutstanding: loan ? ethers.formatEther(loan.principalOutstanding) : '0',
+    newFdxBalance: ethers.formatEther(newFdxBal),
+  };
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -612,4 +726,155 @@ export function explorerAddressLink(address) {
 
 export function explorerBlockLink(blockNumber) {
   return `https://amoy.polygonscan.com/block/${blockNumber}`;
+}
+
+// ─────────────────────────────────────────────────────────────
+// PARSE REVERT REASON — extract human-readable error from tx
+// ─────────────────────────────────────────────────────────────
+export function parseRevertReason(err) {
+  if (!err) return 'Unknown error';
+
+  // User rejected in wallet
+  if (err.code === 4001 || err.code === 'ACTION_REJECTED') return 'Transaction rejected by user.';
+
+  // ethers v6 error data
+  if (err.reason) return err.reason;
+  if (err.revert?.name) return err.revert.name;
+
+  // ABI-decoded custom errors from our contracts
+  const knownErrors = {
+    'CreditCapExceeded': 'Borrow amount exceeds your credit cap.',
+    'InsufficientLiquidity': 'Pool has insufficient liquidity for this amount.',
+    'PolicyVersionMismatch': 'Credit policy was updated. Refresh and try again.',
+    'ZeroAmount': 'Amount must be greater than zero.',
+    'LoanNotFound': 'Loan not found.',
+    'LoanNotActive': 'Loan is not in Active or Overdue status.',
+    'RepaymentExceedsDebt': 'Repayment amount exceeds outstanding debt.',
+    'NotBorrower': 'Only the original borrower can repay this loan.',
+    'WithdrawExceedsBalance': 'Withdrawal exceeds your deposited balance.',
+  };
+
+  const msg = err.message || String(err);
+  for (const [selector, human] of Object.entries(knownErrors)) {
+    if (msg.includes(selector)) return human;
+  }
+
+  // Gas estimation failure — pull the revert from the message
+  const match = msg.match(/reason="([^"]+)"/) || msg.match(/reverted with reason string '([^']+)'/);
+  if (match) return match[1];
+
+  // Fallback: return first 200 chars
+  return msg.slice(0, 200);
+}
+
+// ─────────────────────────────────────────────────────────────
+// CREDIT PRE-FLIGHT — read on-chain credit before borrow UI
+// ─────────────────────────────────────────────────────────────
+export async function fetchCreditPreFlight(address) {
+  const provider = getReadProvider();
+  const policy = getCreditPolicy(provider);
+  const pool = getLendingPool(provider);
+  const token = getFundryxToken(provider);
+
+  const [eligibility, available, fdxBalance, lenderBalance, policyVer] = await Promise.all([
+    policy.previewEligibility(address).catch(() => ({ maxCredit: 0n, version: 1, repaymentCount: 0n, outstandingExposure: 0n })),
+    pool.availableLiquidity().catch(() => 0n),
+    token.balanceOf(address).catch(() => 0n),
+    pool.lenderBalances(address).catch(() => 0n),
+    policy.policyVersion().catch(() => 1),
+  ]);
+
+  const maxCredit = Number(ethers.formatEther(
+    typeof eligibility.maxCredit === 'bigint' ? eligibility.maxCredit : (eligibility[0] ?? 0n)
+  ));
+  const effectiveBorrowLimit = Math.min(maxCredit, Number(ethers.formatEther(available)));
+
+  return {
+    maxCredit,
+    effectiveBorrowLimit,
+    availableLiquidity: Number(ethers.formatEther(available)),
+    fdxBalance: Number(ethers.formatEther(fdxBalance)),
+    lenderBalance: Number(ethers.formatEther(lenderBalance)),
+    policyVersion: Number(typeof eligibility.version === 'bigint' ? eligibility.version : (eligibility[1] ?? policyVer)),
+    repaymentCount: Number(typeof eligibility.repaymentCount === 'bigint' ? eligibility.repaymentCount : (eligibility[2] ?? 0n)),
+  };
+}
+
+// ─────────────────────────────────────────────────────────────
+// TESTNET MOCK SWAP — constant-product x*y=k with FDX & mock POL
+// No external DEX exists on Polygon Amoy. This is a clearly labeled
+// test-only implementation. In production, integrate QuickSwap V3 on mainnet.
+// ─────────────────────────────────────────────────────────────
+
+// MockSwapRouter deployed address — set after deployment
+// If not deployed yet, MOCK_SWAP_ROUTER will be null and swap will show "not available"
+export const MOCK_SWAP_ROUTER_ADDRESS = import.meta.env.VITE_MOCK_SWAP_ROUTER || null;
+
+export const MOCK_SWAP_ROUTER_ABI = [
+  'function swap(address tokenIn, address tokenOut, uint256 amountIn, uint256 minAmountOut, address to) external returns (uint256 amountOut)',
+  'function getAmountOut(address tokenIn, address tokenOut, uint256 amountIn) external view returns (uint256 amountOut, uint256 priceImpactBps)',
+  'function addLiquidity(address tokenA, address tokenB, uint256 amountA, uint256 amountB) external',
+  'function getReserves(address tokenA, address tokenB) external view returns (uint256 reserveA, uint256 reserveB)',
+  'event Swap(address indexed sender, address tokenIn, address tokenOut, uint256 amountIn, uint256 amountOut, address to)',
+];
+
+export function getMockSwapRouter(signerOrProvider) {
+  if (!MOCK_SWAP_ROUTER_ADDRESS) return null;
+  return new ethers.Contract(MOCK_SWAP_ROUTER_ADDRESS, MOCK_SWAP_ROUTER_ABI, signerOrProvider);
+}
+
+export async function executeSwap(signer, tokenInAddress, tokenOutAddress, amountIn, slippageBps = 50) {
+  if (!MOCK_SWAP_ROUTER_ADDRESS) {
+    throw new Error('[Testnet] No swap router deployed. Deploy MockSwapRouter.sol to Polygon Amoy first.');
+  }
+
+  const provider = signer.provider;
+  const network = await provider.getNetwork();
+  if (Number(network.chainId) !== CHAIN_ID) {
+    throw new Error(`Wrong network. Switch to Polygon Amoy (chain ${CHAIN_ID}).`);
+  }
+
+  const address = await signer.getAddress();
+  const router = getMockSwapRouter(signer);
+  const tokenIn = new ethers.Contract(tokenInAddress, ERC20_ABI, signer);
+  const amountInWei = ethers.parseEther(amountIn.toString());
+
+  // Balance check
+  const balance = await tokenIn.balanceOf(address).catch(() => 0n);
+  if (balance < amountInWei) {
+    throw new Error(`Insufficient token balance. Have ${ethers.formatEther(balance)}, need ${amountIn}.`);
+  }
+
+  // Get expected output with slippage
+  const [expectedOut, priceImpact] = await router.getAmountOut(tokenInAddress, tokenOutAddress, amountInWei);
+  const minOut = expectedOut * BigInt(10000 - slippageBps) / 10000n;
+
+  // Approve router
+  const allowance = await tokenIn.allowance(address, MOCK_SWAP_ROUTER_ADDRESS);
+  if (allowance < amountInWei) {
+    const approveTx = await tokenIn.approve(MOCK_SWAP_ROUTER_ADDRESS, ethers.MaxUint256).catch((err) => {
+      throw new Error(`Approval failed: ${parseRevertReason(err)}`);
+    });
+    await approveTx.wait();
+  }
+
+  // Deadline: 20 minutes from now (not used in MockSwapRouter but pattern established)
+  const tx = await router.swap(tokenInAddress, tokenOutAddress, amountInWei, minOut, address).catch((err) => {
+    throw new Error(parseRevertReason(err));
+  });
+  const receipt = await tx.wait();
+  if (!receipt || receipt.status === 0) throw new Error('Swap reverted on-chain.');
+
+  // Read output balance
+  const tokenOut = new ethers.Contract(tokenOutAddress, ERC20_ABI, provider);
+  const newOutBalance = await tokenOut.balanceOf(address).catch(() => 0n);
+
+  return {
+    tx,
+    receipt,
+    amountOut: ethers.formatEther(expectedOut),
+    priceImpact: Number(priceImpact) / 100,
+    newOutBalance: ethers.formatEther(newOutBalance),
+    explorerUrl: explorerTxLink(tx.hash),
+  };
 }

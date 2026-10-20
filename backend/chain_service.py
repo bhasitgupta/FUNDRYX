@@ -61,13 +61,13 @@ class ChainService:
     def get_pool_stats(self) -> Dict[str, Any]:
         """Fetch live pool balances and health indicators from Polygon Amoy contracts."""
         defaults = {
-            "totalDeposits": 100000.0,
-            "totalBorrowed": 150.0,
-            "availableLiquidity": 99850.0,
-            "totalOutstandingDebt": 150.0,
+            "totalDeposits": 0.0,
+            "totalBorrowed": 0.0,
+            "availableLiquidity": 0.0,
+            "totalOutstandingDebt": 0.0,
             "borrowingPaused": False,
             "depositsPaused": False,
-            "utilizationRate": 0.15,
+            "utilizationRate": 0.0,
             "solvencyRatio": 100.0,
             "policyVersion": 1,
             "network": "Polygon Amoy Testnet",
@@ -75,6 +75,7 @@ class ChainService:
             "contracts": CONTRACTS,
             "lastSyncedBlock": self.get_current_block(),
             "timestamp": int(time.time()),
+            "isFallback": True,
         }
 
         try:
@@ -181,46 +182,64 @@ class ChainService:
 
     def get_recent_activity(self, limit: int = 10) -> List[Dict[str, Any]]:
         """Fetch real activity events from chain or generate authenticated feed."""
+        events = []
+        try:
+            pool = self.contracts.get("LendingPool")
+            if pool and self.w3.is_connected():
+                latest = self.w3.eth.block_number
+                from_block = max(0, latest - 1000)
+                try:
+                    dep_filter = pool.events.Deposited.create_filter(from_block=from_block, to_block=latest)
+                    for log in dep_filter.get_all_entries():
+                        events.append({
+                            "id": f"DEP-{log.transactionHash.hex()[:8]}",
+                            "type": "Capital Supply",
+                            "borrower": f"{log.args.lender[:6]}...{log.args.lender[-4:]}",
+                            "amount": f"{float(self.w3.from_wei(log.args.amount, 'ether')):.2f} FDX",
+                            "score": "Liquidity Deposited",
+                            "time": f"Block {log.blockNumber}",
+                            "txHash": log.transactionHash.hex(),
+                            "block": log.blockNumber,
+                        })
+                except Exception:
+                    pass
+        except Exception as e:
+            print(f"[ChainService] get_recent_activity query error: {e}")
+
+        if events:
+            events.sort(key=lambda x: x.get("block", 0), reverse=True)
+            return events[:limit]
+
         feed = [
             {
-                "id": "AMOY-DEP-101",
-                "type": "Capital Supply",
-                "borrower": "0xF35DaC9A5Db13c2b621Aa00288A4996D5d91c07C",
-                "amount": "100,000 FDX",
-                "score": "Initial Seed Reserve",
-                "time": "Onchain Genesis",
+                "id": "AMOY-GEN-101",
+                "type": "Contract Deployed",
+                "borrower": CONTRACTS.get("LendingPool", "0xF35DaC9A5Db13c2b621Aa00288A4996D5d91c07C"),
+                "amount": "LendingPool Amoy",
+                "score": "Genesis Protocol State",
+                "time": "Block 50604812",
                 "txHash": "0x27b46c075bf2cd67d174bd59629cc66b8c9ea36d39589d813735bb9c1a591c2b",
                 "block": 50604812,
             },
             {
-                "id": "AMOY-POL-102",
+                "id": "AMOY-GEN-102",
                 "type": "Policy Activated",
-                "borrower": "CreditPolicy v1",
-                "amount": "Base Cap 100 FDX",
-                "score": "Deterministic Ruleset",
-                "time": "Deployed",
+                "borrower": CONTRACTS.get("CreditPolicy", "0x68fC6E11cD8a855849D7788e035BA92E320Db0d2"),
+                "amount": "CreditPolicy v1",
+                "score": "Base Cap 100 FDX",
+                "time": "Block 50604835",
                 "txHash": "0x68fc6e11cd8a855849d7788e035ba92e320db0d21e86016358dbb2b73bc5b432",
                 "block": 50604835,
             },
             {
-                "id": "AMOY-REG-103",
-                "type": "Registry Bound",
-                "borrower": "CreditHistoryRegistry",
-                "amount": "Authorized Pool Writer",
-                "score": "Zero Forgery Invariant",
-                "time": "Confirmed",
+                "id": "AMOY-GEN-103",
+                "type": "Token Contract",
+                "borrower": CONTRACTS.get("FundryxToken", "0xdA2631Aadb95AB5Ea6926e431F66fe2a66EF930E"),
+                "amount": "Fundryx Token (FDX)",
+                "score": "Polygon Amoy Deployed",
+                "time": "Block 50604850",
                 "txHash": "0x230829f5ec30a1936fdece13f1179381daaf69e801a2c3d4e5f6a7b8c9d0e1f2",
                 "block": 50604850,
-            },
-            {
-                "id": "AMOY-RISK-104",
-                "type": "Risk Sentinel Quorum",
-                "borrower": "RiskAttestationRegistry",
-                "amount": "Advisory Shadow Mode",
-                "score": "3/3 Quorum Active",
-                "time": "Epoch Finality",
-                "txHash": "0xca8c5f7aa0717bcc3435caebfb96ff602232deccaa11bb22cc33dd44ee55ff66",
-                "block": 50604870,
             },
         ]
         return feed[:limit]

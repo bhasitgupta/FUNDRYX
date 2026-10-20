@@ -34,14 +34,17 @@ import {
   executeBorrow,
   executeDeposit,
   executeRepay,
+  executeSwap,
   fetchRecentEvents,
   fetchWalletData,
   fetchBorrowerLoans,
+  fetchCreditPreFlight,
+  parseRevertReason,
   CONTRACT_ADDRESSES,
+  MOCK_SWAP_ROUTER_ADDRESS,
+  CHAIN_ID,
   explorerTxLink,
 } from '../utils/contracts';
-
-
 
 export default function FundryxAppPortal({
   wallet,
@@ -59,24 +62,32 @@ export default function FundryxAppPortal({
     if (initialTab) setActiveTab(initialTab);
   }, [initialTab]);
 
-  // Loan Calculator state
-  const [borrowInput, setBorrowInput] = useState(25000);
+  // Loan Calculator state & transaction lifecycle
+  const [borrowInput, setBorrowInput] = useState(50);
   const [borrowTerm, setBorrowTerm] = useState(14);
   const [borrowSuccess, setBorrowSuccess] = useState(false);
+  const [borrowTxStatus, setBorrowTxStatus] = useState('ready'); // ready | awaiting-wallet | pending | confirmed | failed
 
-  // Supply Vault state
-  const [supplyAsset, setSupplyAsset] = useState('USDC');
-  const [supplyAmount, setSupplyAmount] = useState('10000');
+  // Supply Vault state & transaction lifecycle
+  const [supplyAsset, setSupplyAsset] = useState('FDX');
+  const [supplyAmount, setSupplyAmount] = useState('100');
   const [supplySuccess, setSupplySuccess] = useState(false);
+  const [supplyTxStatus, setSupplyTxStatus] = useState('ready'); // ready | awaiting-wallet | pending | confirmed | failed
 
-  // Repay state
+  // Repay state & transaction lifecycle
   const [repaySuccess, setRepaySuccess] = useState(false);
+  const [repayTxStatus, setRepayTxStatus] = useState({}); // { [loanId]: ready | awaiting-wallet | pending | confirmed | failed }
 
-  // Swap state
-  const [swapFrom, setSwapFrom] = useState('USDC');
-  const [swapTo, setSwapTo] = useState('FDX');
-  const [swapAmount, setSwapAmount] = useState('5000');
+  // Swap state & transaction lifecycle
+  const [swapFrom, setSwapFrom] = useState('FDX');
+  const [swapTo, setSwapTo] = useState('WMATIC');
+  const [swapAmount, setSwapAmount] = useState('10');
   const [swapSuccess, setSwapSuccess] = useState(false);
+  const [swapTxStatus, setSwapTxStatus] = useState('ready'); // ready | awaiting-wallet | pending | confirmed | failed
+
+  // User balances from chain
+  const [userFdxBalance, setUserFdxBalance] = useState(null);
+  const [userPolBalance, setUserPolBalance] = useState(null);
 
   // Stress test simulator state
   const [stressShock, setStressShock] = useState(25);
@@ -130,20 +141,13 @@ export default function FundryxAppPortal({
       })
       .catch(() => {});
 
-    // 2. Fetch Borrower Credit Score & Active Loans
+    // 2. Fetch Borrower Credit Score, Active Loans & Wallet Balance directly from chain
     const targetAddr = wallet.address;
-    if (!targetAddr) return;
-    fetch(`http://127.0.0.1:8000/api/credit/score/${targetAddr}`)
-      .then((r) => r.json())
-      .then((data) => {
-        if (data && data.score) {
-          setCreditProfile((prev) => ({ ...prev, ...data }));
-        }
-      })
-      .catch(async () => {
-        // Fallback: fetch real data directly from chain
-        try {
-          const walletData = await fetchWalletData(targetAddr);
+    if (targetAddr) {
+      fetchWalletData(targetAddr)
+        .then((walletData) => {
+          setUserFdxBalance(walletData.fdxBalance);
+          setUserPolBalance(walletData.polBalance);
           setCreditProfile((prev) => ({
             ...prev,
             borrower: targetAddr,
@@ -152,11 +156,27 @@ export default function FundryxAppPortal({
             outstandingExposure: walletData.outstandingExposure,
             verifiedRepaidValue: walletData.stats?.verifiedRepaidValue || 0,
             defaultCount: walletData.stats?.defaultCount || 0,
+            tier: walletData.maxCredit >= 200 ? 'Prime Tier 1' : 'Standard Tier 2',
           }));
-          const onchainLoans = await fetchBorrowerLoans(targetAddr);
-          if (onchainLoans.length > 0) setActiveLoans(onchainLoans);
-        } catch (_) {}
-      });
+        })
+        .catch(() => {});
+
+      fetchBorrowerLoans(targetAddr)
+        .then((onchainLoans) => {
+          if (onchainLoans && onchainLoans.length > 0) setActiveLoans(onchainLoans);
+        })
+        .catch(() => {});
+
+      // Enrich with backend risk score if available
+      fetch(`http://127.0.0.1:8000/api/credit/score/${targetAddr}`)
+        .then((r) => r.json())
+        .then((data) => {
+          if (data && data.score) {
+            setCreditProfile((prev) => ({ ...prev, ...data }));
+          }
+        })
+        .catch(() => {});
+    }
 
     // 3. Fetch Risk Telemetry
     fetch('http://127.0.0.1:8000/api/risk/telemetry')
@@ -217,125 +237,287 @@ export default function FundryxAppPortal({
   }, [wallet.address]);
 
   const handleExecuteBorrow = async () => {
-    setBorrowSuccess(true);
-    setTxNotification({ type: 'info', message: 'Submitting uncollateralized loan onchain...' });
-
-    if (wallet.signer) {
-      try {
-        const { tx } = await executeBorrow(wallet.signer, borrowInput);
-        setTxNotification({
-          type: 'success',
-          message: `Loan Confirmed onchain! TX: ${tx.hash.slice(0, 8)}...`,
-          txHash: tx.hash,
-        });
-      } catch (err) {
-        console.warn('Onchain borrow fallback:', err.message);
-        setTxNotification({
-          type: 'success',
-          message: `Loan confirmed on network for ${borrowInput} USDC.`,
-        });
-      }
-    } else {
+    if (!wallet.signer || !wallet.address) {
+      setBorrowTxStatus('failed');
       setTxNotification({
-        type: 'success',
-        message: `Loan disbursed in Institutional Sandbox: $${Number(borrowInput).toLocaleString()} USDC`,
+        type: 'danger',
+        message: 'Wallet not connected. Connect your Web3 wallet to borrow.',
       });
+      return;
     }
 
-    const newLoan = {
-      id: `LOAN-${Math.floor(1000 + Math.random() * 9000)}`,
-      asset: 'USDC',
-      amount: Number(borrowInput),
-      apr: '5.20%',
-      dueDays: borrowTerm,
-      progress: 10,
-      status: 'Active',
-      tier: creditProfile.tier || 'Prime Tier 1',
-    };
-    setActiveLoans((prev) => [newLoan, ...prev]);
-    setActivityFeed((prev) => [
-      {
-        id: `EV-${Math.floor(1000 + Math.random() * 9000)}`,
-        type: 'Disbursement',
-        borrower: wallet.address ? `${wallet.address.slice(0, 6)}...${wallet.address.slice(-4)}` : 'Unknown',
-        amount: `${Number(borrowInput).toLocaleString()} FDX`,
-        score: creditProfile.tier || 'Protocol',
-        time: 'Just now',
-        hash: 'Pending...',
-      },
-      ...prev,
-    ]);
-    setTimeout(() => {
+    try {
+      setBorrowTxStatus('awaiting-wallet');
+      setTxNotification({
+        type: 'info',
+        message: 'Awaiting wallet signature for uncollateralized loan...',
+      });
+
+      // Credit pre-flight check
+      const preFlight = await fetchCreditPreFlight(wallet.address).catch(() => null);
+      if (preFlight) {
+        if (Number(borrowInput) > preFlight.maxCredit) {
+          throw new Error(
+            `Borrow amount (${borrowInput} FDX) exceeds your on-chain credit cap of ${preFlight.maxCredit.toFixed(2)} FDX. Build credit by repaying active loans.`
+          );
+        }
+        if (Number(borrowInput) > preFlight.availableLiquidity) {
+          throw new Error(
+            `Pool has insufficient liquidity (${preFlight.availableLiquidity.toFixed(2)} FDX available). Deposit liquidity or lower borrow amount.`
+          );
+        }
+      }
+
+      setBorrowTxStatus('pending');
+      setTxNotification({
+        type: 'info',
+        message: 'Submitting loan transaction to Polygon Amoy... Waiting for block confirmation.',
+      });
+
+      const { tx, receipt, newFdxBalance } = await executeBorrow(wallet.signer, borrowInput);
+
+      setBorrowTxStatus('confirmed');
+      setBorrowSuccess(true);
+      if (newFdxBalance) setUserFdxBalance(Number(newFdxBalance));
+
+      setTxNotification({
+        type: 'success',
+        message: `Loan Confirmed on Polygon Amoy! Block ${receipt.blockNumber}`,
+        txHash: tx.hash,
+      });
+
+      // Refresh onchain loans and wallet data
+      const [updatedLoans, updatedWallet] = await Promise.all([
+        fetchBorrowerLoans(wallet.address).catch(() => []),
+        fetchWalletData(wallet.address).catch(() => null),
+      ]);
+
+      if (updatedLoans && updatedLoans.length > 0) {
+        setActiveLoans(updatedLoans);
+      } else {
+        const newLoan = {
+          id: `LOAN-${receipt.blockNumber % 1000}`,
+          loanId: receipt.blockNumber % 1000,
+          asset: 'FDX',
+          amount: Number(borrowInput),
+          principalInitial: Number(borrowInput),
+          principalOutstanding: Number(borrowInput) * 1.052,
+          apr: '5.20%',
+          dueDays: borrowTerm,
+          progress: 10,
+          status: 'Active',
+          tier: creditProfile.tier || 'Onchain Loan',
+        };
+        setActiveLoans((prev) => [newLoan, ...prev]);
+      }
+
+      if (updatedWallet) {
+        setCreditProfile((prev) => ({
+          ...prev,
+          outstandingExposure: updatedWallet.outstandingExposure,
+          repaymentCount: updatedWallet.repaymentCount,
+          maxCredit: updatedWallet.maxCredit,
+        }));
+      }
+
+      setActivityFeed((prev) => [
+        {
+          id: `EV-${tx.hash.slice(2, 6)}`,
+          type: 'Disbursement',
+          borrower: `${wallet.address.slice(0, 6)}...${wallet.address.slice(-4)}`,
+          amount: `${Number(borrowInput).toLocaleString()} FDX`,
+          score: creditProfile.tier || 'Verified Credit',
+          time: `Block ${receipt.blockNumber}`,
+          hash: `${tx.hash.slice(0, 6)}...${tx.hash.slice(-4)}`,
+          txHash: tx.hash,
+        },
+        ...prev,
+      ]);
+
+      setTimeout(() => {
+        setBorrowSuccess(false);
+        setBorrowTxStatus('ready');
+      }, 5000);
+    } catch (err) {
+      console.error('Onchain borrow failed:', err);
+      const reason = parseRevertReason(err);
+      setBorrowTxStatus('failed');
       setBorrowSuccess(false);
-      setTxNotification(null);
-    }, 4500);
+      setTxNotification({
+        type: 'danger',
+        message: `Borrow failed: ${reason}`,
+      });
+      setTimeout(() => setBorrowTxStatus('ready'), 7000);
+    }
   };
 
   const handleExecuteSupply = async () => {
-    setSupplySuccess(true);
-    setTxNotification({ type: 'info', message: `Supplying ${supplyAmount} ${supplyAsset} to reserve vault...` });
-
-    if (wallet.signer) {
-      try {
-        const { tx } = await executeDeposit(wallet.signer, supplyAmount);
-        setTxNotification({
-          type: 'success',
-          message: `Deposit Confirmed onchain! TX: ${tx.hash.slice(0, 8)}...`,
-          txHash: tx.hash,
-        });
-      } catch (err) {
-        console.warn('Onchain supply fallback:', err.message);
-        setTxNotification({
-          type: 'success',
-          message: `Deposit confirmed on network for ${supplyAmount} ${supplyAsset}.`,
-        });
-      }
-    } else {
+    if (!wallet.signer || !wallet.address) {
+      setSupplyTxStatus('failed');
       setTxNotification({
-        type: 'success',
-        message: `Supplied ${Number(supplyAmount).toLocaleString()} ${supplyAsset} to Vault.`,
+        type: 'danger',
+        message: 'Wallet not connected. Connect your Web3 wallet to deposit capital.',
       });
+      return;
     }
 
-    setActivityFeed((prev) => [
-      {
-        id: `EV-${Math.floor(1000 + Math.random() * 9000)}`,
-        type: 'Capital Supply',
-        borrower: wallet.address ? `${wallet.address.slice(0, 6)}...${wallet.address.slice(-4)}` : '0x71c9...49a2',
-        amount: `${Number(supplyAmount).toLocaleString()} ${supplyAsset}`,
-        score: 'Reserve Backed',
-        time: 'Just now',
-        hash: '0x7a81...49de',
-      },
-      ...prev,
-    ]);
-    setTimeout(() => {
+    try {
+      setSupplyTxStatus('awaiting-wallet');
+      setTxNotification({
+        type: 'info',
+        message: `Preparing deposit of ${supplyAmount} FDX... Confirm ERC-20 approval / deposit in your wallet.`,
+      });
+
+      const { tx, receipt, newFdxBalance, newLenderBalance, newTotalDeposits } = await executeDeposit(
+        wallet.signer,
+        supplyAmount
+      );
+
+      setSupplyTxStatus('confirmed');
+      setSupplySuccess(true);
+      if (newFdxBalance) setUserFdxBalance(Number(newFdxBalance));
+
+      setLivePool((prev) => ({
+        ...prev,
+        totalDeposits: Number(newTotalDeposits),
+        availableLiquidity: (prev.availableLiquidity || 0) + Number(supplyAmount),
+      }));
+
+      setTxNotification({
+        type: 'success',
+        message: `Deposit Confirmed on Polygon Amoy! Block ${receipt.blockNumber}`,
+        txHash: tx.hash,
+      });
+
+      setActivityFeed((prev) => [
+        {
+          id: `EV-${tx.hash.slice(2, 6)}`,
+          type: 'Capital Supply',
+          borrower: `${wallet.address.slice(0, 6)}...${wallet.address.slice(-4)}`,
+          amount: `${Number(supplyAmount).toLocaleString()} FDX`,
+          score: 'Liquidity Deposited',
+          time: `Block ${receipt.blockNumber}`,
+          hash: `${tx.hash.slice(0, 6)}...${tx.hash.slice(-4)}`,
+          txHash: tx.hash,
+        },
+        ...prev,
+      ]);
+
+      setTimeout(() => {
+        setSupplySuccess(false);
+        setSupplyTxStatus('ready');
+      }, 5000);
+    } catch (err) {
+      console.error('Onchain supply failed:', err);
+      const reason = parseRevertReason(err);
+      setSupplyTxStatus('failed');
       setSupplySuccess(false);
-      setTxNotification(null);
-    }, 4500);
+      setTxNotification({
+        type: 'danger',
+        message: `Deposit failed: ${reason}`,
+      });
+      setTimeout(() => setSupplyTxStatus('ready'), 7000);
+    }
   };
 
-  const handleExecuteRepay = async (id) => {
-    setActiveLoans((prev) => prev.map((l) => (l.id === id ? { ...l, status: 'Settled', progress: 100 } : l)));
-    setRepaySuccess(true);
-    setTxNotification({ type: 'success', message: `Loan ${id} full settlement confirmed onchain!` });
+  const handleExecuteRepay = async (loanIdOrRef) => {
+    if (!wallet.signer || !wallet.address) {
+      setTxNotification({
+        type: 'danger',
+        message: 'Wallet not connected. Connect your Web3 wallet to settle loans.',
+      });
+      return;
+    }
 
-    setActivityFeed((prev) => [
-      {
-        id: `EV-${Math.floor(1000 + Math.random() * 9000)}`,
-        type: 'Repayment',
-        borrower: wallet.address ? `${wallet.address.slice(0, 6)}...${wallet.address.slice(-4)}` : '0x71c9...49a2',
-        amount: 'Verified Full Settlement',
-        score: '+15 Prime Boost',
-        time: 'Just now',
-        hash: '0x9d4a...c77b',
-      },
-      ...prev,
-    ]);
-    setTimeout(() => {
-      setRepaySuccess(false);
-      setTxNotification(null);
-    }, 3500);
+    const rawId = typeof loanIdOrRef === 'string' && loanIdOrRef.startsWith('LOAN-')
+      ? Number(loanIdOrRef.replace('LOAN-', ''))
+      : Number(loanIdOrRef);
+
+    const targetLoan = activeLoans.find(
+      (l) => l.loanId === rawId || l.id === loanIdOrRef || l.id === `LOAN-${rawId}`
+    );
+    const repayAmount = targetLoan ? (targetLoan.principalOutstanding || targetLoan.amount) : 0;
+
+    if (!repayAmount || repayAmount <= 0) {
+      setTxNotification({
+        type: 'danger',
+        message: 'Loan has zero outstanding balance or is already settled.',
+      });
+      return;
+    }
+
+    try {
+      setRepayTxStatus((prev) => ({ ...prev, [rawId]: 'awaiting-wallet' }));
+      setTxNotification({
+        type: 'info',
+        message: `Repaying Loan #${rawId} (${Number(repayAmount).toFixed(2)} FDX). Confirm transaction in wallet...`,
+      });
+
+      const { tx, receipt, loanStatus } = await executeRepay(
+        wallet.signer,
+        rawId,
+        repayAmount
+      );
+
+      setRepayTxStatus((prev) => ({ ...prev, [rawId]: 'confirmed' }));
+      setRepaySuccess(true);
+
+      setTxNotification({
+        type: 'success',
+        message: `Repayment Confirmed! Loan #${rawId} status: ${loanStatus}`,
+        txHash: tx.hash,
+      });
+
+      // Refresh onchain loans and wallet balance
+      const [updatedLoans, updatedWallet] = await Promise.all([
+        fetchBorrowerLoans(wallet.address).catch(() => []),
+        fetchWalletData(wallet.address).catch(() => null),
+      ]);
+
+      if (updatedLoans && updatedLoans.length > 0) {
+        setActiveLoans(updatedLoans);
+      } else {
+        setActiveLoans((prev) =>
+          prev.map((l) =>
+            (l.loanId === rawId || l.id === loanIdOrRef)
+              ? { ...l, status: 'Settled', progress: 100, principalOutstanding: 0 }
+              : l
+          )
+        );
+      }
+
+      if (updatedWallet) {
+        setUserFdxBalance(updatedWallet.fdxBalance);
+      }
+
+      setActivityFeed((prev) => [
+        {
+          id: `EV-${tx.hash.slice(2, 6)}`,
+          type: 'Repayment',
+          borrower: `${wallet.address.slice(0, 6)}...${wallet.address.slice(-4)}`,
+          amount: `${Number(repayAmount).toLocaleString()} FDX`,
+          score: '+Credit History Boost',
+          time: `Block ${receipt.blockNumber}`,
+          hash: `${tx.hash.slice(0, 6)}...${tx.hash.slice(-4)}`,
+          txHash: tx.hash,
+        },
+        ...prev,
+      ]);
+
+      setTimeout(() => {
+        setRepaySuccess(false);
+        setRepayTxStatus((prev) => ({ ...prev, [rawId]: 'ready' }));
+      }, 5000);
+    } catch (err) {
+      console.error('Onchain repayment failed:', err);
+      const reason = parseRevertReason(err);
+      setRepayTxStatus((prev) => ({ ...prev, [rawId]: 'failed' }));
+      setTxNotification({
+        type: 'danger',
+        message: `Repayment failed: ${reason}`,
+      });
+      setTimeout(() => setRepayTxStatus((prev) => ({ ...prev, [rawId]: 'ready' })), 7000);
+    }
   };
 
   const handleRunAudit = async () => {
@@ -366,9 +548,60 @@ export default function FundryxAppPortal({
     }
   };
 
-  const handleExecuteSwap = () => {
-    setSwapSuccess(true);
-    setTimeout(() => setSwapSuccess(false), 2500);
+  const handleExecuteSwap = async () => {
+    if (!wallet.signer || !wallet.address) {
+      setSwapTxStatus('failed');
+      setTxNotification({
+        type: 'danger',
+        message: 'Wallet not connected. Connect your Web3 wallet first.',
+      });
+      return;
+    }
+
+    if (!MOCK_SWAP_ROUTER_ADDRESS) {
+      setSwapTxStatus('failed');
+      setTxNotification({
+        type: 'danger',
+        message: '[Testnet AMM] MockSwapRouter contract not yet configured. Contract is written at contracts/core/MockSwapRouter.sol ready for deployment.',
+      });
+      setTimeout(() => setSwapTxStatus('ready'), 7000);
+      return;
+    }
+
+    try {
+      setSwapTxStatus('awaiting-wallet');
+      setTxNotification({
+        type: 'info',
+        message: `Initiating swap of ${swapAmount} ${swapFrom} to ${swapTo}. Confirm in wallet...`,
+      });
+
+      const tokenInAddr = CONTRACT_ADDRESSES.FundryxToken;
+      const tokenOutAddr = CONTRACT_ADDRESSES.FundryxToken; // Testnet pair
+
+      const res = await executeSwap(wallet.signer, tokenInAddr, tokenOutAddr, swapAmount, 100);
+
+      setSwapTxStatus('confirmed');
+      setSwapSuccess(true);
+      setTxNotification({
+        type: 'success',
+        message: `Swap Confirmed onchain! Received ${Number(res.amountOut).toFixed(4)} ${swapTo}`,
+        txHash: res.tx.hash,
+      });
+
+      setTimeout(() => {
+        setSwapSuccess(false);
+        setSwapTxStatus('ready');
+      }, 5000);
+    } catch (err) {
+      console.error('Swap failed:', err);
+      const reason = parseRevertReason(err);
+      setSwapTxStatus('failed');
+      setTxNotification({
+        type: 'danger',
+        message: `Swap failed: ${reason}`,
+      });
+      setTimeout(() => setSwapTxStatus('ready'), 7000);
+    }
   };
 
   const termSections = [
@@ -427,7 +660,7 @@ export default function FundryxAppPortal({
                 FUNDRYX
               </span>
               <span className="text-[10px] font-mono text-emerald-400 font-semibold tracking-wider mt-1">
-                PORTAL v4 · MAINNET
+                PORTAL v4 · POLYGON AMOY
               </span>
             </div>
           </button>
@@ -515,7 +748,7 @@ export default function FundryxAppPortal({
                 <div className="h-10 px-3.5 rounded-[10px] bg-[var(--surface-2)] border border-[var(--border)] flex items-center gap-2 text-xs font-mono text-[var(--primary)] font-semibold">
                   <span className="w-2 h-2 rounded-full bg-[var(--primary)] animate-pulse" />
                   <span>{wallet.address.slice(0, 6)}...{wallet.address.slice(-4)}</span>
-                  <span className="text-[var(--text-dim)]">({wallet.balance || '10,000'} FDX)</span>
+                  <span className="text-[var(--text-dim)]">({userFdxBalance !== null ? Number(userFdxBalance).toFixed(2) : (wallet.balance || '0.00')} FDX)</span>
                 </div>
                 <button
                   onClick={onDisconnect}
@@ -538,14 +771,28 @@ export default function FundryxAppPortal({
 
         {/* Real-Time Onchain Transaction Toast */}
         {txNotification && (
-          <div className="mx-6 sm:mx-8 mt-4 p-3.5 rounded-xl border border-emerald-500/40 bg-emerald-950/60 text-emerald-300 text-xs font-mono flex items-center justify-between shadow-lg shadow-emerald-950/40">
-            <span>{txNotification.message}</span>
+          <div
+            className={`mx-6 sm:mx-8 mt-4 p-3.5 rounded-xl border text-xs font-mono flex items-center justify-between shadow-lg transition-all ${
+              txNotification.type === 'danger'
+                ? 'border-rose-500/50 bg-rose-950/80 text-rose-300 shadow-rose-950/50'
+                : txNotification.type === 'info'
+                ? 'border-amber-500/50 bg-amber-950/70 text-amber-300 shadow-amber-950/40'
+                : 'border-emerald-500/40 bg-emerald-950/60 text-emerald-300 shadow-emerald-950/40'
+            }`}
+          >
+            <div className="flex items-center gap-2">
+              <span className={`inline-block w-2 h-2 rounded-full ${
+                txNotification.type === 'danger' ? 'bg-rose-400 animate-pulse' :
+                txNotification.type === 'info' ? 'bg-amber-400 animate-spin' : 'bg-emerald-400'
+              }`} />
+              <span>{txNotification.message}</span>
+            </div>
             {txNotification.txHash && (
               <a
                 href={explorerTxLink(txNotification.txHash)}
                 target="_blank"
                 rel="noreferrer"
-                className="text-emerald-400 underline font-semibold flex items-center gap-1 hover:text-emerald-300"
+                className="text-emerald-400 underline font-semibold flex items-center gap-1 hover:text-emerald-300 shrink-0 ml-4"
               >
                 View on Polygonscan <ExternalLink size={12} />
               </a>
@@ -672,13 +919,18 @@ export default function FundryxAppPortal({
                               <td className="text-right">
                                 {loan.status === 'Active' ? (
                                   <button
-                                    onClick={() => handleExecuteRepay(loan.id)}
-                                    className="portal-btn-secondary h-8 px-3 text-xs"
+                                    onClick={() => handleExecuteRepay(loan.loanId || loan.id)}
+                                    disabled={repayTxStatus[loan.loanId || loan.id] === 'awaiting-wallet' || repayTxStatus[loan.loanId || loan.id] === 'pending'}
+                                    className="portal-btn-secondary h-8 px-3 text-xs disabled:opacity-60"
                                   >
-                                    Settle
+                                    {repayTxStatus[loan.loanId || loan.id] === 'awaiting-wallet' && 'Confirm...'}
+                                    {repayTxStatus[loan.loanId || loan.id] === 'pending' && 'Settling...'}
+                                    {repayTxStatus[loan.loanId || loan.id] === 'confirmed' && 'Settled!'}
+                                    {repayTxStatus[loan.loanId || loan.id] === 'failed' && 'Retry'}
+                                    {(!repayTxStatus[loan.loanId || loan.id] || repayTxStatus[loan.loanId || loan.id] === 'ready') && 'Settle'}
                                   </button>
                                 ) : (
-                                  <span className="text-xs text-[var(--text-dim)]">Verified</span>
+                                  <span className="text-xs text-[var(--text-dim)]">Settled</span>
                                 )}
                               </td>
                             </tr>
@@ -871,27 +1123,42 @@ export default function FundryxAppPortal({
                   <div>
                     <div className="portal-card-header">
                       <h2 className="portal-card-title">Request Uncollateralized Loan</h2>
-                      <span className="portal-badge portal-badge-primary">Prime Eligible</span>
+                      <span className="portal-badge portal-badge-primary">Cap: {creditProfile.maxCredit || 100} FDX</span>
                     </div>
 
                     {/* Amount Input + Slider */}
                     <div className="mb-5">
                       <div className="flex justify-between items-center mb-2">
                         <label className="portal-label">Borrow Amount</label>
-                        <span className="font-mono text-sm font-bold text-[var(--primary)]">${Number(borrowInput).toLocaleString()} USDC</span>
+                        <span className="font-mono text-sm font-bold text-[var(--primary)]">{Number(borrowInput).toLocaleString()} FDX</span>
+                      </div>
+                      <div className="relative mb-2">
+                        <input
+                          type="number"
+                          value={borrowInput}
+                          onChange={(e) => setBorrowInput(e.target.value)}
+                          className="w-full h-11 px-4 pr-16 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] font-mono text-white text-base outline-none focus:border-[var(--primary)] transition"
+                          placeholder="50"
+                        />
+                        <button
+                          onClick={() => setBorrowInput(Math.min(creditProfile.maxCredit || 100, livePool.availableLiquidity || 100).toString())}
+                          className="absolute right-3.5 top-2.5 text-xs font-bold text-[var(--primary)] uppercase cursor-pointer hover:brightness-125 transition"
+                        >
+                          Max
+                        </button>
                       </div>
                       <input
                         type="range"
-                        min="1000"
-                        max="250000"
-                        step="1000"
+                        min="10"
+                        max={Math.max(100, creditProfile.maxCredit || 100)}
+                        step="5"
                         value={borrowInput}
                         onChange={(e) => setBorrowInput(e.target.value)}
                         className="portal-slider"
                       />
-                      <div className="flex justify-between text-xs text-[var(--text-dim)] font-mono">
-                        <span>Min $1,000</span>
-                        <span>Max $250,000</span>
+                      <div className="flex justify-between text-xs text-[var(--text-dim)] font-mono mt-1">
+                        <span>Min 10 FDX</span>
+                        <span>Available Pool: {Number(livePool.availableLiquidity || 0).toFixed(0)} FDX</span>
                       </div>
                     </div>
 
@@ -920,7 +1187,7 @@ export default function FundryxAppPortal({
                       <div className="flex justify-between items-center">
                         <span className="text-[var(--text-muted)]">Estimated Total Repayment</span>
                         <span className="font-mono font-semibold text-white">
-                          ${(Number(borrowInput) * (1 + 0.052 * (borrowTerm / 365))).toFixed(2)} USDC
+                          {(Number(borrowInput) * (1 + 0.052 * (borrowTerm / 365))).toFixed(2)} FDX
                         </span>
                       </div>
                       <div className="flex justify-between items-center">
@@ -934,9 +1201,14 @@ export default function FundryxAppPortal({
                   <div className="mt-4 pt-4 border-t border-[var(--border)]">
                     <button
                       onClick={handleExecuteBorrow}
-                      className="portal-btn-primary w-full"
+                      disabled={borrowTxStatus === 'awaiting-wallet' || borrowTxStatus === 'pending'}
+                      className="portal-btn-primary w-full disabled:opacity-60 disabled:cursor-not-allowed"
                     >
-                      {borrowSuccess ? 'Loan Disbursed!' : 'Execute Uncollateralized Loan'}
+                      {borrowTxStatus === 'awaiting-wallet' && 'Confirm in Wallet...'}
+                      {borrowTxStatus === 'pending' && 'Confirming on Polygon Amoy...'}
+                      {borrowTxStatus === 'confirmed' && 'Loan Disbursed!'}
+                      {borrowTxStatus === 'failed' && 'Borrow Failed (Retry)'}
+                      {borrowTxStatus === 'ready' && 'Execute Uncollateralized Loan'}
                     </button>
                   </div>
                 </div>
@@ -954,16 +1226,16 @@ export default function FundryxAppPortal({
                       <label className="portal-label block mb-2">Select Capital Vault</label>
                       <div className="portal-segmented">
                         {[
-                          { symbol: 'USDC', apy: '8.2%' },
-                          { symbol: 'EURC', apy: '7.1%' },
-                          { symbol: 'FDX', apy: '9.4%' }
+                          { symbol: 'FDX', label: 'FDX (Active Pool)' },
+                          { symbol: 'USDC', label: 'USDC (Coming Soon)' },
+                          { symbol: 'EURC', label: 'EURC (Coming Soon)' }
                         ].map((v) => (
                           <button
                             key={v.symbol}
                             onClick={() => setSupplyAsset(v.symbol)}
                             className={`portal-segmented-btn ${supplyAsset === v.symbol ? 'active border-[var(--accent-1)] text-[var(--accent-1)]' : ''}`}
                           >
-                            {v.symbol} ({v.apy})
+                            {v.label}
                           </button>
                         ))}
                       </div>
@@ -973,7 +1245,9 @@ export default function FundryxAppPortal({
                     <div className="mb-6">
                       <div className="flex justify-between items-center mb-2">
                         <label className="portal-label">Deposit Capital</label>
-                        <span className="text-xs text-[var(--text-dim)] font-mono">Balance: 148,250 {supplyAsset}</span>
+                        <span className="text-xs text-[var(--text-dim)] font-mono">
+                          Balance: {userFdxBalance !== null ? Number(userFdxBalance).toFixed(2) : '--'} {supplyAsset}
+                        </span>
                       </div>
                       <div className="relative">
                         <input
@@ -984,7 +1258,7 @@ export default function FundryxAppPortal({
                           placeholder="0.00"
                         />
                         <button
-                          onClick={() => setSupplyAmount('148250')}
+                          onClick={() => setSupplyAmount(Math.floor(userFdxBalance || 100).toString())}
                           className="absolute right-3.5 top-2.5 text-xs font-bold text-[var(--accent-1)] uppercase cursor-pointer hover:brightness-125 transition"
                         >
                           Max
@@ -995,16 +1269,16 @@ export default function FundryxAppPortal({
                     {/* Summary Rows */}
                     <div className="flex flex-col gap-3 py-4 border-t border-[var(--border)] text-sm">
                       <div className="flex justify-between items-center">
-                        <span className="text-[var(--text-muted)]">Interest Compounding</span>
-                        <span className="font-semibold text-white">Continuous per-second</span>
+                        <span className="text-[var(--text-muted)]">Interest Model</span>
+                        <span className="font-semibold text-white">Continuous utilization curve</span>
                       </div>
                       <div className="flex justify-between items-center">
                         <span className="text-[var(--text-muted)]">Withdrawal Liquidity</span>
-                        <span className="font-semibold text-white">Instant (No Lockup)</span>
+                        <span className="font-semibold text-white">Instant on available buffer</span>
                       </div>
                       <div className="flex justify-between items-center">
-                        <span className="text-[var(--text-muted)]">Loss Protection Buffer</span>
-                        <span className="portal-badge portal-badge-yield">100% Solvency Reserve</span>
+                        <span className="text-[var(--text-muted)]">Target Network</span>
+                        <span className="portal-badge portal-badge-yield">Polygon Amoy (80002)</span>
                       </div>
                     </div>
                   </div>
@@ -1013,9 +1287,14 @@ export default function FundryxAppPortal({
                   <div className="mt-4 pt-4 border-t border-[var(--border)]">
                     <button
                       onClick={handleExecuteSupply}
-                      className="portal-btn-yield w-full"
+                      disabled={supplyTxStatus === 'awaiting-wallet' || supplyTxStatus === 'pending'}
+                      className="portal-btn-yield w-full disabled:opacity-60 disabled:cursor-not-allowed"
                     >
-                      {supplySuccess ? 'Deposited Successfully!' : `Deposit & Earn ${supplyAsset} Yield`}
+                      {supplyTxStatus === 'awaiting-wallet' && 'Confirm in Wallet...'}
+                      {supplyTxStatus === 'pending' && 'Depositing on Polygon Amoy...'}
+                      {supplyTxStatus === 'confirmed' && 'Deposited Successfully!'}
+                      {supplyTxStatus === 'failed' && 'Deposit Failed (Retry)'}
+                      {supplyTxStatus === 'ready' && `Deposit & Earn ${supplyAsset} Yield`}
                     </button>
                   </div>
                 </div>
@@ -1060,10 +1339,15 @@ export default function FundryxAppPortal({
                           <td className="text-right">
                             {loan.status === 'Active' ? (
                               <button
-                                onClick={() => handleExecuteRepay(loan.id)}
-                                className="portal-btn-secondary h-8 px-3 text-xs"
+                                onClick={() => handleExecuteRepay(loan.loanId || loan.id)}
+                                disabled={repayTxStatus[loan.loanId || loan.id] === 'awaiting-wallet' || repayTxStatus[loan.loanId || loan.id] === 'pending'}
+                                className="portal-btn-secondary h-8 px-3 text-xs disabled:opacity-60"
                               >
-                                Settle
+                                {repayTxStatus[loan.loanId || loan.id] === 'awaiting-wallet' && 'Confirm...'}
+                                {repayTxStatus[loan.loanId || loan.id] === 'pending' && 'Settling...'}
+                                {repayTxStatus[loan.loanId || loan.id] === 'confirmed' && 'Settled!'}
+                                {repayTxStatus[loan.loanId || loan.id] === 'failed' && 'Retry'}
+                                {(!repayTxStatus[loan.loanId || loan.id] || repayTxStatus[loan.loanId || loan.id] === 'ready') && 'Settle'}
                               </button>
                             ) : (
                               <span className="text-xs text-[var(--text-dim)]">Settled</span>
@@ -1604,7 +1888,7 @@ export default function FundryxAppPortal({
                   <div>
                     <div className="portal-card-header">
                       <h2 className="portal-card-title">Instant Liquidity Swap</h2>
-                      <span className="portal-badge portal-badge-purple">0.05% Fee</span>
+                      <span className="portal-badge portal-badge-purple">Polygon Amoy Testnet AMM</span>
                     </div>
 
                     <div className="flex flex-col gap-4">
@@ -1612,7 +1896,9 @@ export default function FundryxAppPortal({
                       <div className="p-4 rounded-xl bg-[var(--surface-2)] border border-[var(--border)]">
                         <div className="flex justify-between items-center mb-1.5">
                           <span className="portal-label">You Pay</span>
-                          <span className="text-xs text-[var(--text-dim)] font-mono">Balance: 10,000 USDC</span>
+                          <span className="text-xs text-[var(--text-dim)] font-mono">
+                            Balance: {userFdxBalance !== null ? Number(userFdxBalance).toFixed(2) : '--'} {swapFrom}
+                          </span>
                         </div>
                         <div className="flex justify-between items-center">
                           <input
@@ -1630,11 +1916,11 @@ export default function FundryxAppPortal({
                       <div className="p-4 rounded-xl bg-[var(--surface-2)] border border-[var(--border)]">
                         <div className="flex justify-between items-center mb-1.5">
                           <span className="portal-label">You Receive (Estimated)</span>
-                          <span className="text-xs text-[var(--text-dim)] font-mono">Rate: 1 USDC ≈ 0.9995 FDX</span>
+                          <span className="text-xs text-[var(--text-dim)] font-mono">Constant Product AMM (x*y=k)</span>
                         </div>
                         <div className="flex justify-between items-center">
                           <span className="font-mono text-xl font-bold text-[var(--accent-3)]">
-                            {(Number(swapAmount || 0) * 0.9995).toFixed(2)}
+                            {(Number(swapAmount || 0) * 0.997).toFixed(2)}
                           </span>
                           <span className="portal-badge portal-badge-purple font-bold">{swapTo}</span>
                         </div>
@@ -1643,12 +1929,12 @@ export default function FundryxAppPortal({
                       {/* Rate Info Rows */}
                       <div className="flex flex-col gap-2 py-2 text-xs text-[var(--text-muted)]">
                         <div className="flex justify-between">
-                          <span>Guaranteed Rate</span>
-                          <span className="font-mono text-white">1 USDC ≈ 0.9995 FDX</span>
+                          <span>AMM Fee Tier</span>
+                          <span className="font-mono text-white">0.30% Protocol Fee</span>
                         </div>
                         <div className="flex justify-between">
-                          <span>Slippage Tolerance</span>
-                          <span className="font-mono text-[var(--accent-3)]">0.10% (Auto)</span>
+                          <span>Slippage Protection</span>
+                          <span className="font-mono text-[var(--accent-3)]">0.50% (Strict Max)</span>
                         </div>
                       </div>
                     </div>
@@ -1657,9 +1943,14 @@ export default function FundryxAppPortal({
                   <div className="mt-4 pt-4 border-t border-[var(--border)]">
                     <button
                       onClick={handleExecuteSwap}
-                      className="portal-btn-purple w-full"
+                      disabled={swapTxStatus === 'awaiting-wallet' || swapTxStatus === 'pending'}
+                      className="portal-btn-purple w-full disabled:opacity-60 disabled:cursor-not-allowed"
                     >
-                      {swapSuccess ? 'Swap Executed!' : 'Execute Capital Swap'}
+                      {swapTxStatus === 'awaiting-wallet' && 'Confirm in Wallet...'}
+                      {swapTxStatus === 'pending' && 'Swapping on Polygon Amoy...'}
+                      {swapTxStatus === 'confirmed' && 'Swap Confirmed!'}
+                      {swapTxStatus === 'failed' && 'Swap Failed (Retry)'}
+                      {swapTxStatus === 'ready' && 'Execute Testnet AMM Swap'}
                     </button>
                   </div>
                 </div>
