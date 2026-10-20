@@ -548,10 +548,10 @@ export async function executeDeposit(signer, amount) {
     throw new Error(`Insufficient FDX balance. You have ${Number(fmt).toFixed(4)} FDX. Request testnet tokens via the Faucet tab.`);
   }
 
-  // Approval — Step 1
+  // Approval — Step 1: Approve exact amount (avoids phishing/wallet drainer flags)
   const allowance = await token.allowance(address, CONTRACT_ADDRESSES.LendingPool);
   if (allowance < amountWei) {
-    const approveTx = await token.approve(CONTRACT_ADDRESSES.LendingPool, ethers.MaxUint256).catch((err) => {
+    const approveTx = await token.approve(CONTRACT_ADDRESSES.LendingPool, amountWei).catch((err) => {
       throw new Error(`Approval rejected: ${parseRevertReason(err)}`);
     });
     await approveTx.wait();
@@ -604,10 +604,10 @@ export async function executeRepay(signer, loanId, amount) {
     throw new Error(`Insufficient FDX to repay. You have ${Number(fmt).toFixed(4)} FDX, need ${amount} FDX.`);
   }
 
-  // Approval
+  // Approval — exact amount
   const allowance = await token.allowance(address, CONTRACT_ADDRESSES.LendingPool);
   if (allowance < amountWei) {
-    const approveTx = await token.approve(CONTRACT_ADDRESSES.LendingPool, ethers.MaxUint256).catch((err) => {
+    const approveTx = await token.approve(CONTRACT_ADDRESSES.LendingPool, amountWei).catch((err) => {
       throw new Error(`Approval rejected: ${parseRevertReason(err)}`);
     });
     await approveTx.wait();
@@ -849,10 +849,10 @@ export async function executeSwap(signer, tokenInAddress, tokenOutAddress, amoun
   const [expectedOut, priceImpact] = await router.getAmountOut(tokenInAddress, tokenOutAddress, amountInWei);
   const minOut = expectedOut * BigInt(10000 - slippageBps) / 10000n;
 
-  // Approve router
+  // Approve router — exact amount
   const allowance = await tokenIn.allowance(address, MOCK_SWAP_ROUTER_ADDRESS);
   if (allowance < amountInWei) {
-    const approveTx = await tokenIn.approve(MOCK_SWAP_ROUTER_ADDRESS, ethers.MaxUint256).catch((err) => {
+    const approveTx = await tokenIn.approve(MOCK_SWAP_ROUTER_ADDRESS, amountInWei).catch((err) => {
       throw new Error(`Approval failed: ${parseRevertReason(err)}`);
     });
     await approveTx.wait();
