@@ -1,4 +1,9 @@
 import { ethers } from 'ethers';
+import {
+  isSupabaseConfigured,
+  fetchAuditEventsFromSupabase,
+  recordAuditEventToSupabase,
+} from './supabase';
 
 // ─────────────────────────────────────────────────────────────
 // NETWORK CONFIG — Polygon Amoy Testnet
@@ -596,6 +601,24 @@ export async function executeBorrow(signer, amount, policyVersion) {
 
   // Read updated FDX balance after confirmation
   const newFdxBalance = await token.balanceOf(address).catch(() => 0n);
+
+  // Proactively record to Supabase audit trail
+  recordAuditEventToSupabase({
+    chainId: CHAIN_ID,
+    txHash: receipt.hash,
+    blockNumber: receipt.blockNumber,
+    type: 'Loan Disbursement',
+    contractAddress: CONTRACT_ADDRESSES.LendingPool,
+    borrower: address,
+    fullBorrower: address,
+    amount: `${amount} FDX`,
+    rawAmount: amount,
+    status: 'CONFIRMED',
+    gasUsed: receipt.gasUsed?.toString(),
+    effectiveGasPrice: receipt.gasPrice ? ethers.formatUnits(receipt.gasPrice, 'gwei') : null,
+    metadata: { loanVersion: usedVersion },
+  }).catch(() => {});
+
   return { tx, receipt, newFdxBalance: ethers.formatEther(newFdxBalance) };
 }
 
@@ -647,6 +670,23 @@ export async function executeDeposit(signer, amount) {
     pool.lenderBalances(address).catch(() => 0n),
     pool.totalDeposits().catch(() => 0n),
   ]);
+
+  // Proactively record to Supabase audit trail
+  recordAuditEventToSupabase({
+    chainId: CHAIN_ID,
+    txHash: receipt.hash,
+    blockNumber: receipt.blockNumber,
+    type: 'Capital Supply',
+    contractAddress: CONTRACT_ADDRESSES.LendingPool,
+    borrower: address,
+    fullBorrower: address,
+    amount: `${amount} FDX`,
+    rawAmount: amount,
+    status: 'CONFIRMED',
+    gasUsed: receipt.gasUsed?.toString(),
+    effectiveGasPrice: receipt.gasPrice ? ethers.formatUnits(receipt.gasPrice, 'gwei') : null,
+    metadata: { lenderBalance: ethers.formatEther(newLenderBal) },
+  }).catch(() => {});
 
   return {
     tx,
@@ -726,6 +766,26 @@ export async function executeRepay(signer, loanId, amount) {
     pool.getLoan(loanId).catch(() => null),
     token.balanceOf(address).catch(() => 0n),
   ]);
+
+  // Proactively record to Supabase audit trail
+  recordAuditEventToSupabase({
+    chainId: CHAIN_ID,
+    txHash: receipt.hash,
+    blockNumber: receipt.blockNumber,
+    type: 'Loan Repayment',
+    contractAddress: CONTRACT_ADDRESSES.LendingPool,
+    borrower: address,
+    fullBorrower: address,
+    amount: `${amount} FDX`,
+    rawAmount: amount,
+    status: 'CONFIRMED',
+    gasUsed: receipt.gasUsed?.toString(),
+    effectiveGasPrice: receipt.gasPrice ? ethers.formatUnits(receipt.gasPrice, 'gwei') : null,
+    metadata: {
+      loanId: String(loanId),
+      remainingOutstanding: loan ? ethers.formatEther(loan.principalOutstanding) : '0',
+    },
+  }).catch(() => {});
 
   return {
     tx,
@@ -889,9 +949,46 @@ export async function fetchRecentEvents(blockRange = 3000) {
     } catch {}
   }
 
-  // Sort by block descending
-  events.sort((a, b) => b.blockNumber - a.blockNumber);
-  return events;
+  // Deduplicate and merge with Supabase persistent audit events
+  const eventMap = new Map();
+
+  // 1. Load Supabase events if available
+  if (isSupabaseConfigured) {
+    try {
+      const sbEvents = await fetchAuditEventsFromSupabase(100);
+      if (sbEvents && Array.isArray(sbEvents)) {
+        for (const ev of sbEvents) {
+          eventMap.set(ev.tx_hash.toLowerCase(), {
+            id: `SB-${ev.tx_hash.slice(2, 6)}`,
+            type: ev.event_name,
+            borrower: ev.wallet_address ? `${ev.wallet_address.slice(0, 6)}...${ev.wallet_address.slice(-4)}` : '0x...',
+            amount: ev.amount_formatted || `${ev.amount} FDX`,
+            score: 'Supabase Verified',
+            time: `Block ${ev.block_number}`,
+            hash: `${ev.tx_hash.slice(0, 8)}...${ev.tx_hash.slice(-6)}`,
+            txHash: ev.tx_hash,
+            blockNumber: Number(ev.block_number),
+            timestamp: ev.created_at,
+            fullBorrower: ev.wallet_address,
+            fromSupabase: true,
+          });
+        }
+      }
+    } catch {}
+  }
+
+  // 2. Add on-chain queried logs (and sync to Supabase)
+  for (const ev of events) {
+    const key = ev.txHash.toLowerCase();
+    if (!eventMap.has(key)) {
+      eventMap.set(key, ev);
+      recordAuditEventToSupabase(ev).catch(() => {});
+    }
+  }
+
+  const combined = Array.from(eventMap.values());
+  combined.sort((a, b) => b.blockNumber - a.blockNumber);
+  return combined;
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -1051,6 +1148,27 @@ export async function executeSwap(signer, tokenInAddress, tokenOutAddress, amoun
   // Read output balance
   const tokenOut = new ethers.Contract(tokenOutAddress, ERC20_ABI, provider);
   const newOutBalance = await tokenOut.balanceOf(address).catch(() => 0n);
+
+  // Proactively record to Supabase audit trail
+  recordAuditEventToSupabase({
+    chainId: CHAIN_ID,
+    txHash: receipt.hash,
+    blockNumber: receipt.blockNumber,
+    type: 'AMM Swap',
+    contractAddress: MOCK_SWAP_ROUTER_ADDRESS,
+    borrower: address,
+    fullBorrower: address,
+    amount: `${amountIn} In -> ${Number(ethers.formatEther(expectedOut)).toFixed(4)} Out`,
+    rawAmount: amountIn,
+    status: 'CONFIRMED',
+    gasUsed: receipt.gasUsed?.toString(),
+    effectiveGasPrice: receipt.gasPrice ? ethers.formatUnits(receipt.gasPrice, 'gwei') : null,
+    metadata: {
+      tokenIn: tokenInAddress,
+      tokenOut: tokenOutAddress,
+      priceImpact: Number(priceImpact) / 100,
+    },
+  }).catch(() => {});
 
   return {
     tx,

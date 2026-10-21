@@ -33,7 +33,9 @@ import {
   Copy,
   Lock,
   Shield,
+  Database,
 } from 'lucide-react';
+import { isSupabaseConfigured } from '../utils/supabase';
 import {
   executeBorrow,
   executeDeposit,
@@ -2293,7 +2295,7 @@ export default function FundryxAppPortal({
               </div>
 
               {/* Admin Authority Banner */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="p-4 rounded-xl bg-[var(--surface-1)] border border-emerald-500/30 flex items-center gap-3">
                   <div className="p-2.5 rounded-lg bg-emerald-500/10 text-emerald-400">
                     <ShieldCheck size={20} />
@@ -2324,6 +2326,21 @@ export default function FundryxAppPortal({
                     <span className="text-[10px] uppercase font-mono text-[var(--text-dim)] block">Consensus Network</span>
                     <span className="font-mono text-xs font-bold text-white">Polygon Amoy (80002)</span>
                     <span className="text-[10px] text-cyan-400 block font-medium">Direct Bor RPC · Zero Middleware</span>
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-xl bg-[var(--surface-1)] border border-[var(--border)] flex items-center gap-3">
+                  <div className={`p-2.5 rounded-lg ${isSupabaseConfigured ? 'bg-emerald-500/10 text-emerald-400' : 'bg-amber-500/10 text-amber-400'}`}>
+                    <Database size={20} />
+                  </div>
+                  <div>
+                    <span className="text-[10px] uppercase font-mono text-[var(--text-dim)] block">Audit Database</span>
+                    <span className="font-mono text-xs font-bold text-white">
+                      {isSupabaseConfigured ? 'Supabase Indexed' : 'On-Chain Ledger'}
+                    </span>
+                    <span className={`text-[10px] block font-medium ${isSupabaseConfigured ? 'text-emerald-400' : 'text-amber-400'}`}>
+                      {isSupabaseConfigured ? 'Persistent Indexing Active' : 'RPC Direct · Ready for Keys'}
+                    </span>
                   </div>
                 </div>
               </div>
