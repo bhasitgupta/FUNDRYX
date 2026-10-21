@@ -353,7 +353,7 @@ export default function FundryxAppPortal({
       setBorrowTxStatus('pending');
       setTxNotification({
         type: 'info',
-        message: 'Submitting loan transaction to Polygon Amoy... Waiting for block confirmation.',
+        message: 'Submitting loan transaction on-chain... Waiting for block confirmation.',
       });
 
       const { tx, receipt, newFdxBalance } = await executeBorrow(wallet.signer, borrowInput);
@@ -364,7 +364,7 @@ export default function FundryxAppPortal({
 
       setTxNotification({
         type: 'success',
-        message: `Loan Confirmed on Polygon Amoy! Block ${receipt.blockNumber}`,
+        message: `Loan Confirmed on-chain! Block ${receipt.blockNumber}`,
         txHash: tx.hash,
       });
 
@@ -502,7 +502,7 @@ export default function FundryxAppPortal({
 
       setTxNotification({
         type: 'success',
-        message: `Deposit Confirmed on Polygon Amoy! Block ${receipt.blockNumber}`,
+        message: `Deposit Confirmed on-chain! Block ${receipt.blockNumber}`,
         txHash: tx.hash,
       });
 
@@ -833,7 +833,7 @@ export default function FundryxAppPortal({
                 FUNDRYX
               </span>
               <span className="text-[10px] font-mono text-emerald-400 font-semibold tracking-wider mt-1">
-                PORTAL v4 · POLYGON AMOY
+                PORTAL v4 · INSTITUTIONAL NETWORK
               </span>
             </div>
           </button>
@@ -968,7 +968,7 @@ export default function FundryxAppPortal({
                 rel="noreferrer"
                 className="text-emerald-400 underline font-semibold flex items-center gap-1 hover:text-emerald-300 shrink-0 ml-4"
               >
-                View on Polygonscan <ExternalLink size={12} />
+                View on Explorer <ExternalLink size={12} />
               </a>
             )}
           </div>
@@ -1379,7 +1379,7 @@ export default function FundryxAppPortal({
                       className="portal-btn-primary w-full disabled:opacity-60 disabled:cursor-not-allowed"
                     >
                       {borrowTxStatus === 'awaiting-wallet' && 'Confirm in Wallet...'}
-                      {borrowTxStatus === 'pending' && 'Confirming on Polygon Amoy...'}
+                      {borrowTxStatus === 'pending' && 'Confirming on-chain...'}
                       {borrowTxStatus === 'confirmed' && 'Loan Disbursed!'}
                       {borrowTxStatus === 'failed' && 'Borrow Failed (Retry)'}
                       {borrowTxStatus === 'ready' && 'Execute Uncollateralized Loan'}
@@ -1463,7 +1463,7 @@ export default function FundryxAppPortal({
                       </div>
                       <div className="flex justify-between items-center">
                         <span className="text-[var(--text-muted)]">Target Network</span>
-                        <span className="portal-badge portal-badge-yield">Polygon Amoy (80002)</span>
+                        <span className="portal-badge portal-badge-yield">Primary Settlement (80002)</span>
                       </div>
                     </div>
                   </div>
@@ -1476,7 +1476,7 @@ export default function FundryxAppPortal({
                       className="portal-btn-yield w-full disabled:opacity-60 disabled:cursor-not-allowed"
                     >
                       {supplyTxStatus === 'awaiting-wallet' && 'Confirm in Wallet...'}
-                      {supplyTxStatus === 'pending' && 'Depositing on Polygon Amoy...'}
+                      {supplyTxStatus === 'pending' && 'Depositing on-chain...'}
                       {supplyTxStatus === 'confirmed' && 'Deposited Successfully!'}
                       {supplyTxStatus === 'failed' && 'Deposit Failed (Retry)'}
                       {supplyTxStatus === 'ready' && `Deposit & Earn ${supplyAsset} Yield`}
@@ -2172,7 +2172,7 @@ export default function FundryxAppPortal({
                       {isSeeding && 'Seeding Liquidity Pool...'}
                       {!isSeeding && pairReserves.fdx === 0 && 'Seed Liquidity (10 POL) to Enable Swaps'}
                       {!isSeeding && pairReserves.fdx > 0 && swapTxStatus === 'awaiting-wallet' && 'Confirm in Wallet...'}
-                      {!isSeeding && pairReserves.fdx > 0 && swapTxStatus === 'pending' && 'Swapping on Polygon Amoy...'}
+                      {!isSeeding && pairReserves.fdx > 0 && swapTxStatus === 'pending' && 'Swapping on-chain...'}
                       {!isSeeding && pairReserves.fdx > 0 && swapTxStatus === 'confirmed' && 'Swap Confirmed!'}
                       {!isSeeding && pairReserves.fdx > 0 && swapTxStatus === 'failed' && 'Swap Failed (Retry)'}
                       {!isSeeding && pairReserves.fdx > 0 && swapTxStatus === 'ready' && 'Execute Liquidity Swap'}
@@ -2369,7 +2369,7 @@ export default function FundryxAppPortal({
                     <span className="portal-badge portal-badge-primary">Admin Validated</span>
                   </div>
                   <p className="portal-page-sub">
-                    Immutable on-chain execution ledger and cryptographic hash validation suite on Polygon Amoy.
+                    Immutable on-chain execution ledger and cryptographic hash validation suite.
                   </p>
                 </div>
                 <button
@@ -2412,7 +2412,7 @@ export default function FundryxAppPortal({
                   </div>
                   <div>
                     <span className="text-[10px] uppercase font-mono text-[var(--text-dim)] block">Consensus Network</span>
-                    <span className="font-mono text-xs font-bold text-white">Polygon Amoy (80002)</span>
+                    <span className="font-mono text-xs font-bold text-white">Primary Settlement Layer (80002)</span>
                     <span className="text-[10px] text-cyan-400 block font-medium">Direct Bor RPC · Zero Middleware</span>
                   </div>
                 </div>
@@ -2443,7 +2443,7 @@ export default function FundryxAppPortal({
                   <span className="portal-badge portal-badge-cyan">RPC Validation</span>
                 </div>
                 <p className="text-xs text-[var(--text-muted)] mb-4">
-                  Paste any transaction hash to verify receipt status, mined block number, and cryptographic consensus on Polygonscan Amoy.
+                  Paste any transaction hash to verify receipt status, mined block number, and cryptographic consensus on explorer.
                 </p>
                 
                 <div className="flex flex-col sm:flex-row gap-3 mb-4">
@@ -2502,7 +2502,7 @@ export default function FundryxAppPortal({
                         rel="noreferrer"
                         className="text-cyan-400 hover:text-cyan-300 flex items-center gap-1 font-semibold underline"
                       >
-                        View on Polygonscan <ExternalLink size={12} />
+                        View on Explorer <ExternalLink size={12} />
                       </a>
                     </div>
 
@@ -2524,7 +2524,7 @@ export default function FundryxAppPortal({
                 <div className="portal-card-header">
                   <div className="flex items-center gap-2">
                     <FileText size={16} className="text-emerald-400" />
-                    <h2 className="portal-card-title">Live Cryptographic Audit Trail (Polygon Amoy)</h2>
+                    <h2 className="portal-card-title">Live Cryptographic Audit Trail</h2>
                   </div>
                   <span className="portal-badge portal-badge-neutral">
                     {auditEvents.length} Events Verified
@@ -2547,7 +2547,7 @@ export default function FundryxAppPortal({
                       {auditEvents.length === 0 ? (
                         <tr>
                           <td colSpan={6} className="text-center py-8 text-xs text-[var(--text-dim)] font-mono">
-                            {isLoadingAudit ? 'Fetching verified blocks from Polygon Amoy...' : 'No events in recent block range.'}
+                            {isLoadingAudit ? 'Fetching verified blocks from network...' : 'No events in recent block range.'}
                           </td>
                         </tr>
                       ) : (
@@ -2571,7 +2571,7 @@ export default function FundryxAppPortal({
                                   target="_blank"
                                   rel="noreferrer"
                                   className="text-emerald-400 hover:text-emerald-300"
-                                  title="Inspect on Polygonscan Amoy"
+                                  title="Inspect on Explorer"
                                 >
                                   <ExternalLink size={12} />
                                 </a>

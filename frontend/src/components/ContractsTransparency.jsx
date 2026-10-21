@@ -126,7 +126,7 @@ export default function ContractsTransparency() {
                     target="_blank"
                     rel="noopener noreferrer"
                     className="p-1.5 text-[#8ca395] hover:text-white rounded-md hover:bg-[#1c2e25] transition"
-                    title="View on Polygonscan"
+                    title="View on Block Explorer"
                   >
                     <ExternalLink size={12} />
                   </a>

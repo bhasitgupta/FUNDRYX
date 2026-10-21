@@ -544,7 +544,7 @@ export async function executeBorrow(signer, amount, policyVersion) {
   // Chain guard
   const network = await provider.getNetwork();
   if (Number(network.chainId) !== CHAIN_ID) {
-    throw new Error(`Wrong network. Switch to Polygon Amoy (chain ${CHAIN_ID}). Current: ${network.chainId}.`);
+    throw new Error(`Wrong network. Switch to Primary Network (chain ${CHAIN_ID}). Current: ${network.chainId}.`);
   }
 
   const address = await signer.getAddress();
@@ -552,7 +552,7 @@ export async function executeBorrow(signer, amount, policyVersion) {
   // FDX balance check — borrowing transfers FDX OUT of pool, but borrower needs POL for gas
   const polBalance = await provider.getBalance(address);
   if (polBalance < ethers.parseEther('0.001')) {
-    throw new Error('Insufficient POL for gas. Ensure your wallet has POL on Polygon Amoy.');
+    throw new Error('Insufficient POL for gas. Ensure your wallet has POL balance.');
   }
 
   // Read actual policyVersion from chain if not provided
@@ -636,7 +636,7 @@ export async function executeDeposit(signer, amount) {
   // Chain guard
   const network = await provider.getNetwork();
   if (Number(network.chainId) !== CHAIN_ID) {
-    throw new Error(`Wrong network. Switch to Polygon Amoy (chain ${CHAIN_ID}). Current: ${network.chainId}.`);
+    throw new Error(`Wrong network. Switch to Primary Network (chain ${CHAIN_ID}). Current: ${network.chainId}.`);
   }
 
   const address = await signer.getAddress();
@@ -734,7 +734,7 @@ export async function executeRepay(signer, loanId, amount) {
   // Chain guard
   const network = await provider.getNetwork();
   if (Number(network.chainId) !== CHAIN_ID) {
-    throw new Error(`Wrong network. Switch to Polygon Amoy (chain ${CHAIN_ID}).`);
+    throw new Error(`Wrong network. Switch to Primary Network (chain ${CHAIN_ID}).`);
   }
 
   const address = await signer.getAddress();
@@ -842,7 +842,7 @@ export async function verifyTxHashOnChain(txHash) {
   ]);
 
   if (!tx || !receipt) {
-    throw new Error('Transaction hash not found or not yet mined on Polygon Amoy.');
+    throw new Error('Transaction hash not found or not yet mined on-chain.');
   }
 
   const latestBlock = await provider.getBlockNumber().catch(() => receipt.blockNumber);
@@ -1207,7 +1207,7 @@ export async function executeSwap(signer, tokenInAddress, tokenOutAddress, amoun
   const provider = signer.provider;
   const network = await provider.getNetwork();
   if (Number(network.chainId) !== CHAIN_ID) {
-    throw new Error(`Wrong network. Switch to Polygon Amoy (chain ${CHAIN_ID}).`);
+    throw new Error(`Wrong network. Switch to Primary Network (chain ${CHAIN_ID}).`);
   }
 
   const address = await signer.getAddress();

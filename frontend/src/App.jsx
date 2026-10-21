@@ -410,7 +410,7 @@ export default function App() {
           wallet={{
             title: "Multi-Currency Capital Reserves",
             description: "Illustrative reserve allocation. Connect your wallet to view live balances.",
-            growth: "Protocol Live · Polygon Amoy",
+            growth: "Protocol Live · Institutional Network",
             wallets: [
               { code: "USDC", symbol: "$", balance: poolStats.totalDeposits > 0 ? poolStats.totalDeposits : 0, perUsd: 1 },
               { code: "FDX", symbol: "✦ ", balance: 0, perUsd: 1 },
