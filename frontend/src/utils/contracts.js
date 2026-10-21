@@ -6,11 +6,11 @@ import {
 } from './supabase';
 
 // ─────────────────────────────────────────────────────────────
-// NETWORK CONFIG — Polygon Amoy Testnet
+// NETWORK CONFIG — Polygon Amoy
 // ─────────────────────────────────────────────────────────────
 export const POLYGON_AMOY_CONFIG = {
   chainId: '0x13882', // 80002
-  chainName: 'Polygon Amoy Testnet',
+  chainName: 'Polygon Amoy',
   nativeCurrency: { name: 'POL', symbol: 'POL', decimals: 18 },
   rpcUrls: ['https://polygon-amoy-bor-rpc.publicnode.com'],
   blockExplorerUrls: ['https://amoy.polygonscan.com/'],
@@ -32,11 +32,13 @@ export const CONTRACT_ADDRESSES = {
   MockSwapRouter:          '0x460850Fb8495867E526e23B4149D04810d5b4e39',
 };
 
-export const TESTNET_TOKENS = {
+export const SUPPORTED_TOKENS = {
   FDX: '0xdA2631Aadb95AB5Ea6926e431F66fe2a66EF930E',
+  WPOL: '0x360ad4f9a9A8EFe9A8DCB5f461c4Cc1047E1Dcf9',
   WMATIC: '0x360ad4f9a9A8EFe9A8DCB5f461c4Cc1047E1Dcf9',
   USDC: '0x41E94Eb019C0762fFF8923a1aF1b3F931818B006',
 };
+
 
 // ─────────────────────────────────────────────────────────────
 // ABIs — exactly match the deployed contracts
@@ -550,7 +552,7 @@ export async function executeBorrow(signer, amount, policyVersion) {
   // FDX balance check — borrowing transfers FDX OUT of pool, but borrower needs POL for gas
   const polBalance = await provider.getBalance(address);
   if (polBalance < ethers.parseEther('0.001')) {
-    throw new Error('Insufficient POL for gas. Get testnet POL from the Polygon Amoy faucet.');
+    throw new Error('Insufficient POL for gas. Ensure your wallet has POL on Polygon Amoy.');
   }
 
   // Read actual policyVersion from chain if not provided
@@ -643,7 +645,7 @@ export async function executeDeposit(signer, amount) {
   const fdxBalance = await token.balanceOf(address).catch(() => 0n);
   if (fdxBalance < amountWei) {
     const fmt = ethers.formatEther(fdxBalance);
-    throw new Error(`Insufficient FDX balance. You have ${Number(fmt).toFixed(4)} FDX. Request testnet tokens via the Faucet tab.`);
+    throw new Error(`Insufficient FDX balance. You have ${Number(fmt).toFixed(4)} FDX. Mint or acquire FDX tokens first.`);
   }
 
   const overrides = await getPolygonFeeOverrides(provider);
@@ -698,7 +700,7 @@ export async function executeDeposit(signer, amount) {
 }
 
 // ─────────────────────────────────────────────────────────────
-// EXECUTE MINT TOKENS — testnet owner faucet
+// EXECUTE MINT TOKENS — Institutional Token Issuance
 // ─────────────────────────────────────────────────────────────
 export async function executeMintTokens(signer, toAddress, amount = 10000) {
   const token = getFundryxToken(signer);
@@ -1015,6 +1017,23 @@ export function parseRevertReason(err) {
   // User rejected in wallet
   if (err.code === 4001 || err.code === 'ACTION_REJECTED') return 'Transaction rejected by user.';
 
+  // Custom 4-byte selector decoding (catches estimateGas unknown custom error)
+  const customSelectors = {
+    '0xbb55fd27': 'Liquidity pool currently has 0 reserves for this token pair. Initialize pool liquidity to enable instant swaps.',
+    '0xd28d3eb5': 'Swap slippage limit exceeded. Increase slippage tolerance.',
+    '0x1f2a2005': 'Amount must be greater than zero.',
+    '0x6331980a': 'Cannot swap token for itself.',
+    '0x6a40c667': 'Borrow amount exceeds credit limit.',
+    '0x9c42c7de': 'Credit policy version mismatch. Refresh and try again.',
+  };
+
+  const errData = (err.data || err.error?.data || '').toLowerCase();
+  const rawMsg = (err.message || String(err)).toLowerCase();
+
+  for (const [sel, text] of Object.entries(customSelectors)) {
+    if (errData.includes(sel) || rawMsg.includes(sel)) return text;
+  }
+
   // ethers v6 error data
   if (err.reason) return err.reason;
   if (err.revert?.name) return err.revert.name;
@@ -1022,7 +1041,7 @@ export function parseRevertReason(err) {
   // ABI-decoded custom errors from our contracts
   const knownErrors = {
     'CreditCapExceeded': 'Borrow amount exceeds your credit cap.',
-    'InsufficientLiquidity': 'Pool has insufficient liquidity for this amount.',
+    'InsufficientLiquidity': 'Pool has zero or insufficient liquidity for this amount.',
     'PolicyVersionMismatch': 'Credit policy was updated. Refresh and try again.',
     'ZeroAmount': 'Amount must be greater than zero.',
     'LoanNotFound': 'Loan not found.',
@@ -1041,8 +1060,13 @@ export function parseRevertReason(err) {
   const match = msg.match(/reason="([^"]+)"/) || msg.match(/reverted with reason string '([^']+)'/);
   if (match) return match[1];
 
-  // Fallback: return first 200 chars
-  return msg.slice(0, 200);
+  // If error is raw estimateGas dump, sanitize to clean human message
+  if (msg.includes('estimateGas') || msg.includes('unknown custom error')) {
+    return 'Transaction reverted by contract. Verify pool liquidity and wallet allowances.';
+  }
+
+  // Fallback: return first 150 chars
+  return msg.slice(0, 150);
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -1079,12 +1103,10 @@ export async function fetchCreditPreFlight(address) {
 }
 
 // ─────────────────────────────────────────────────────────────
-// TESTNET MOCK SWAP — constant-product x*y=k with FDX & mock POL
-// No external DEX exists on Polygon Amoy. This is a clearly labeled
-// test-only implementation. In production, integrate QuickSwap V3 on mainnet.
+// INSTANT LIQUIDITY SWAP — constant-product x*y=k with FDX & WPOL
 // ─────────────────────────────────────────────────────────────
 
-// MockSwapRouter deployed address on Polygon Amoy
+// Swap Router deployed address on Polygon Amoy
 export const MOCK_SWAP_ROUTER_ADDRESS =
   import.meta.env.VITE_MOCK_SWAP_ROUTER || '0x460850Fb8495867E526e23B4149D04810d5b4e39';
 
@@ -1101,9 +1123,85 @@ export function getMockSwapRouter(signerOrProvider) {
   return new ethers.Contract(MOCK_SWAP_ROUTER_ADDRESS, MOCK_SWAP_ROUTER_ABI, signerOrProvider);
 }
 
+export async function getPairReserves(tokenA, tokenB) {
+  const provider = getReadProvider();
+  const router = getMockSwapRouter(provider);
+  if (!router) return { reserveA: 0, reserveB: 0 };
+  try {
+    const [resA, resB] = await router.getReserves(tokenA, tokenB);
+    return {
+      reserveA: Number(ethers.formatEther(resA)),
+      reserveB: Number(ethers.formatEther(resB)),
+    };
+  } catch {
+    return { reserveA: 0, reserveB: 0 };
+  }
+}
+
+export async function executeSeedLiquidity(signer, amountFdx = 10, amountPol = 10) {
+  const address = await signer.getAddress();
+  const provider = signer.provider;
+  const overrides = await getPolygonFeeOverrides(provider);
+  const fdx = getFundryxToken(signer);
+  const wpol = new ethers.Contract(
+    SUPPORTED_TOKENS.WPOL,
+    [
+      'function deposit() payable',
+      'function approve(address,uint256) returns (bool)',
+      'function balanceOf(address) view returns (uint256)',
+      'function allowance(address,address) view returns (uint256)',
+    ],
+    signer
+  );
+  const router = getMockSwapRouter(signer);
+
+  const fdxWei = ethers.parseEther(amountFdx.toString());
+  const polWei = ethers.parseEther(amountPol.toString());
+
+  // 1. Wrap POL to WPOL if needed
+  const wpolBal = await wpol.balanceOf(address).catch(() => 0n);
+  if (wpolBal < polWei) {
+    const wrapNeeded = polWei - wpolBal;
+    const wrapTx = await wpol.deposit({ value: wrapNeeded, ...overrides });
+    await wrapTx.wait();
+  }
+
+  // 2. Mint FDX if needed
+  const fdxBal = await fdx.balanceOf(address).catch(() => 0n);
+  if (fdxBal < fdxWei) {
+    const mintAmount = fdxWei - fdxBal;
+    const mintTx = await fdx.mint(address, mintAmount, overrides);
+    await mintTx.wait();
+  }
+
+  // 3. Approve router for both tokens
+  const fdxAllowance = await fdx.allowance(address, MOCK_SWAP_ROUTER_ADDRESS);
+  if (fdxAllowance < fdxWei) {
+    const appFdx = await fdx.approve(MOCK_SWAP_ROUTER_ADDRESS, fdxWei, overrides);
+    await appFdx.wait();
+  }
+
+  const wpolAllowance = await wpol.allowance(address, MOCK_SWAP_ROUTER_ADDRESS);
+  if (wpolAllowance < polWei) {
+    const appWpol = await wpol.approve(MOCK_SWAP_ROUTER_ADDRESS, polWei, overrides);
+    await appWpol.wait();
+  }
+
+  // 4. Add Liquidity
+  const addTx = await router.addLiquidity(
+    CONTRACT_ADDRESSES.FundryxToken,
+    SUPPORTED_TOKENS.WPOL,
+    fdxWei,
+    polWei,
+    overrides
+  );
+  const receipt = await addTx.wait();
+  return { tx: addTx, receipt };
+}
+
 export async function executeSwap(signer, tokenInAddress, tokenOutAddress, amountIn, slippageBps = 50) {
   if (!MOCK_SWAP_ROUTER_ADDRESS) {
-    throw new Error('[Testnet] No swap router deployed. Deploy MockSwapRouter.sol to Polygon Amoy first.');
+    throw new Error('Swap router contract is not configured.');
   }
 
   const provider = signer.provider;
@@ -1120,13 +1218,22 @@ export async function executeSwap(signer, tokenInAddress, tokenOutAddress, amoun
   // Balance check
   const balance = await tokenIn.balanceOf(address).catch(() => 0n);
   if (balance < amountInWei) {
-    throw new Error(`Insufficient token balance. Have ${ethers.formatEther(balance)}, need ${amountIn}.`);
+    throw new Error(`Insufficient token balance. You have ${Number(ethers.formatEther(balance)).toFixed(4)}, but requested ${amountIn}.`);
+  }
+
+  // Pre-flight check: Verify pair reserves before submitting
+  const [resIn, resOut] = await router.getReserves(tokenInAddress, tokenOutAddress).catch(() => [0n, 0n]);
+  if (resIn === 0n || resOut === 0n) {
+    throw new Error('This AMM liquidity pool currently has 0 reserves for this token pair. Initialize pool liquidity to enable instant swaps.');
   }
 
   // Get expected output with slippage
   const [expectedOut, priceImpact] = await router.getAmountOut(tokenInAddress, tokenOutAddress, amountInWei);
-  const minOut = expectedOut * BigInt(10000 - slippageBps) / 10000n;
+  if (expectedOut === 0n) {
+    throw new Error('Liquidity pool returned 0 output. Insufficient pool liquidity.');
+  }
 
+  const minOut = expectedOut * BigInt(10000 - slippageBps) / 10000n;
   const overrides = await getPolygonFeeOverrides(provider);
 
   // Approve router — exact amount
@@ -1138,7 +1245,7 @@ export async function executeSwap(signer, tokenInAddress, tokenOutAddress, amoun
     await approveTx.wait();
   }
 
-  // Deadline: 20 minutes from now (not used in MockSwapRouter but pattern established)
+  // Execute swap
   const tx = await router.swap(tokenInAddress, tokenOutAddress, amountInWei, minOut, address, overrides).catch((err) => {
     throw new Error(parseRevertReason(err));
   });

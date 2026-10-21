@@ -30,7 +30,7 @@ def root():
         "project": "Fundryx",
         "description": "Onchain Capital Network API",
         "status": "ONLINE",
-        "chain": "Polygon Amoy Testnet",
+        "chain": "Polygon Amoy",
         "chainId": CHAIN_ID,
         "docs": "/docs",
     }

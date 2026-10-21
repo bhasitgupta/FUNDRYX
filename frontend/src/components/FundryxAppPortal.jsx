@@ -42,13 +42,15 @@ import {
   executeRepay,
   executeSwap,
   executeMintTokens,
+  executeSeedLiquidity,
+  getPairReserves,
   fetchRecentEvents,
   fetchWalletData,
   fetchBorrowerLoans,
   fetchCreditPreFlight,
   parseRevertReason,
   CONTRACT_ADDRESSES,
-  TESTNET_TOKENS,
+  SUPPORTED_TOKENS,
   MOCK_SWAP_ROUTER_ADDRESS,
   CHAIN_ID,
   explorerTxLink,
@@ -91,10 +93,12 @@ export default function FundryxAppPortal({
 
   // Swap state & transaction lifecycle
   const [swapFrom, setSwapFrom] = useState('FDX');
-  const [swapTo, setSwapTo] = useState('WMATIC');
+  const [swapTo, setSwapTo] = useState('WPOL');
   const [swapAmount, setSwapAmount] = useState('10');
   const [swapSuccess, setSwapSuccess] = useState(false);
   const [swapTxStatus, setSwapTxStatus] = useState('ready'); // ready | awaiting-wallet | pending | confirmed | failed
+  const [pairReserves, setPairReserves] = useState({ fdx: 0, wpol: 0 });
+  const [isSeeding, setIsSeeding] = useState(false);
 
   // User balances from chain
   const [userFdxBalance, setUserFdxBalance] = useState(null);
@@ -429,11 +433,11 @@ export default function FundryxAppPortal({
     }
   };
 
-  const handleMintFaucet = async () => {
+  const handleMintTokens = async () => {
     if (!wallet.signer || !wallet.address) {
       setTxNotification({
         type: 'danger',
-        message: 'Wallet not connected. Connect your Web3 wallet to mint test FDX.',
+        message: 'Wallet not connected. Connect your Web3 wallet to mint FDX.',
       });
       return;
     }
@@ -442,7 +446,7 @@ export default function FundryxAppPortal({
       setIsMinting(true);
       setTxNotification({
         type: 'info',
-        message: 'Requesting 10,000 FDX from testnet faucet... Confirm in wallet.',
+        message: 'Requesting 10,000 FDX allocation... Confirm in wallet.',
       });
 
       const { tx, receipt, newBalance } = await executeMintTokens(wallet.signer, wallet.address, 10000);
@@ -454,12 +458,12 @@ export default function FundryxAppPortal({
       });
       setTimeout(() => setIsMinting(false), 3000);
     } catch (err) {
-      console.error('Faucet mint failed:', err);
+      console.error('Token mint failed:', err);
       const reason = parseRevertReason(err);
       setIsMinting(false);
       setTxNotification({
         type: 'danger',
-        message: `Faucet mint failed: ${reason}`,
+        message: `Token mint failed: ${reason}`,
       });
     }
   };
@@ -661,6 +665,54 @@ export default function FundryxAppPortal({
     }
   };
 
+  const loadPairReserves = async () => {
+    try {
+      const res = await getPairReserves(CONTRACT_ADDRESSES.FundryxToken, SUPPORTED_TOKENS.WPOL);
+      setPairReserves({ fdx: res.reserveA, wpol: res.reserveB });
+    } catch {}
+  };
+
+  useEffect(() => {
+    loadPairReserves();
+  }, [activeTab]);
+
+  const handleSeedLiquidity = async () => {
+    if (!wallet.signer || !wallet.address) {
+      setTxNotification({
+        type: 'danger',
+        message: 'Connect your wallet to seed liquidity.',
+      });
+      return;
+    }
+    setIsSeeding(true);
+    setTxNotification({
+      type: 'info',
+      message: 'Seeding AMM liquidity: supplying 10 FDX + 10 WPOL to router... Confirm in wallet.',
+    });
+    try {
+      const res = await executeSeedLiquidity(wallet.signer, 10, 10);
+      setTxNotification({
+        type: 'success',
+        message: 'Liquidity initialized on-chain! 10 FDX + 10 WPOL supplied.',
+        txHash: res.tx.hash,
+      });
+      await loadPairReserves();
+      if (wallet.address) {
+        const wData = await fetchWalletData(wallet.address);
+        setUserFdxBalance(wData.fdxBalance);
+        setUserPolBalance(wData.polBalance);
+      }
+    } catch (err) {
+      console.error('Seed liquidity failed:', err);
+      setTxNotification({
+        type: 'danger',
+        message: `Liquidity seeding failed: ${parseRevertReason(err)}`,
+      });
+    } finally {
+      setIsSeeding(false);
+    }
+  };
+
   const handleExecuteSwap = async () => {
     if (!wallet.signer || !wallet.address) {
       setSwapTxStatus('failed');
@@ -675,7 +727,7 @@ export default function FundryxAppPortal({
       setSwapTxStatus('failed');
       setTxNotification({
         type: 'danger',
-        message: '[Testnet AMM] MockSwapRouter contract not yet configured. Contract is written at contracts/core/MockSwapRouter.sol ready for deployment.',
+        message: 'Swap router contract is not configured.',
       });
       setTimeout(() => setSwapTxStatus('ready'), 7000);
       return;
@@ -688,8 +740,8 @@ export default function FundryxAppPortal({
         message: `Initiating swap of ${swapAmount} ${swapFrom} to ${swapTo}. Confirm in wallet...`,
       });
 
-      const tokenInAddr = TESTNET_TOKENS[swapFrom] || CONTRACT_ADDRESSES.FundryxToken;
-      const tokenOutAddr = TESTNET_TOKENS[swapTo] || TESTNET_TOKENS.WMATIC;
+      const tokenInAddr = SUPPORTED_TOKENS[swapFrom] || CONTRACT_ADDRESSES.FundryxToken;
+      const tokenOutAddr = SUPPORTED_TOKENS[swapTo] || SUPPORTED_TOKENS.WPOL;
 
       const res = await executeSwap(wallet.signer, tokenInAddr, tokenOutAddr, swapAmount, 100);
 
@@ -697,9 +749,16 @@ export default function FundryxAppPortal({
       setSwapSuccess(true);
       setTxNotification({
         type: 'success',
-        message: `Swap Confirmed onchain! Received ${Number(res.amountOut).toFixed(4)} ${swapTo}`,
+        message: `Swap Confirmed on-chain! Received ${Number(res.amountOut).toFixed(4)} ${swapTo}`,
         txHash: res.tx.hash,
       });
+
+      await loadPairReserves();
+      if (wallet.address) {
+        const wData = await fetchWalletData(wallet.address);
+        setUserFdxBalance(wData.fdxBalance);
+        setUserPolBalance(wData.polBalance);
+      }
 
       setTimeout(() => {
         setSwapSuccess(false);
@@ -1366,12 +1425,12 @@ export default function FundryxAppPortal({
                           </span>
                           <button
                             type="button"
-                            onClick={handleMintFaucet}
+                            onClick={handleMintTokens}
                             disabled={isMinting}
                             className="px-2 py-0.5 text-[10px] font-bold rounded bg-[var(--accent-1)]/20 text-[var(--accent-1)] hover:bg-[var(--accent-1)]/30 border border-[var(--accent-1)]/40 transition disabled:opacity-50 cursor-pointer"
-                            title="Mint 10,000 test FDX tokens directly to your wallet"
+                            title="Mint 10,000 FDX tokens directly to your wallet"
                           >
-                            {isMinting ? 'Minting...' : '+ Faucet 10k FDX'}
+                            {isMinting ? 'Minting...' : '+ Mint 10k FDX'}
                           </button>
                         </div>
                       </div>
@@ -2014,7 +2073,32 @@ export default function FundryxAppPortal({
                   <div>
                     <div className="portal-card-header">
                       <h2 className="portal-card-title">Instant Liquidity Swap</h2>
-                      <span className="portal-badge portal-badge-purple">Polygon Amoy Testnet AMM</span>
+                      <span className="portal-badge portal-badge-purple">Institutional Liquidity AMM</span>
+                    </div>
+
+                    {/* Pair Liquidity Status Banner */}
+                    <div className="mb-4">
+                      {pairReserves.fdx === 0 || pairReserves.wpol === 0 ? (
+                        <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between text-xs text-amber-300">
+                          <div className="flex flex-col">
+                            <span className="font-semibold">Pool Reserves: 0.00 FDX / 0.00 WPOL</span>
+                            <span className="text-[11px] text-amber-400/80">Pool requires initial liquidity before swapping.</span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={handleSeedLiquidity}
+                            disabled={isSeeding || !wallet.signer}
+                            className="px-3 py-1.5 rounded-lg bg-amber-500 text-black font-bold text-xs hover:bg-amber-400 transition cursor-pointer disabled:opacity-50"
+                          >
+                            {isSeeding ? 'Seeding Pool...' : 'Seed Liquidity (10 POL)'}
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex justify-between items-center text-xs text-[var(--text-dim)] font-mono px-1">
+                          <span>AMM Liquidity:</span>
+                          <span className="text-emerald-400 font-semibold">{pairReserves.fdx.toFixed(2)} FDX / {pairReserves.wpol.toFixed(2)} WPOL</span>
+                        </div>
+                      )}
                     </div>
 
                     <div className="flex flex-col gap-4">
@@ -2028,12 +2112,12 @@ export default function FundryxAppPortal({
                             </span>
                             <button
                               type="button"
-                              onClick={handleMintFaucet}
+                              onClick={handleMintTokens}
                               disabled={isMinting}
                               className="px-2 py-0.5 text-[10px] font-bold rounded bg-[var(--accent-3)]/20 text-[var(--accent-3)] hover:bg-[var(--accent-3)]/30 border border-[var(--accent-3)]/40 transition disabled:opacity-50 cursor-pointer"
-                              title="Mint 10,000 test FDX tokens"
+                              title="Mint 10,000 FDX tokens"
                             >
-                              {isMinting ? 'Minting...' : '+ Faucet 10k FDX'}
+                              {isMinting ? 'Minting...' : '+ Mint 10k FDX'}
                             </button>
                           </div>
                         </div>
@@ -2057,7 +2141,9 @@ export default function FundryxAppPortal({
                         </div>
                         <div className="flex justify-between items-center">
                           <span className="font-mono text-xl font-bold text-[var(--accent-3)]">
-                            {(Number(swapAmount || 0) * 0.997).toFixed(2)}
+                            {pairReserves.fdx === 0 || pairReserves.wpol === 0
+                              ? '0.00 (Unseeded Pool)'
+                              : ((Number(swapAmount || 0) * 997 * pairReserves.wpol) / (pairReserves.fdx * 1000 + Number(swapAmount || 0) * 997)).toFixed(4)}
                           </span>
                           <span className="portal-badge portal-badge-purple font-bold">{swapTo}</span>
                         </div>
@@ -2079,15 +2165,17 @@ export default function FundryxAppPortal({
 
                   <div className="mt-4 pt-4 border-t border-[var(--border)]">
                     <button
-                      onClick={handleExecuteSwap}
-                      disabled={swapTxStatus === 'awaiting-wallet' || swapTxStatus === 'pending'}
+                      onClick={pairReserves.fdx === 0 || pairReserves.wpol === 0 ? handleSeedLiquidity : handleExecuteSwap}
+                      disabled={swapTxStatus === 'awaiting-wallet' || swapTxStatus === 'pending' || isSeeding}
                       className="portal-btn-purple w-full disabled:opacity-60 disabled:cursor-not-allowed"
                     >
-                      {swapTxStatus === 'awaiting-wallet' && 'Confirm in Wallet...'}
-                      {swapTxStatus === 'pending' && 'Swapping on Polygon Amoy...'}
-                      {swapTxStatus === 'confirmed' && 'Swap Confirmed!'}
-                      {swapTxStatus === 'failed' && 'Swap Failed (Retry)'}
-                      {swapTxStatus === 'ready' && 'Execute Testnet AMM Swap'}
+                      {isSeeding && 'Seeding Liquidity Pool...'}
+                      {!isSeeding && pairReserves.fdx === 0 && 'Seed Liquidity (10 POL) to Enable Swaps'}
+                      {!isSeeding && pairReserves.fdx > 0 && swapTxStatus === 'awaiting-wallet' && 'Confirm in Wallet...'}
+                      {!isSeeding && pairReserves.fdx > 0 && swapTxStatus === 'pending' && 'Swapping on Polygon Amoy...'}
+                      {!isSeeding && pairReserves.fdx > 0 && swapTxStatus === 'confirmed' && 'Swap Confirmed!'}
+                      {!isSeeding && pairReserves.fdx > 0 && swapTxStatus === 'failed' && 'Swap Failed (Retry)'}
+                      {!isSeeding && pairReserves.fdx > 0 && swapTxStatus === 'ready' && 'Execute Liquidity Swap'}
                     </button>
                   </div>
                 </div>

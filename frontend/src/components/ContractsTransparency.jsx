@@ -30,7 +30,7 @@ export default function ContractsTransparency() {
       name: 'FundryxToken (FDX)',
       role: 'Lending Asset (ERC-20)',
       address: CONTRACT_ADDRESSES.FundryxToken,
-      description: 'Standard 18-decimal testnet currency backing liquidity vaults.',
+      description: 'Standard 18-decimal institutional asset backing liquidity vaults.',
       icon: Layers,
     },
     {
