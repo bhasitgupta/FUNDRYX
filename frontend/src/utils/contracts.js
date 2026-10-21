@@ -358,6 +358,32 @@ export async function connectWallet(walletType = 'metamask') {
   };
 }
 
+// Silently reconnect if an account is already authorized in window.ethereum / Phantom
+export async function reconnectWallet() {
+  if (typeof window === 'undefined') return null;
+  const injected = window.phantom?.ethereum || window.ethereum;
+  if (!injected) return null;
+  try {
+    const accounts = await injected.request({ method: 'eth_accounts' });
+    if (!accounts || accounts.length === 0) return null;
+    const provider = new ethers.BrowserProvider(injected);
+    const signer = await provider.getSigner().catch(() => null);
+    if (!signer) return null;
+    const network = await provider.getNetwork().catch(() => ({ chainId: 80002n }));
+    const balance = await provider.getBalance(accounts[0]).catch(() => 0n);
+    return {
+      address: accounts[0],
+      signer,
+      provider,
+      balance: ethers.formatEther(balance),
+      chainId: Number(network.chainId),
+      walletType: injected.isPhantom ? 'phantom' : 'metamask',
+    };
+  } catch {
+    return null;
+  }
+}
+
 // ─────────────────────────────────────────────────────────────
 // CONTRACT FACTORIES
 // ─────────────────────────────────────────────────────────────

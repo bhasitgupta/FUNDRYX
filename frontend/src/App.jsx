@@ -4,8 +4,60 @@ import FundryxLanding from './components/FundryxLanding';
 import FundryxAppPortal from './components/FundryxAppPortal';
 import WalletModal from './components/WalletModal';
 import ChooseCryptoWalletLoginPage from './app/choose-crypto-wallet-login/page';
-import { connectWallet, CONTRACT_ADDRESSES, LENDING_POOL_ABI } from './utils/contracts';
+import { connectWallet, reconnectWallet, CONTRACT_ADDRESSES, LENDING_POOL_ABI } from './utils/contracts';
 import { ethers } from 'ethers';
+
+class PortalErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error, errorInfo) {
+    console.error('Portal ErrorBoundary caught:', error, errorInfo);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen bg-[#0c1410] text-[#ecebe1] flex flex-col items-center justify-center p-6 text-center font-sans">
+          <div className="max-w-md p-8 rounded-2xl bg-[#15231c] border border-red-500/30 flex flex-col items-center gap-4 shadow-2xl">
+            <div className="w-12 h-12 rounded-xl bg-red-500/10 border border-red-500/30 flex items-center justify-center text-red-400 font-bold text-xl">
+              !
+            </div>
+            <h2 className="text-xl font-bold text-white">Application Telemetry Alert</h2>
+            <p className="text-xs text-[#8fa799] font-mono leading-relaxed">
+              {this.state.error?.message || 'An unexpected rendering error occurred inside the portal.'}
+            </p>
+            <div className="flex gap-3 mt-2">
+              <button
+                onClick={() => {
+                  this.setState({ hasError: false, error: null });
+                  window.location.reload();
+                }}
+                className="px-4 py-2 rounded-xl bg-emerald-500 text-black font-semibold text-xs hover:bg-emerald-400 transition cursor-pointer"
+              >
+                Reload Interface
+              </button>
+              <button
+                onClick={() => {
+                  this.setState({ hasError: false, error: null });
+                  window.location.hash = '';
+                  window.location.reload();
+                }}
+                className="px-4 py-2 rounded-xl bg-[#1c2e24] border border-[#263e34] text-white font-semibold text-xs hover:bg-[#22382b] transition cursor-pointer"
+              >
+                Return to Home
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 export default function App() {
   const [currentView, setCurrentView] = useState('landing'); // 'landing' | 'app' | 'wallet-login'
@@ -137,14 +189,31 @@ export default function App() {
     }
   };
 
+  // Silent auto-reconnect on mount if wallet already approved
+  useEffect(() => {
+    reconnectWallet()
+      .then((conn) => {
+        if (conn) {
+          walletRef.current = conn;
+          setWallet(conn);
+          fetchLivePoolData(conn.provider);
+          const hash = (window.location.hash || '').toLowerCase();
+          if (hash.startsWith('#app') || hash === '#borrow' || hash === '#lending' || hash === '#credit' || hash === '#risk' || hash === '#markets' || hash === '#audit') {
+            setCurrentView('app');
+          }
+        }
+      })
+      .catch((e) => console.log('Auto-reconnect silent bypass:', e.message));
+  }, []);
+
   // Deep-linking and URL Hash synchronization
   useEffect(() => {
     const handleHash = () => {
       const hash = (window.location.hash || '').toLowerCase();
       if (hash === '#wallet-login' || hash === '#login' || hash.includes('choose-crypto-wallet')) {
         setCurrentView('wallet-login');
-      } else if (hash.startsWith('#app') || hash === '#borrow' || hash === '#lending' || hash === '#credit' || hash === '#risk') {
-        const activeAddr = walletRef.current?.address;
+      } else if (hash.startsWith('#app') || hash === '#borrow' || hash === '#lending' || hash === '#credit' || hash === '#risk' || hash === '#markets' || hash === '#audit') {
+        const activeAddr = walletRef.current?.address || window.phantom?.ethereum?.selectedAddress || window.ethereum?.selectedAddress;
         if (!activeAddr) {
           setCurrentView('landing');
         } else {
@@ -157,6 +226,8 @@ export default function App() {
             setActiveAppTab('risk');
           } else if (hash.includes('market')) {
             setActiveAppTab('markets');
+          } else if (hash.includes('audit')) {
+            setActiveAppTab('audit');
           } else if (hash.includes('terms') || hash.includes('legal')) {
             setActiveAppTab('terms');
           } else {
@@ -206,23 +277,25 @@ export default function App() {
         />
       ) : currentView === 'app' ? (
         /* View 2: Full Fundryx Web Application Portal */
-        <FundryxAppPortal
-          wallet={wallet}
-          poolStats={poolStats}
-          initialTab={activeAppTab}
-          onConnect={() => setIsWalletModalOpen(true)}
-          onNavigateWalletLogin={() => {
-            setCurrentView('wallet-login');
-            window.location.hash = '#wallet-login';
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-          }}
-          onDisconnect={handleDisconnect}
-          onBackToLanding={() => {
-            setCurrentView('landing');
-            window.location.hash = '';
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-          }}
-        />
+        <PortalErrorBoundary>
+          <FundryxAppPortal
+            wallet={wallet}
+            poolStats={poolStats}
+            initialTab={activeAppTab}
+            onConnect={() => setIsWalletModalOpen(true)}
+            onNavigateWalletLogin={() => {
+              setCurrentView('wallet-login');
+              window.location.hash = '#wallet-login';
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            onDisconnect={handleDisconnect}
+            onBackToLanding={() => {
+              setCurrentView('landing');
+              window.location.hash = '';
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+          />
+        </PortalErrorBoundary>
       ) : (
         /* View 3: Fundryx Institutional Landing Experience */
         <FundryxLanding

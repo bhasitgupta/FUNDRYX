@@ -2,6 +2,12 @@
 @import "tailwindcss";
 @import "lenis/dist/lenis.css";
 
+html, body {
+  background-color: #0c1410;
+  color: #ecebe1;
+  min-height: 100vh;
+}
+
 /* ====================================================
    PORTAL DESIGN TOKENS (Extracted from Landing 'forest' palette)
    ==================================================== */

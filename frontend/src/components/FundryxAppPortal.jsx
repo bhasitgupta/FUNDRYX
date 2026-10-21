@@ -747,7 +747,7 @@ export default function FundryxAppPortal({
     {
       label: 'Institutional Governance',
       children: [
-        { value: 'audit', label: 'Admin On-Chain Audit', icon: ShieldCheck },
+        { value: 'audit', label: 'Admin On-Chain Audit', icon: <ShieldCheck size={16} /> },
         { value: 'terms', label: 'Legal & Risk Terms', icon: Download04Icon },
         { value: 'landing', label: 'Website Home', icon: Rocket01Icon }
       ]

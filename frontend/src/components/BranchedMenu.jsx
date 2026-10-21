@@ -37,7 +37,19 @@ const DEFAULT_ITEMS = [
 const PAD = 6;
 const MARK = 16;
 
-const renderIcon = icon => (isValidElement(icon) ? icon : <HugeiconsIcon icon={icon} size={16} strokeWidth={1.8} />);
+const renderIcon = icon => {
+  if (!icon) return null;
+  if (isValidElement(icon)) return icon;
+  if (typeof icon === 'function' || (typeof icon === 'object' && (icon.$$typeof || icon.render))) {
+    const IconComp = icon;
+    return <IconComp size={16} strokeWidth={1.8} />;
+  }
+  try {
+    return <HugeiconsIcon icon={icon} size={16} strokeWidth={1.8} />;
+  } catch {
+    return null;
+  }
+};
 const toSet = open => new Set(Array.isArray(open) ? open : open >= 0 ? [open] : []);
 
 export default function BranchedMenu({
