@@ -14,7 +14,11 @@ export const SUPPORTED_NETWORKS = {
     hexChainId: '0x279f',
     name: 'Monad',
     shortName: 'Monad',
+    nativeToken: 'MON',
     nativeCurrency: { name: 'MON', symbol: 'MON', decimals: 18 },
+    wrappedNative: { symbol: 'WMON', address: null },
+    supportedAssets: ['MON', 'WMON'],
+    supportedOperations: ['read_only_telemetry', 'risk_analysis'],
     rpcUrl: 'https://testnet-rpc.monad.xyz/',
     explorerUrl: 'https://testnet.monadexplorer.com',
     status: 'PENDING_DEPLOYMENT',
@@ -29,7 +33,11 @@ export const SUPPORTED_NETWORKS = {
     hexChainId: '0x13882',
     name: 'Polygon',
     shortName: 'Polygon',
+    nativeToken: 'POL',
     nativeCurrency: { name: 'POL', symbol: 'POL', decimals: 18 },
+    wrappedNative: { symbol: 'WPOL', address: '0x360ad4f9a9A8EFe9A8DCB5f461c4Cc1047E1Dcf9' },
+    supportedAssets: ['FDX', 'WPOL', 'USDC'],
+    supportedOperations: ['lending', 'borrowing', 'swap', 'telemetry', 'audit'],
     rpcUrl: 'https://polygon-amoy-bor-rpc.publicnode.com',
     explorerUrl: 'https://amoy.polygonscan.com',
     status: 'ACTIVE',
@@ -58,7 +66,11 @@ export const SUPPORTED_NETWORKS = {
     hexChainId: '0xa86a',
     name: 'Avalanche',
     shortName: 'Avalanche',
+    nativeToken: 'AVAX',
     nativeCurrency: { name: 'Avalanche', symbol: 'AVAX', decimals: 18 },
+    wrappedNative: { symbol: 'WAVAX', address: null },
+    supportedAssets: ['AVAX', 'WAVAX'],
+    supportedOperations: ['read_only_telemetry', 'risk_analysis'],
     rpcUrl: 'https://api.avax.network/ext/bc/C/rpc',
     explorerUrl: 'https://snowtrace.io',
     status: 'PENDING_DEPLOYMENT',
@@ -73,7 +85,11 @@ export const SUPPORTED_NETWORKS = {
     hexChainId: '0x2105',
     name: 'Base',
     shortName: 'Base',
+    nativeToken: 'ETH',
     nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
+    wrappedNative: { symbol: 'WETH', address: null },
+    supportedAssets: ['ETH', 'WETH'],
+    supportedOperations: ['read_only_telemetry', 'risk_analysis'],
     rpcUrl: 'https://mainnet.base.org',
     explorerUrl: 'https://basescan.org',
     status: 'PENDING_DEPLOYMENT',
@@ -656,24 +672,47 @@ export async function fetchBorrowerLoans(address, provider) {
   return loans.filter(Boolean).map(l => {
     const init = Number(ethers.formatEther(l.principalInitial));
     const out = Number(ethers.formatEther(l.principalOutstanding));
+    const fee = Number(ethers.formatEther(l.feeAmount));
     const isSettled = Number(l.status) === 2 || out === 0;
+
+    const nowSec = Math.floor(Date.now() / 1000);
+    const createdSec = Number(l.createdAt);
+    const dueSec = Number(l.dueAt);
+    const tenureDaysTotal = Math.max(1, Math.round((dueSec - createdSec) / 86400));
+    const remainingSec = dueSec - nowSec;
+    const isOverdue = remainingSec < 0 && !isSettled;
+    const dueDays = Math.max(0, Math.ceil(remainingSec / 86400));
+    const overdueDays = isOverdue ? Math.ceil(Math.abs(remainingSec) / 86400) : 0;
+
+    // Local timezone formatted date strings
+    const borrowDateFormatted = createdSec > 0 ? new Date(createdSec * 1000).toLocaleDateString() : 'N/A';
+    const dueDateFormatted = dueSec > 0 ? new Date(dueSec * 1000).toLocaleDateString() : 'N/A';
+    const dueTimeFormatted = dueSec > 0 ? new Date(dueSec * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+
     return {
       id: `LOAN-${l.loanId}`,
       loanId: Number(l.loanId),
       borrower: l.borrower,
+      originChain: 'Polygon (80002)',
       asset: 'FDX',
       amount: init,
       principalInitial: init,
       principalOutstanding: out,
-      feeAmount: Number(ethers.formatEther(l.feeAmount)),
+      feeAmount: fee,
       apr: '5.20%',
-      createdAt: Number(l.createdAt),
-      dueAt: Number(l.dueAt),
-      status: isSettled ? 'Settled' : (LOAN_STATUS[l.status] ?? 'Active'),
+      createdAt: createdSec,
+      dueAt: dueSec,
+      borrowDateFormatted,
+      dueDateFormatted,
+      dueTimeFormatted,
+      tenureDaysTotal,
+      isOverdue,
+      overdueDays,
+      status: isSettled ? 'Settled' : (isOverdue ? 'Overdue' : (LOAN_STATUS[l.status] ?? 'Active')),
       statusCode: Number(l.status),
       policyVersion: Number(l.policyVersion),
-      dueDays: Math.max(0, Math.ceil((Number(l.dueAt) - Date.now() / 1000) / 86400)),
-      progress: isSettled ? 100 : (init > 0 ? Math.max(10, Math.round(((init - out) / init) * 100)) : 10),
+      dueDays,
+      progress: isSettled ? 100 : (init > 0 ? Math.min(100, Math.max(0, Math.round(((init + fee - out) / (init + fee)) * 100))) : 0),
     };
   });
 }

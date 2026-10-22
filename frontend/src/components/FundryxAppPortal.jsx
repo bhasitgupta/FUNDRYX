@@ -34,6 +34,10 @@ import {
   Lock,
   Shield,
   Database,
+  ArrowLeftRight,
+  HelpCircle,
+  Info,
+  Sliders,
 } from 'lucide-react';
 import {
   isSupabaseConfigured,
@@ -47,6 +51,7 @@ import {
 import {
   executeBorrow,
   executeDeposit,
+  executeWithdraw,
   executeRepay,
   executeSwap,
   executeMintTokens,
@@ -105,6 +110,11 @@ export default function FundryxAppPortal({
   const [supplyAmount, setSupplyAmount] = useState('100');
   const [supplySuccess, setSupplySuccess] = useState(false);
   const [supplyTxStatus, setSupplyTxStatus] = useState('ready'); // ready | awaiting-wallet | pending | confirmed | failed
+  const [userLenderBalance, setUserLenderBalance] = useState(0);
+  const [withdrawAmount, setWithdrawAmount] = useState('');
+  const [isWithdrawing, setIsWithdrawing] = useState(false);
+  const [withdrawTxStatus, setWithdrawTxStatus] = useState('ready');
+  const [supplyMode, setSupplyMode] = useState('deposit'); // 'deposit' | 'withdraw'
 
   // Repay state & transaction lifecycle
   const [repaySuccess, setRepaySuccess] = useState(false);
@@ -118,6 +128,11 @@ export default function FundryxAppPortal({
   const [swapTxStatus, setSwapTxStatus] = useState('ready'); // ready | awaiting-wallet | pending | confirmed | failed
   const [pairReserves, setPairReserves] = useState({ fdx: 0, wpol: 0 });
   const [isSeeding, setIsSeeding] = useState(false);
+  const [slippageBps, setSlippageBps] = useState(50); // 50 bps = 0.50%
+  const [swapSubTab, setSwapSubTab] = useState('same-chain'); // 'same-chain' | 'cross-chain' | 'pool'
+  const [crossDestChain, setCrossDestChain] = useState(10143);
+  const [isHowSwapWorksOpen, setIsHowSwapWorksOpen] = useState(false);
+  const [marketView, setMarketView] = useState('amm'); // 'amm' | 'orderbook'
 
   // User balances from chain
   const [userFdxBalance, setUserFdxBalance] = useState(null);
@@ -371,6 +386,9 @@ export default function FundryxAppPortal({
         .then((walletData) => {
           setUserFdxBalance(walletData.fdxBalance);
           setUserPolBalance(walletData.polBalance);
+          if (walletData.lenderBalance !== undefined) {
+            setUserLenderBalance(Number(walletData.lenderBalance));
+          }
           setCreditProfile((prev) => ({
             ...prev,
             borrower: targetAddr,
@@ -660,6 +678,7 @@ export default function FundryxAppPortal({
       setSupplyTxStatus('confirmed');
       setSupplySuccess(true);
       if (newFdxBalance) setUserFdxBalance(Number(newFdxBalance));
+      if (newLenderBalance !== undefined) setUserLenderBalance(Number(newLenderBalance));
 
       setLivePool((prev) => ({
         ...prev,
@@ -701,6 +720,100 @@ export default function FundryxAppPortal({
         message: `Deposit failed: ${reason}`,
       });
       setTimeout(() => setSupplyTxStatus('ready'), 7000);
+    }
+  };
+
+  const handleExecuteWithdraw = async () => {
+    if (!wallet.signer || !wallet.address) {
+      setWithdrawTxStatus('failed');
+      setTxNotification({
+        type: 'danger',
+        message: 'Wallet not connected. Connect your Web3 wallet to withdraw capital.',
+      });
+      return;
+    }
+
+    if (!isChainDeployed) {
+      setWithdrawTxStatus('failed');
+      setTxNotification({
+        type: 'danger',
+        message: `${currentNetwork?.name || 'Selected chain'} contracts are in staging. Switch to Polygon to withdraw capital.`,
+      });
+      return;
+    }
+
+    const withdrawNum = Number(withdrawAmount);
+    if (!withdrawNum || withdrawNum <= 0) {
+      setWithdrawTxStatus('failed');
+      setTxNotification({
+        type: 'danger',
+        message: 'Enter a valid withdrawal amount.',
+      });
+      return;
+    }
+
+    if (withdrawNum > userLenderBalance) {
+      setWithdrawTxStatus('failed');
+      setTxNotification({
+        type: 'danger',
+        message: `Withdrawal exceeds your deposited capital. You have ${userLenderBalance.toFixed(2)} FDX available.`,
+      });
+      return;
+    }
+
+    try {
+      setWithdrawTxStatus('awaiting-wallet');
+      setIsWithdrawing(true);
+      setTxNotification({
+        type: 'info',
+        message: `Preparing withdrawal of ${withdrawAmount} FDX... Confirm in your wallet.`,
+      });
+
+      const { tx, receipt } = await executeWithdraw(wallet.signer, withdrawAmount);
+
+      setWithdrawTxStatus('confirmed');
+      setUserLenderBalance((prev) => Math.max(0, prev - withdrawNum));
+      setUserFdxBalance((prev) => (prev !== null ? prev + withdrawNum : null));
+      setLivePool((prev) => ({
+        ...prev,
+        totalDeposits: Math.max(0, (prev.totalDeposits || 0) - withdrawNum),
+        availableLiquidity: Math.max(0, (prev.availableLiquidity || 0) - withdrawNum),
+      }));
+
+      setTxNotification({
+        type: 'success',
+        message: `Capital Withdrawn! Block ${receipt.blockNumber}`,
+        txHash: tx.hash,
+      });
+
+      setActivityFeed((prev) => [
+        {
+          id: `EV-${tx.hash.slice(2, 6)}`,
+          type: 'Capital Withdrawal',
+          borrower: `${wallet.address.slice(0, 6)}...${wallet.address.slice(-4)}`,
+          amount: `${withdrawNum.toLocaleString()} FDX`,
+          score: 'Principal Returned',
+          time: `Block ${receipt.blockNumber}`,
+          hash: `${tx.hash.slice(0, 6)}...${tx.hash.slice(-4)}`,
+          txHash: tx.hash,
+        },
+        ...prev,
+      ]);
+
+      setTimeout(() => {
+        setWithdrawTxStatus('ready');
+        setIsWithdrawing(false);
+      }, 5000);
+    } catch (err) {
+      console.error('Onchain withdraw failed:', err);
+      const reason = parseRevertReason(err);
+      setWithdrawTxStatus('failed');
+      setIsWithdrawing(false);
+      setTxNotification({
+        type: 'danger',
+        message: `Withdrawal failed: ${reason}`,
+      });
+      setTimeout(() => setWithdrawTxStatus('ready'), 7000);
     }
   };
 
@@ -972,7 +1085,7 @@ export default function FundryxAppPortal({
       const tokenInAddr = SUPPORTED_TOKENS[swapFrom] || CONTRACT_ADDRESSES.FundryxToken;
       const tokenOutAddr = SUPPORTED_TOKENS[swapTo] || SUPPORTED_TOKENS.WPOL;
 
-      const res = await executeSwap(wallet.signer, tokenInAddr, tokenOutAddr, swapAmount, 100);
+      const res = await executeSwap(wallet.signer, tokenInAddr, tokenOutAddr, swapAmount, slippageBps);
 
       setSwapTxStatus('confirmed');
       setSwapSuccess(true);
@@ -1029,6 +1142,7 @@ export default function FundryxAppPortal({
       children: [
         { value: 'overview', label: 'Overview & Portfolio', icon: Layers01Icon },
         { value: 'lending', label: 'Able Credit (Borrow & Lend)', icon: Rocket01Icon },
+        { value: 'swap', label: 'Instant Swap (AMM)', icon: <ArrowLeftRight size={16} /> },
         { value: 'credit', label: 'Borderline Verify (Score)', icon: CursorPointer01Icon },
         { value: 'risk', label: 'AI Risk Telemetry', icon: Notification03Icon },
         { value: 'markets', label: 'Capital Markets', icon: TextFontIcon }
@@ -1126,6 +1240,7 @@ export default function FundryxAppPortal({
               <span className="text-sm font-semibold text-[var(--text)] truncate">
                 {activeTab === 'overview' && 'Overview & Portfolio'}
                 {activeTab === 'lending' && 'Able Credit'}
+                {activeTab === 'swap' && 'Instant Liquidity Swap'}
                 {activeTab === 'credit' && 'Borderline Verify'}
                 {activeTab === 'risk' && 'AI Risk Telemetry'}
                 {activeTab === 'markets' && 'Capital Markets'}
@@ -1691,151 +1806,303 @@ export default function FundryxAppPortal({
                 <div className="portal-card portal-card-top-yield portal-sheen-yield flex flex-col justify-between">
                   <div>
                     <div className="portal-card-header">
-                      <h2 className="portal-card-title">Supply Liquidity Vaults</h2>
+                      <div>
+                        <h2 className="portal-card-title">Supply Liquidity Vaults</h2>
+                        <span className="text-[11px] text-[var(--text-dim)]">Shared protocol vault for uncollateralized lending</span>
+                      </div>
                       <span className="portal-badge portal-badge-yield">7.80% APY</span>
                     </div>
 
-                    {/* Asset Segmented Control */}
-                    <div className="mb-5">
-                      <label className="portal-label block mb-2">Select Capital Vault</label>
-                      <div className="portal-segmented">
-                        {[
-                          { symbol: 'FDX', label: 'FDX (Active Pool)' },
-                          { symbol: 'USDC', label: 'USDC (Coming Soon)' },
-                          { symbol: 'EURC', label: 'EURC (Coming Soon)' }
-                        ].map((v) => (
-                          <button
-                            key={v.symbol}
-                            onClick={() => setSupplyAsset(v.symbol)}
-                            className={`portal-segmented-btn ${supplyAsset === v.symbol ? 'active border-[var(--accent-1)] text-[var(--accent-1)]' : ''}`}
-                          >
-                            {v.label}
-                          </button>
-                        ))}
+                    {/* Mode Toggle: Deposit vs Withdraw */}
+                    <div className="grid grid-cols-2 p-1 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] mb-4">
+                      <button
+                        type="button"
+                        onClick={() => setSupplyMode('deposit')}
+                        className={`py-1.5 text-xs font-bold rounded-lg transition ${
+                          supplyMode === 'deposit'
+                            ? 'bg-[var(--accent-1)] text-black shadow'
+                            : 'text-[var(--text-muted)] hover:text-white'
+                        }`}
+                      >
+                        Deposit Capital
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setSupplyMode('withdraw')}
+                        className={`py-1.5 text-xs font-bold rounded-lg transition ${
+                          supplyMode === 'withdraw'
+                            ? 'bg-[var(--accent-1)] text-black shadow'
+                            : 'text-[var(--text-muted)] hover:text-white'
+                        }`}
+                      >
+                        Withdraw Capital
+                      </button>
+                    </div>
+
+                    {/* User Position & Defined Vault Progress Metric */}
+                    <div className="p-3 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] mb-4">
+                      <div className="flex justify-between items-center text-xs mb-1.5">
+                        <span className="text-[var(--text-dim)]">Your Supplied Capital:</span>
+                        <span className="font-mono font-bold text-[var(--accent-1)] text-sm">
+                          {userLenderBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} FDX
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center text-[11px] text-[var(--text-muted)] mb-1">
+                        <span>Vault Target Liquidity:</span>
+                        <span className="font-mono">50,000 FDX Capacity</span>
+                      </div>
+                      <div className="w-full h-2 bg-[var(--surface)] rounded-full overflow-hidden mb-1">
+                        <div
+                          className="h-full bg-gradient-to-r from-[var(--accent-1)] to-emerald-400 rounded-full transition-all duration-500"
+                          style={{ width: `${Math.min(100, Math.max(2, (Number(livePool.totalDeposits || 0) / 50000) * 100))}%` }}
+                        />
+                      </div>
+                      <div className="flex justify-between items-center text-[10px] font-mono text-[var(--text-dim)]">
+                        <span>Metric: Pool Funding Progress</span>
+                        <span>{((Number(livePool.totalDeposits || 0) / 50000) * 100).toFixed(1)}% ({Number(livePool.totalDeposits || 0).toLocaleString()} FDX)</span>
                       </div>
                     </div>
 
-                    {/* Deposit Amount Input */}
-                    <div className="mb-6">
-                      <div className="flex justify-between items-center mb-2">
-                        <label className="portal-label">Deposit Capital</label>
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs text-[var(--text-dim)] font-mono">
-                            Balance: {userFdxBalance !== null ? Number(userFdxBalance).toFixed(2) : '--'} {supplyAsset}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={handleMintTokens}
-                            disabled={isMinting}
-                            className="px-2 py-0.5 text-[10px] font-bold rounded bg-[var(--accent-1)]/20 text-[var(--accent-1)] hover:bg-[var(--accent-1)]/30 border border-[var(--accent-1)]/40 transition disabled:opacity-50 cursor-pointer"
-                            title="Mint 10,000 FDX tokens directly to your wallet"
-                          >
-                            {isMinting ? 'Minting...' : '+ Mint 10k FDX'}
-                          </button>
+                    {supplyMode === 'deposit' ? (
+                      <>
+                        {/* Asset Segmented Control */}
+                        <div className="mb-4">
+                          <label className="portal-label block mb-1.5">Select Capital Vault</label>
+                          <div className="portal-segmented">
+                            {[
+                              { symbol: 'FDX', label: 'FDX (Active Pool)' },
+                              { symbol: 'USDC', label: 'USDC (Staging)' },
+                              { symbol: 'EURC', label: 'EURC (Staging)' }
+                            ].map((v) => (
+                              <button
+                                key={v.symbol}
+                                onClick={() => setSupplyAsset(v.symbol)}
+                                className={`portal-segmented-btn ${supplyAsset === v.symbol ? 'active border-[var(--accent-1)] text-[var(--accent-1)]' : ''}`}
+                              >
+                                {v.label}
+                              </button>
+                            ))}
+                          </div>
                         </div>
-                      </div>
-                      <div className="relative">
-                        <input
-                          type="number"
-                          value={supplyAmount}
-                          onChange={(e) => setSupplyAmount(e.target.value)}
-                          className="w-full h-11 px-4 pr-16 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] font-mono text-white text-base outline-none focus:border-[var(--accent-1)] transition"
-                          placeholder="0.00"
-                        />
-                        <button
-                          onClick={() => setSupplyAmount(Math.floor(userFdxBalance || 100).toString())}
-                          className="absolute right-3.5 top-2.5 text-xs font-bold text-[var(--accent-1)] uppercase cursor-pointer hover:brightness-125 transition"
-                        >
-                          Max
-                        </button>
-                      </div>
-                    </div>
+
+                        {/* Deposit Amount Input */}
+                        <div className="mb-4">
+                          <div className="flex justify-between items-center mb-1.5">
+                            <label className="portal-label">Deposit Capital</label>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-[var(--text-dim)] font-mono">
+                                Balance: {userFdxBalance !== null ? Number(userFdxBalance).toFixed(2) : '--'} {supplyAsset}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={handleMintTokens}
+                                disabled={isMinting}
+                                className="px-2 py-0.5 text-[10px] font-bold rounded bg-[var(--accent-1)]/20 text-[var(--accent-1)] hover:bg-[var(--accent-1)]/30 border border-[var(--accent-1)]/40 transition disabled:opacity-50 cursor-pointer"
+                                title="Mint 10,000 FDX tokens directly to your wallet"
+                              >
+                                {isMinting ? 'Minting...' : '+ Mint 10k FDX'}
+                              </button>
+                            </div>
+                          </div>
+                          <div className="relative">
+                            <input
+                              type="number"
+                              value={supplyAmount}
+                              onChange={(e) => setSupplyAmount(e.target.value)}
+                              className="w-full h-11 px-4 pr-16 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] font-mono text-white text-base outline-none focus:border-[var(--accent-1)] transition"
+                              placeholder="0.00"
+                            />
+                            <button
+                              onClick={() => setSupplyAmount(Math.floor(userFdxBalance || 100).toString())}
+                              className="absolute right-3.5 top-2.5 text-xs font-bold text-[var(--accent-1)] uppercase cursor-pointer hover:brightness-125 transition"
+                            >
+                              Max
+                            </button>
+                          </div>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        {/* Withdraw Input */}
+                        <div className="mb-4">
+                          <div className="flex justify-between items-center mb-1.5">
+                            <label className="portal-label">Withdraw Capital</label>
+                            <span className="text-xs text-[var(--text-dim)] font-mono">
+                              Available: {userLenderBalance.toFixed(2)} FDX
+                            </span>
+                          </div>
+                          <div className="relative">
+                            <input
+                              type="number"
+                              value={withdrawAmount}
+                              onChange={(e) => setWithdrawAmount(e.target.value)}
+                              className="w-full h-11 px-4 pr-16 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] font-mono text-white text-base outline-none focus:border-[var(--accent-1)] transition"
+                              placeholder="0.00"
+                            />
+                            <button
+                              onClick={() => setWithdrawAmount(userLenderBalance.toString())}
+                              className="absolute right-3.5 top-2.5 text-xs font-bold text-[var(--accent-1)] uppercase cursor-pointer hover:brightness-125 transition"
+                            >
+                              Max
+                            </button>
+                          </div>
+                        </div>
+                      </>
+                    )}
 
                     {/* Summary Rows */}
-                    <div className="flex flex-col gap-3 py-4 border-t border-[var(--border)] text-sm">
+                    <div className="flex flex-col gap-2.5 py-3 border-t border-[var(--border)] text-xs text-[var(--text-muted)]">
                       <div className="flex justify-between items-center">
-                        <span className="text-[var(--text-muted)]">Interest Model</span>
-                        <span className="font-semibold text-white">Continuous utilization curve</span>
+                        <span>Interest Curve</span>
+                        <span className="font-semibold text-white">Algorithmic continuous utilization model</span>
                       </div>
                       <div className="flex justify-between items-center">
-                        <span className="text-[var(--text-muted)]">Withdrawal Liquidity</span>
-                        <span className="font-semibold text-white">Instant on available buffer</span>
+                        <span>Withdrawal Liquidity</span>
+                        <span className="font-semibold text-white">Instant on unborrowed pool balance</span>
                       </div>
                       <div className="flex justify-between items-center">
-                        <span className="text-[var(--text-muted)]">Target Network</span>
-                        <span className="portal-badge portal-badge-yield">Primary Settlement (80002)</span>
+                        <span>Target Network</span>
+                        <span className="portal-badge portal-badge-yield">Polygon Primary (80002)</span>
                       </div>
                     </div>
                   </div>
 
-                  {/* Primary Button */}
+                  {/* Primary Action Button */}
                   <div className="mt-4 pt-4 border-t border-[var(--border)]">
-                    <button
-                      onClick={handleExecuteSupply}
-                      disabled={supplyTxStatus === 'awaiting-wallet' || supplyTxStatus === 'pending'}
-                      className="portal-btn-yield w-full disabled:opacity-60 disabled:cursor-not-allowed"
-                    >
-                      {supplyTxStatus === 'awaiting-wallet' && 'Confirm in Wallet...'}
-                      {supplyTxStatus === 'pending' && 'Depositing on-chain...'}
-                      {supplyTxStatus === 'confirmed' && 'Deposited Successfully!'}
-                      {supplyTxStatus === 'failed' && 'Deposit Failed (Retry)'}
-                      {supplyTxStatus === 'ready' && `Deposit & Earn ${supplyAsset} Yield`}
-                    </button>
+                    {supplyMode === 'deposit' ? (
+                      <button
+                        onClick={handleExecuteSupply}
+                        disabled={supplyTxStatus === 'awaiting-wallet' || supplyTxStatus === 'pending'}
+                        className="portal-btn-yield w-full disabled:opacity-60 disabled:cursor-not-allowed"
+                      >
+                        {supplyTxStatus === 'awaiting-wallet' && 'Confirm in Wallet...'}
+                        {supplyTxStatus === 'pending' && 'Depositing on-chain...'}
+                        {supplyTxStatus === 'confirmed' && 'Deposited Successfully!'}
+                        {supplyTxStatus === 'failed' && 'Deposit Failed (Retry)'}
+                        {supplyTxStatus === 'ready' && `Deposit & Earn ${supplyAsset} Yield`}
+                      </button>
+                    ) : (
+                      <button
+                        onClick={handleExecuteWithdraw}
+                        disabled={isWithdrawing || withdrawTxStatus === 'awaiting-wallet' || userLenderBalance <= 0}
+                        className="portal-btn-secondary w-full border-[var(--accent-1)]/40 text-[var(--accent-1)] hover:bg-[var(--accent-1)]/10 disabled:opacity-50"
+                      >
+                        {isWithdrawing ? 'Withdrawing on-chain...' : `Withdraw Capital (${withdrawAmount || '0'} FDX)`}
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
 
               {/* Row 3: Active Positions Table */}
               <div className="portal-card">
-                <div className="portal-card-header">
-                  <h2 className="portal-card-title">Active Loan Facilities</h2>
-                  <span className="portal-badge portal-badge-neutral">Deterministic Servicing</span>
+                <div className="portal-card-header flex justify-between items-center flex-wrap gap-2">
+                  <div>
+                    <h2 className="portal-card-title">Active Loan Facilities</h2>
+                    <span className="text-[11px] text-[var(--text-dim)]">Uncollateralized credit facilities disbursed from shared pool</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="portal-badge portal-badge-neutral">Origin: Polygon (80002)</span>
+                    <span className="portal-badge portal-badge-primary">{activeLoans.length} Facilities</span>
+                  </div>
                 </div>
+
                 <div className="portal-table-wrapper">
                   <table className="portal-table-v2">
                     <thead>
                       <tr>
-                        <th>Loan ID</th>
+                        <th>Facility ID & Origin</th>
                         <th>Principal</th>
-                        <th className="text-right">APR</th>
-                        <th className="text-right">Due Days</th>
-                        <th className="text-center">Progress</th>
+                        <th>Accrued Fee</th>
+                        <th>Outstanding Debt</th>
+                        <th>Borrow Date</th>
+                        <th>Tenure & Due Date</th>
+                        <th className="text-center">Remaining Time</th>
+                        <th className="text-center">Repay Progress</th>
                         <th className="text-center">Status</th>
-                        <th className="text-right">Action</th>
+                        <th className="text-right">Settlement Action</th>
                       </tr>
                     </thead>
                     <tbody>
                       {activeLoans.map((loan) => (
                         <tr key={loan.id}>
-                          <td className="font-mono text-xs text-[var(--text-muted)]">{loan.id}</td>
-                          <td className="font-semibold text-white font-mono tabular-nums">{loan.amount.toLocaleString()} {loan.asset}</td>
-                          <td className="text-right font-mono tabular-nums text-[var(--primary)]">{loan.apr}</td>
-                          <td className="text-right text-[var(--text-muted)] text-xs">{loan.status === 'Active' ? `${loan.dueDays}d` : 'Matured'}</td>
-                          <td className="text-center">
-                            <div className="w-24 h-1.5 bg-[var(--surface)] rounded-full mx-auto overflow-hidden">
-                              <div className="h-full bg-[var(--primary)] rounded-full" style={{ width: `${loan.progress}%` }} />
+                          <td>
+                            <div className="flex flex-col">
+                              <span className="font-mono text-xs font-bold text-white">{loan.id}</span>
+                              <span className="text-[10px] text-[var(--text-dim)]">{loan.originChain || 'Polygon (80002)'}</span>
+                            </div>
+                          </td>
+                          <td className="font-semibold text-white font-mono tabular-nums">
+                            {loan.amount.toLocaleString()} {loan.asset}
+                          </td>
+                          <td className="font-mono text-xs text-[var(--primary)] tabular-nums">
+                            +{(loan.feeAmount || 0).toFixed(2)} {loan.asset} ({loan.apr || '5.20%'})
+                          </td>
+                          <td className="font-mono text-sm font-bold text-white tabular-nums">
+                            {(loan.principalOutstanding || loan.amount).toFixed(2)} {loan.asset}
+                          </td>
+                          <td className="text-xs text-[var(--text-muted)] font-mono whitespace-nowrap">
+                            {loan.borrowDateFormatted || 'Confirmed'}
+                          </td>
+                          <td>
+                            <div className="flex flex-col text-xs font-mono">
+                              <span className="text-white font-semibold">{loan.tenureDaysTotal || 14}d tenure</span>
+                              <span className="text-[10px] text-[var(--text-dim)]">{loan.dueDateFormatted || 'N/A'} {loan.dueTimeFormatted || ''}</span>
                             </div>
                           </td>
                           <td className="text-center">
-                            <span className={`portal-badge ${loan.status === 'Active' ? 'portal-badge-primary' : 'portal-badge-neutral'}`}>
+                            {loan.status === 'Settled' ? (
+                              <span className="text-xs text-emerald-400 font-mono font-semibold">Settled</span>
+                            ) : loan.isOverdue ? (
+                              <span className="portal-badge portal-badge-danger font-mono text-[11px]">
+                                Overdue ({loan.overdueDays}d)
+                              </span>
+                            ) : (
+                              <span className="portal-badge portal-badge-neutral font-mono text-[11px]">
+                                {loan.dueDays}d remaining
+                              </span>
+                            )}
+                          </td>
+                          <td className="text-center">
+                            <div className="w-20 h-1.5 bg-[var(--surface)] rounded-full mx-auto overflow-hidden">
+                              <div
+                                className="h-full bg-[var(--primary)] rounded-full transition-all duration-300"
+                                style={{ width: `${loan.progress}%` }}
+                              />
+                            </div>
+                            <span className="text-[10px] font-mono text-[var(--text-dim)] mt-0.5 block">
+                              {loan.progress}%
+                            </span>
+                          </td>
+                          <td className="text-center">
+                            <span
+                              className={`portal-badge ${
+                                loan.status === 'Active'
+                                  ? 'portal-badge-primary'
+                                  : loan.status === 'Overdue'
+                                  ? 'portal-badge-danger'
+                                  : 'portal-badge-neutral'
+                              }`}
+                            >
                               {loan.status}
                             </span>
                           </td>
                           <td className="text-right">
-                            {loan.status === 'Active' ? (
+                            {loan.status === 'Active' || loan.status === 'Overdue' ? (
                               <button
                                 onClick={() => handleExecuteRepay(loan.loanId || loan.id)}
                                 disabled={repayTxStatus[loan.loanId || loan.id] === 'awaiting-wallet' || repayTxStatus[loan.loanId || loan.id] === 'pending'}
-                                className="portal-btn-secondary h-8 px-3 text-xs disabled:opacity-60"
+                                className="portal-btn-primary h-8 px-3 text-xs font-bold disabled:opacity-60 whitespace-nowrap"
+                                title={`Repay Loan #${loan.loanId || loan.id} in full`}
                               >
                                 {repayTxStatus[loan.loanId || loan.id] === 'awaiting-wallet' && 'Confirm...'}
                                 {repayTxStatus[loan.loanId || loan.id] === 'pending' && 'Settling...'}
                                 {repayTxStatus[loan.loanId || loan.id] === 'confirmed' && 'Settled!'}
                                 {repayTxStatus[loan.loanId || loan.id] === 'failed' && 'Retry'}
-                                {(!repayTxStatus[loan.loanId || loan.id] || repayTxStatus[loan.loanId || loan.id] === 'ready') && 'Settle'}
+                                {(!repayTxStatus[loan.loanId || loan.id] || repayTxStatus[loan.loanId || loan.id] === 'ready') && `Repay #${loan.loanId || loan.id}`}
                               </button>
                             ) : (
-                              <span className="text-xs text-[var(--text-dim)]">Settled</span>
+                              <span className="text-xs text-[var(--text-dim)] font-mono">Settled</span>
                             )}
                           </td>
                         </tr>
@@ -2091,50 +2358,85 @@ export default function FundryxAppPortal({
           {/* TAB 4: AI RISK TELEMETRY                                */}
           {/* ======================================================= */}
           {activeTab === 'risk' && (
-            <div className="flex flex-col gap-10 animate-fade-in">
-              <div>
-                <h1 className="portal-page-title">AI Risk Telemetry</h1>
-                <p className="portal-page-sub">Advisory shadow sentinel monitoring protocol solvency.</p>
+            <div className="flex flex-col gap-8 animate-fade-in">
+              <div className="flex justify-between items-start flex-wrap gap-4">
+                <div>
+                  <h1 className="portal-page-title">AI Risk Telemetry</h1>
+                  <p className="portal-page-sub">Advisory shadow sentinel monitoring protocol solvency and liquidity velocity.</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="portal-badge portal-badge-cyan">Model Status: Active</span>
+                  <span className="portal-badge portal-badge-neutral">Freshness: Real-Time Stream</span>
+                </div>
               </div>
 
-              {/* Row 1: 4 Stat Cards */}
+              {/* Advisory Guardrail Banner */}
+              <div className="p-4 rounded-xl border border-cyan-500/30 bg-cyan-950/20 text-xs text-cyan-200 flex items-center justify-between gap-3 flex-wrap sm:flex-nowrap">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <ShieldCheck size={18} className="text-cyan-400 shrink-0" />
+                  <span>
+                    <strong>Advisory &amp; Non-Custodial:</strong> AI telemetry models continuously evaluate pool health, solvency ratios, and liquidation buffers. Models operate strictly read-only and have zero authority to move capital, modify balances, or liquidate positions.
+                  </span>
+                </div>
+                <span className="portal-badge portal-badge-cyan font-mono text-[10px] shrink-0">Non-Custodial</span>
+              </div>
+
+              {/* Row 1: 4 Stat Cards with Provenance & Clear Units */}
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
                 <div className="portal-card portal-card-top-cyan portal-sheen-cyan">
                   <div className="portal-card-header">
-                    <span className="portal-label">Sentinel Quorum</span>
-                    <span className="portal-badge portal-badge-cyan">
-                      <span className="pulse-dot-cyan shrink-0" /> 3/3
-                    </span>
+                    <div>
+                      <span className="portal-label">Sentinel Quorum</span>
+                      <span className="text-[10px] text-[var(--text-dim)] block">3-Node Consensus</span>
+                    </div>
+                    <span className="portal-badge portal-badge-cyan text-[10px]">AI MODEL</span>
                   </div>
-                  <div className="portal-stat-num text-[var(--accent-2)]">3/3 Active</div>
-                  <div className="text-xs text-[var(--text-muted)] mt-3">100% consensus sync</div>
+                  <div className="portal-stat-num text-[var(--accent-2)]">3/3 Nodes</div>
+                  <div className="text-xs text-[var(--text-muted)] mt-2">
+                    zkSNARK verified multi-node agreement. 100% consensus sync.
+                  </div>
                 </div>
 
                 <div className="portal-card portal-card-top-primary">
                   <div className="portal-card-header">
-                    <span className="portal-label">Solvency Ratio</span>
-                    <span className="portal-badge portal-badge-primary">Optimal</span>
+                    <div>
+                      <span className="portal-label">Solvency Ratio</span>
+                      <span className="text-[10px] text-[var(--text-dim)] block">Assets vs Liabilities</span>
+                    </div>
+                    <span className="portal-badge portal-badge-primary text-[10px]">AI ADVISORY</span>
                   </div>
                   <div className="portal-stat-num">214.8%</div>
-                  <div className="text-xs text-[var(--text-muted)] mt-3">Surplus headroom buffer</div>
+                  <div className="text-xs text-[var(--text-muted)] mt-2">
+                    Surplus headroom buffer. Safe threshold is &gt;150%.
+                  </div>
                 </div>
 
                 <div className="portal-card portal-card-top-amber">
                   <div className="portal-card-header">
-                    <span className="portal-label">Single-Pool Cap</span>
-                    <span className="portal-badge portal-badge-accent">Circuit</span>
+                    <div>
+                      <span className="portal-label">Pool Utilization</span>
+                      <span className="text-[10px] text-[var(--text-dim)] block">Borrowed / Deposited</span>
+                    </div>
+                    <span className="portal-badge portal-badge-accent text-[10px]">ON-CHAIN</span>
                   </div>
-                  <div className="portal-stat-num">$5.0M</div>
-                  <div className="text-xs text-[var(--text-muted)] mt-3">Auto circuit breaker limit</div>
+                  <div className="portal-stat-num">{livePool.utilization || '0.00'}%</div>
+                  <div className="text-xs text-[var(--text-muted)] mt-2">
+                    Continuous interest rate curve input from LendingPool.
+                  </div>
                 </div>
 
                 <div className="portal-card portal-card-top-cyan">
                   <div className="portal-card-header">
-                    <span className="portal-label">Oracle Health</span>
-                    <span className="portal-badge portal-badge-cyan">Live</span>
+                    <div>
+                      <span className="portal-label">Available Liquidity</span>
+                      <span className="text-[10px] text-[var(--text-dim)] block">Unborrowed Buffer</span>
+                    </div>
+                    <span className="portal-badge portal-badge-cyan text-[10px]">ON-CHAIN</span>
                   </div>
-                  <div className="portal-stat-num">100% Sync</div>
-                  <div className="text-xs text-[var(--text-muted)] mt-3">0.00% price deviation</div>
+                  <div className="portal-stat-num font-mono">{Number(livePool.availableLiquidity || livePool.totalDeposits || 0).toLocaleString()} FDX</div>
+                  <div className="text-xs text-[var(--text-muted)] mt-2">
+                    Instant capital available for uncollateralized disbursement.
+                  </div>
                 </div>
               </div>
 
@@ -2277,206 +2579,560 @@ export default function FundryxAppPortal({
           )}
 
           {/* ======================================================= */}
-          {/* TAB 5: CAPITAL MARKETS                                  */}
+          {/* TAB: INSTANT LIQUIDITY SWAP (AMM)                      */}
           {/* ======================================================= */}
-          {activeTab === 'markets' && (
-            <div className="flex flex-col gap-10 animate-fade-in">
-              <div>
-                <h1 className="portal-page-title">Capital Markets</h1>
-                <p className="portal-page-sub">Federated liquidity vaults and instant atomic swaps.</p>
-              </div>
-
-              {/* Row 1: 4 Stat Cards */}
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
-                <div className="portal-card portal-card-top-primary">
-                  <div className="portal-card-header">
-                    <span className="portal-label">FDX / USDC Price</span>
-                    <span className="portal-badge portal-badge-primary">+0.04%</span>
-                  </div>
-                  <div className="portal-stat-num">$1.0004</div>
-                  <div className="text-xs text-[var(--text-muted)] mt-3">Stable parity maintained</div>
+          {activeTab === 'swap' && (
+            <div className="flex flex-col gap-8 animate-fade-in max-w-4xl mx-auto w-full">
+              <div className="flex justify-between items-start flex-wrap gap-4">
+                <div>
+                  <h1 className="portal-page-title">Instant Liquidity Swap</h1>
+                  <p className="portal-page-sub">Constant-product automated market maker with strict on-chain slippage protection.</p>
                 </div>
-
-                <div className="portal-card portal-card-top-purple portal-sheen-purple">
-                  <div className="portal-card-header">
-                    <span className="portal-label">24h Market Volume</span>
-                    <span className="portal-badge portal-badge-purple">Pool</span>
-                  </div>
-                  <div className="portal-stat-num text-[var(--accent-3)]">$4.82M</div>
-                  <div className="text-xs text-[var(--text-muted)] mt-3">Zero slippage protocol trades</div>
-                </div>
-
-                <div className="portal-card portal-card-top-amber">
-                  <div className="portal-card-header">
-                    <span className="portal-label">Order Book Spread</span>
-                    <span className="portal-badge portal-badge-accent">Tight</span>
-                  </div>
-                  <div className="portal-stat-num">0.06%</div>
-                  <div className="text-xs text-[var(--text-muted)] mt-3">Institutional market depth</div>
-                </div>
-
-                <div className="portal-card portal-card-top-cyan">
-                  <div className="portal-card-header">
-                    <span className="portal-label">Settlement Finality</span>
-                    <span className="portal-badge portal-badge-cyan">Atomic</span>
-                  </div>
-                  <div className="portal-stat-num">Sub-Sec</div>
-                  <div className="text-xs text-[var(--text-muted)] mt-3">Deterministic onchain swaps</div>
+                <div className="flex items-center gap-2">
+                  <span className="portal-badge portal-badge-purple font-mono">0.30% Fee Tier</span>
+                  <span className="portal-badge portal-badge-neutral">Polygon Primary (80002)</span>
                 </div>
               </div>
 
-              {/* Row 2: Order Book (2-col layout) + Swap Card */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
+              {/* Swap Sub-Navigation: Same-Chain vs Cross-Chain vs Pool */}
+              <div className="flex items-center gap-2 border-b border-[var(--border)] pb-3">
+                <button
+                  type="button"
+                  onClick={() => setSwapSubTab('same-chain')}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer ${
+                    swapSubTab === 'same-chain'
+                      ? 'bg-purple-500/20 text-purple-300 border border-purple-500/40'
+                      : 'text-[var(--text-muted)] hover:text-white'
+                  }`}
+                >
+                  Same-Chain AMM Swap
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSwapSubTab('cross-chain')}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
+                    swapSubTab === 'cross-chain'
+                      ? 'bg-purple-500/20 text-purple-300 border border-purple-500/40'
+                      : 'text-[var(--text-muted)] hover:text-white'
+                  }`}
+                >
+                  <span>Cross-Chain Swap</span>
+                  <span className="px-1.5 py-0.2 rounded text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/30">Staging</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSwapSubTab('pool')}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer ${
+                    swapSubTab === 'pool'
+                      ? 'bg-purple-500/20 text-purple-300 border border-purple-500/40'
+                      : 'text-[var(--text-muted)] hover:text-white'
+                  }`}
+                >
+                  Pool &amp; LP Liquidity
+                </button>
+              </div>
 
-                {/* Order Book Card */}
-                <div className="portal-card portal-card-top-purple flex flex-col justify-between">
-                  <div>
-                    <div className="portal-card-header">
-                      <h2 className="portal-card-title">Live Capital Order Book</h2>
-                      <span className="portal-badge portal-badge-purple font-mono">Spread: 0.0006 (0.06%)</span>
-                    </div>
+              {swapSubTab === 'same-chain' && (
+                <div className="flex flex-col gap-6">
+                  {/* Main Swap Card */}
+                  <div className="portal-card portal-card-top-purple portal-sheen-purple p-6">
+                    <div className="flex justify-between items-center mb-5">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-white text-base">Trade Assets</span>
+                        <span className="text-xs text-[var(--text-dim)] font-mono">Constant Product (x·y=k)</span>
+                      </div>
 
-                    <div className="portal-table-wrapper">
-                      <table className="portal-table-v2">
-                        <thead>
-                          <tr>
-                            <th>Bid Price</th>
-                            <th className="text-right">Size (FDX)</th>
-                            <th className="text-right">Ask Price</th>
-                            <th className="text-right">Size (FDX)</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {orderBookBids.map((bid, i) => {
-                            const ask = orderBookAsks[i];
-                            return (
-                              <tr key={i} className="h-10">
-                                <td className="font-mono text-xs text-[var(--primary)] font-semibold">{bid.price.toFixed(4)}</td>
-                                <td className="font-mono text-xs text-white text-right">{bid.size}</td>
-                                <td className="font-mono text-xs text-[var(--danger)] text-right font-semibold">{ask?.price.toFixed(4)}</td>
-                                <td className="font-mono text-xs text-white text-right">{ask?.size}</td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                  <div className="pt-3 border-t border-[var(--border)] mt-4 flex justify-between items-center text-xs text-[var(--text-muted)]">
-                    <span>Market: USDC / FDX Primary</span>
-                    <span className="font-semibold text-[var(--primary)]">Depth: 100% Balanced</span>
-                  </div>
-                </div>
-
-                {/* Instant Liquidity Swap Card */}
-                <div className="portal-card portal-card-top-purple portal-sheen-purple flex flex-col justify-between">
-                  <div>
-                    <div className="portal-card-header">
-                      <h2 className="portal-card-title">Instant Liquidity Swap</h2>
-                      <span className="portal-badge portal-badge-purple">Institutional Liquidity AMM</span>
-                    </div>
-
-                    {/* Pair Liquidity Status Banner */}
-                    <div className="mb-4">
-                      {pairReserves.fdx === 0 || pairReserves.wpol === 0 ? (
-                        <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between text-xs text-amber-300">
-                          <div className="flex flex-col">
-                            <span className="font-semibold">Pool Reserves: 0.00 FDX / 0.00 WPOL</span>
-                            <span className="text-[11px] text-amber-400/80">Pool requires initial liquidity before swapping.</span>
-                          </div>
+                      {/* Slippage Selector */}
+                      <div className="flex items-center gap-1.5 bg-[var(--surface-2)] p-1 rounded-xl border border-[var(--border)]">
+                        <Sliders size={12} className="text-[var(--text-dim)] ml-1" />
+                        <span className="text-[10px] text-[var(--text-muted)] font-mono uppercase mr-1">Slippage:</span>
+                        {[
+                          { label: '0.1%', bps: 10 },
+                          { label: '0.5%', bps: 50 },
+                          { label: '1.0%', bps: 100 }
+                        ].map((s) => (
                           <button
+                            key={s.bps}
                             type="button"
-                            onClick={handleSeedLiquidity}
-                            disabled={isSeeding || !wallet.signer}
-                            className="px-3 py-1.5 rounded-lg bg-amber-500 text-black font-bold text-xs hover:bg-amber-400 transition cursor-pointer disabled:opacity-50"
+                            onClick={() => setSlippageBps(s.bps)}
+                            className={`px-2 py-0.5 rounded-lg text-[11px] font-mono font-bold transition cursor-pointer ${
+                              slippageBps === s.bps
+                                ? 'bg-purple-500 text-black shadow'
+                                : 'text-[var(--text-muted)] hover:text-white'
+                            }`}
                           >
-                            {isSeeding ? 'Seeding Pool...' : 'Seed Liquidity (10 POL)'}
+                            {s.label}
                           </button>
-                        </div>
-                      ) : (
-                        <div className="flex justify-between items-center text-xs text-[var(--text-dim)] font-mono px-1">
-                          <span>AMM Liquidity:</span>
-                          <span className="text-emerald-400 font-semibold">{pairReserves.fdx.toFixed(2)} FDX / {pairReserves.wpol.toFixed(2)} WPOL</span>
-                        </div>
-                      )}
+                        ))}
+                      </div>
                     </div>
 
-                    <div className="flex flex-col gap-4">
-                      {/* Pay Input */}
-                      <div className="p-4 rounded-xl bg-[var(--surface-2)] border border-[var(--border)]">
-                        <div className="flex justify-between items-center mb-1.5">
-                          <span className="portal-label">You Pay</span>
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs text-[var(--text-dim)] font-mono">
-                              Balance: {userFdxBalance !== null ? Number(userFdxBalance).toFixed(2) : '--'} {swapFrom}
-                            </span>
+                    {/* Pay Container */}
+                    <div className="p-4 rounded-2xl bg-[var(--surface-2)] border border-[var(--border)] mb-2 focus-within:border-purple-500/60 transition">
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="portal-label">You Pay</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-mono text-[var(--text-dim)]">
+                            Balance: {swapFrom === 'FDX'
+                              ? (userFdxBalance !== null ? Number(userFdxBalance).toFixed(2) : '--')
+                              : (userPolBalance !== null ? Number(userPolBalance).toFixed(4) : (wallet.balance || '0.00'))} {swapFrom}
+                          </span>
+                          {swapFrom === 'FDX' && (
                             <button
                               type="button"
                               onClick={handleMintTokens}
                               disabled={isMinting}
-                              className="px-2 py-0.5 text-[10px] font-bold rounded bg-[var(--accent-3)]/20 text-[var(--accent-3)] hover:bg-[var(--accent-3)]/30 border border-[var(--accent-3)]/40 transition disabled:opacity-50 cursor-pointer"
-                              title="Mint 10,000 FDX tokens"
+                              className="px-2 py-0.5 text-[10px] font-bold rounded bg-purple-500/20 text-purple-300 hover:bg-purple-500/30 border border-purple-500/40 transition cursor-pointer disabled:opacity-50"
+                              title="Mint 10,000 FDX test tokens"
                             >
-                              {isMinting ? 'Minting...' : '+ Mint 10k FDX'}
+                              {isMinting ? 'Minting...' : '+ Mint 10k'}
                             </button>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex justify-between items-center gap-4">
+                        <input
+                          type="number"
+                          value={swapAmount}
+                          onChange={(e) => setSwapAmount(e.target.value)}
+                          className="bg-transparent font-mono text-2xl font-bold text-white outline-none w-2/3"
+                          placeholder="0.00"
+                        />
+                        <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[var(--surface)] border border-[var(--border)] font-bold text-white text-sm">
+                            <span className="w-2 h-2 rounded-full bg-purple-400" />
+                            <span>{swapFrom}</span>
                           </div>
                         </div>
-                        <div className="flex justify-between items-center">
-                          <input
-                            type="number"
-                            value={swapAmount}
-                            onChange={(e) => setSwapAmount(e.target.value)}
-                            className="bg-transparent font-mono text-xl font-bold text-white outline-none w-2/3"
-                            placeholder="0.00"
-                          />
-                          <span className="portal-badge portal-badge-neutral font-bold">{swapFrom}</span>
-                        </div>
                       </div>
 
-                      {/* Receive Output */}
-                      <div className="p-4 rounded-xl bg-[var(--surface-2)] border border-[var(--border)]">
-                        <div className="flex justify-between items-center mb-1.5">
-                          <span className="portal-label">You Receive (Estimated)</span>
-                          <span className="text-xs text-[var(--text-dim)] font-mono">Constant Product AMM (x*y=k)</span>
-                        </div>
-                        <div className="flex justify-between items-center">
-                          <span className="font-mono text-xl font-bold text-[var(--accent-3)]">
-                            {pairReserves.fdx === 0 || pairReserves.wpol === 0
-                              ? '0.00 (Unseeded Pool)'
-                              : ((Number(swapAmount || 0) * 997 * pairReserves.wpol) / (pairReserves.fdx * 1000 + Number(swapAmount || 0) * 997)).toFixed(4)}
-                          </span>
-                          <span className="portal-badge portal-badge-purple font-bold">{swapTo}</span>
-                        </div>
+                      {/* Quick Percent Buttons */}
+                      <div className="flex justify-end gap-1.5 mt-2">
+                        {[25, 50, 75, 100].map((pct) => (
+                          <button
+                            key={pct}
+                            type="button"
+                            onClick={() => {
+                              const bal = swapFrom === 'FDX' ? (userFdxBalance || 100) : (userPolBalance || 5);
+                              setSwapAmount((Number(bal) * (pct / 100)).toFixed(pct === 100 ? 2 : 2));
+                            }}
+                            className="px-2 py-0.5 rounded text-[10px] font-mono text-[var(--text-muted)] hover:text-white bg-[var(--surface)] border border-[var(--border)] hover:border-purple-500/40 transition cursor-pointer"
+                          >
+                            {pct === 100 ? 'MAX' : `${pct}%`}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Swap Direction Switcher */}
+                    <div className="flex justify-center -my-2.5 relative z-10">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const prevFrom = swapFrom;
+                          setSwapFrom(swapTo);
+                          setSwapTo(prevFrom);
+                        }}
+                        className="p-2 rounded-xl bg-[#141d24] border border-[#2b3a4a] text-purple-300 hover:text-white hover:bg-purple-950/60 hover:scale-110 transition shadow-lg cursor-pointer"
+                        title="Invert swap pair"
+                      >
+                        <ArrowLeftRight size={16} />
+                      </button>
+                    </div>
+
+                    {/* Receive Container */}
+                    <div className="p-4 rounded-2xl bg-[var(--surface-2)] border border-[var(--border)] mb-4">
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="portal-label">You Receive (Estimated)</span>
+                        <span className="text-xs font-mono text-[var(--text-dim)]">
+                          Balance: {swapTo === 'FDX'
+                            ? (userFdxBalance !== null ? Number(userFdxBalance).toFixed(2) : '--')
+                            : (userPolBalance !== null ? Number(userPolBalance).toFixed(4) : (wallet.balance || '0.00'))} {swapTo}
+                        </span>
                       </div>
 
-                      {/* Rate Info Rows */}
-                      <div className="flex flex-col gap-2 py-2 text-xs text-[var(--text-muted)]">
-                        <div className="flex justify-between">
-                          <span>AMM Fee Tier</span>
-                          <span className="font-mono text-white">0.30% Protocol Fee</span>
+                      <div className="flex justify-between items-center gap-4">
+                        <span className="font-mono text-2xl font-bold text-emerald-400">
+                          {(() => {
+                            const numIn = Number(swapAmount) || 0;
+                            const resIn = swapFrom === 'FDX' ? pairReserves.fdx : pairReserves.wpol;
+                            const resOut = swapFrom === 'FDX' ? pairReserves.wpol : pairReserves.fdx;
+                            if (!resIn || !resOut || numIn <= 0) return '0.0000';
+                            const estOut = (numIn * 997 * resOut) / (resIn * 1000 + numIn * 997);
+                            return estOut.toFixed(4);
+                          })()}
+                        </span>
+                        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[var(--surface)] border border-[var(--border)] font-bold text-white text-sm">
+                          <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                          <span>{swapTo}</span>
                         </div>
-                        <div className="flex justify-between">
-                          <span>Slippage Protection</span>
-                          <span className="font-mono text-[var(--accent-3)]">0.50% (Strict Max)</span>
+                      </div>
+                    </div>
+
+                    {/* Rate & Protection Info Box */}
+                    <div className="p-3.5 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] flex flex-col gap-2 text-xs text-[var(--text-muted)] mb-5">
+                      <div className="flex justify-between items-center">
+                        <span>Exchange Rate</span>
+                        <span className="font-mono text-white font-semibold">
+                          {pairReserves.fdx > 0 && pairReserves.wpol > 0
+                            ? (swapFrom === 'FDX'
+                              ? `1 FDX = ${(pairReserves.wpol / pairReserves.fdx).toFixed(4)} WPOL`
+                              : `1 WPOL = ${(pairReserves.fdx / pairReserves.wpol).toFixed(4)} FDX`)
+                            : 'Pool Initializing'}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span>Minimum Received ({((10000 - slippageBps) / 100).toFixed(1)}%)</span>
+                        <span className="font-mono text-white">
+                          {(() => {
+                            const numIn = Number(swapAmount) || 0;
+                            const resIn = swapFrom === 'FDX' ? pairReserves.fdx : pairReserves.wpol;
+                            const resOut = swapFrom === 'FDX' ? pairReserves.wpol : pairReserves.fdx;
+                            if (!resIn || !resOut || numIn <= 0) return '0.0000';
+                            const estOut = (numIn * 997 * resOut) / (resIn * 1000 + numIn * 997);
+                            return (estOut * (10000 - slippageBps) / 10000).toFixed(4);
+                          })()} {swapTo}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span>Price Impact</span>
+                        <span className="font-mono text-emerald-400">
+                          {(() => {
+                            const numIn = Number(swapAmount) || 0;
+                            const resIn = swapFrom === 'FDX' ? pairReserves.fdx : pairReserves.wpol;
+                            if (!resIn || numIn <= 0) return '< 0.01%';
+                            const impact = (numIn / (resIn + numIn)) * 100;
+                            return `${impact.toFixed(2)}%`;
+                          })()}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span>Execution Route</span>
+                        <span className="font-mono text-[var(--text-dim)] truncate max-w-[200px]" title={MOCK_SWAP_ROUTER_ADDRESS}>
+                          MockSwapRouter ({MOCK_SWAP_ROUTER_ADDRESS.slice(0, 6)}...{MOCK_SWAP_ROUTER_ADDRESS.slice(-4)})
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Swap Action Button */}
+                    {!wallet.address ? (
+                      <button
+                        onClick={onConnect}
+                        className="portal-btn-primary w-full h-12 text-sm font-bold"
+                      >
+                        Connect Web3 Wallet to Swap
+                      </button>
+                    ) : wallet.chainId !== 80002 ? (
+                      <button
+                        onClick={() => onSwitchNetwork?.(80002)}
+                        className="portal-btn-amber w-full h-12 text-sm font-bold"
+                      >
+                        Switch to Polygon (80002) to Swap
+                      </button>
+                    ) : (
+                      <button
+                        onClick={handleExecuteSwap}
+                        disabled={swapTxStatus === 'awaiting-wallet' || swapTxStatus === 'pending' || Number(swapAmount) <= 0}
+                        className="portal-btn-purple w-full h-12 text-sm font-bold disabled:opacity-50 cursor-pointer"
+                      >
+                        {swapTxStatus === 'awaiting-wallet' && 'Confirm in Wallet...'}
+                        {swapTxStatus === 'pending' && 'Swapping on Polygon...'}
+                        {swapTxStatus === 'confirmed' && 'Swap Confirmed!'}
+                        {swapTxStatus === 'failed' && 'Swap Failed (Retry)'}
+                        {swapTxStatus === 'ready' && `Swap ${swapFrom} for ${swapTo}`}
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Expandable "How this swap works" Accordion */}
+                  <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] overflow-hidden">
+                    <button
+                      type="button"
+                      onClick={() => setIsHowSwapWorksOpen(!isHowSwapWorksOpen)}
+                      className="w-full p-4 flex justify-between items-center text-left text-sm font-semibold text-white hover:bg-[var(--surface)] transition cursor-pointer"
+                    >
+                      <div className="flex items-center gap-2">
+                        <Info size={16} className="text-purple-400" />
+                        <span>How this swap works</span>
+                      </div>
+                      <span className="text-xs text-[var(--text-dim)] font-mono">
+                        {isHowSwapWorksOpen ? 'Collapse ▲' : 'Learn More ▼'}
+                      </span>
+                    </button>
+
+                    {isHowSwapWorksOpen && (
+                      <div className="p-4 pt-2 border-t border-[var(--border)] flex flex-col gap-3 text-xs text-[var(--text-muted)] leading-relaxed animate-fade-in">
+                        <div>
+                          <strong className="text-white block mb-0.5">1. Architecture &amp; Execution Route</strong>
+                          Swaps execute atomically via the deployed <code className="text-purple-300">MockSwapRouter</code> contract on Polygon Amoy (Chain ID 80002). No off-chain intermediaries or centralized order book matching is involved.
                         </div>
+                        <div>
+                          <strong className="text-white block mb-0.5">2. Constant-Product AMM Pricing (x · y = k)</strong>
+                          The exchange rate is derived algorithmically from current pool reserves ({pairReserves.fdx.toFixed(2)} FDX / {pairReserves.wpol.toFixed(4)} WPOL). Each swap deposits tokens into one side and dispenses from the other according to the constant-product formula.
+                        </div>
+                        <div>
+                          <strong className="text-white block mb-0.5">3. Strict Slippage Protection</strong>
+                          Your transaction specifies a minimum output based on your selected slippage tolerance ({((10000 - slippageBps) / 100).toFixed(1)}%). If pool reserves shift before inclusion, the contract reverts immediately, preserving your full principal.
+                        </div>
+                        <div>
+                          <strong className="text-white block mb-0.5">4. Fee Model</strong>
+                          A 0.30% protocol LP fee is retained in the reserves to reward liquidity providers who supply capital to the pool.
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {swapSubTab === 'cross-chain' && (
+                <div className="portal-card p-6 flex flex-col gap-6">
+                  <div className="flex items-center gap-2">
+                    <span className="portal-badge portal-badge-accent font-bold">Bridge Staging Environment</span>
+                    <span className="text-xs text-[var(--text-dim)] font-mono">Multi-Chain Relayer Layer</span>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="p-4 rounded-xl bg-[var(--surface-2)] border border-[var(--border)]">
+                      <span className="portal-label block mb-1">Source Network</span>
+                      <span className="font-bold text-white text-base">Polygon (80002)</span>
+                      <span className="text-xs text-[var(--text-muted)] block mt-1">Token: FDX / WPOL</span>
+                    </div>
+
+                    <div className="p-4 rounded-xl bg-[var(--surface-2)] border border-[var(--border)]">
+                      <span className="portal-label block mb-1">Destination Network</span>
+                      <select
+                        value={crossDestChain}
+                        onChange={(e) => setCrossDestChain(Number(e.target.value))}
+                        className="bg-transparent font-bold text-white text-base outline-none cursor-pointer w-full"
+                      >
+                        <option value={10143} className="bg-[#0c1218] text-white">Monad (10143) · Native MON</option>
+                        <option value={43114} className="bg-[#0c1218] text-white">Avalanche (43114) · Native AVAX</option>
+                        <option value={8453} className="bg-[#0c1218] text-white">Base (8453) · Native ETH</option>
+                      </select>
+                      <span className="text-xs text-[var(--text-muted)] block mt-1">Cross-Chain Route in Staging</span>
+                    </div>
+                  </div>
+
+                  <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-200 leading-relaxed">
+                    <strong>Notice:</strong> Cross-chain bridge relayers and messaging contracts for Monad, Avalanche, and Base are currently undergoing multi-sig audit verification. To safeguard user funds, cross-chain execution is disabled on this staging interface until bridge verifiers are activated on mainnet.
+                  </div>
+
+                  <button
+                    disabled
+                    className="portal-btn-secondary h-12 w-full opacity-50 cursor-not-allowed font-semibold text-xs"
+                  >
+                    Cross-Chain Route Staging (Execution Disabled)
+                  </button>
+                </div>
+              )}
+
+              {swapSubTab === 'pool' && (
+                <div className="portal-card p-6 flex flex-col gap-6">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <h2 className="portal-card-title">AMM Liquidity Pool</h2>
+                      <span className="text-xs text-[var(--text-dim)]">Provide paired liquidity to earn 0.30% fee on all swaps</span>
+                    </div>
+                    <span className="portal-badge portal-badge-primary">0.30% LP APR</span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="p-4 rounded-xl bg-[var(--surface-2)] border border-[var(--border)]">
+                      <span className="portal-label block mb-1">FDX Pool Reserve</span>
+                      <span className="font-mono text-xl font-bold text-white">{pairReserves.fdx.toFixed(2)} FDX</span>
+                      <span className="text-xs text-[var(--text-muted)] block mt-1">Protocol utility token</span>
+                    </div>
+                    <div className="p-4 rounded-xl bg-[var(--surface-2)] border border-[var(--border)]">
+                      <span className="portal-label block mb-1">WPOL Pool Reserve</span>
+                      <span className="font-mono text-xl font-bold text-white">{pairReserves.wpol.toFixed(4)} WPOL</span>
+                      <span className="text-xs text-[var(--text-muted)] block mt-1">Wrapped native gas token</span>
+                    </div>
+                  </div>
+
+                  <div className="p-4 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] flex flex-col gap-2 text-xs text-[var(--text-muted)]">
+                    <div className="flex justify-between">
+                      <span>Invariant Product (k = x·y)</span>
+                      <span className="font-mono text-white">{(pairReserves.fdx * pairReserves.wpol).toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Pool Share Ratio</span>
+                      <span className="font-mono text-white">1 WPOL = {(pairReserves.wpol > 0 ? (pairReserves.fdx / pairReserves.wpol).toFixed(2) : '4.00')} FDX</span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between p-4 rounded-xl bg-[var(--surface-2)] border border-[var(--border)]">
+                    <div>
+                      <span className="font-bold text-white text-sm block">Add Pool Liquidity</span>
+                      <span className="text-xs text-[var(--text-dim)]">Supply 10 FDX + 10 POL to bootstrap AMM depth</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleSeedLiquidity}
+                      disabled={isSeeding || !wallet.signer}
+                      className="px-4 py-2 rounded-xl bg-purple-500 hover:bg-purple-400 text-black font-bold text-xs transition cursor-pointer disabled:opacity-50"
+                    >
+                      {isSeeding ? 'Supplying Liquidity...' : 'Add Liquidity (10 POL + 10 FDX)'}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ======================================================= */}
+          {/* TAB 5: CAPITAL MARKETS (SIMPLIFIED & VERIFIED)          */}
+          {/* ======================================================= */}
+          {activeTab === 'markets' && (
+            <div className="flex flex-col gap-8 animate-fade-in">
+              <div className="flex justify-between items-start flex-wrap gap-4">
+                <div>
+                  <h1 className="portal-page-title">Capital Markets</h1>
+                  <p className="portal-page-sub">Federated liquidity pool overview and live AMM market statistics.</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="portal-badge portal-badge-primary">Live AMM: FDX / WPOL</span>
+                  <span className="portal-badge portal-badge-neutral">Polygon Primary (80002)</span>
+                </div>
+              </div>
+
+              {/* Row 1: 4 Live Verified Stat Cards */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+                <div className="portal-card portal-card-top-primary">
+                  <div className="portal-card-header">
+                    <div>
+                      <span className="portal-label">AMM Spot Rate</span>
+                      <span className="text-[10px] text-[var(--text-dim)] block">FDX / WPOL</span>
+                    </div>
+                    <span className="portal-badge portal-badge-primary text-[10px]">LIVE AMM</span>
+                  </div>
+                  <div className="portal-stat-num font-mono">
+                    {pairReserves.fdx > 0 ? (pairReserves.wpol / pairReserves.fdx).toFixed(4) : '0.2500'} POL
+                  </div>
+                  <div className="text-xs text-[var(--text-muted)] mt-2">
+                    Verified constant-product pricing on Polygon
+                  </div>
+                </div>
+
+                <div className="portal-card portal-card-top-purple portal-sheen-purple">
+                  <div className="portal-card-header">
+                    <div>
+                      <span className="portal-label">Pool Liquidity</span>
+                      <span className="text-[10px] text-[var(--text-dim)] block">Total Reserves</span>
+                    </div>
+                    <span className="portal-badge portal-badge-purple text-[10px]">ON-CHAIN</span>
+                  </div>
+                  <div className="portal-stat-num text-[var(--accent-3)] font-mono">
+                    {pairReserves.fdx.toFixed(1)} FDX
+                  </div>
+                  <div className="text-xs text-[var(--text-muted)] mt-2">
+                    Paired with {pairReserves.wpol.toFixed(3)} WPOL reserves
+                  </div>
+                </div>
+
+                <div className="portal-card portal-card-top-amber">
+                  <div className="portal-card-header">
+                    <div>
+                      <span className="portal-label">Fee Tier</span>
+                      <span className="text-[10px] text-[var(--text-dim)] block">LP Reward</span>
+                    </div>
+                    <span className="portal-badge portal-badge-accent text-[10px]">FIXED</span>
+                  </div>
+                  <div className="portal-stat-num font-mono">0.30%</div>
+                  <div className="text-xs text-[var(--text-muted)] mt-2">
+                    Retained on-chain for liquidity providers
+                  </div>
+                </div>
+
+                <div className="portal-card portal-card-top-cyan">
+                  <div className="portal-card-header">
+                    <div>
+                      <span className="portal-label">Settlement</span>
+                      <span className="text-[10px] text-[var(--text-dim)] block">Block Finality</span>
+                    </div>
+                    <span className="portal-badge portal-badge-cyan text-[10px]">ATOMIC</span>
+                  </div>
+                  <div className="portal-stat-num font-mono">1 Block</div>
+                  <div className="text-xs text-[var(--text-muted)] mt-2">
+                    Instant balance mutation on execution
+                  </div>
+                </div>
+              </div>
+
+              {/* Row 2: AMM Overview Card + Order Book Prototype Disclosure */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
+                {/* Active Verified AMM Market Card */}
+                <div className="portal-card portal-card-top-purple flex flex-col justify-between">
+                  <div>
+                    <div className="portal-card-header">
+                      <div>
+                        <h2 className="portal-card-title">Verified AMM Liquidity</h2>
+                        <span className="text-xs text-[var(--text-dim)] font-mono">Pair: FDX / WPOL (Polygon Amoy)</span>
+                      </div>
+                      <span className="portal-badge portal-badge-primary">Active</span>
+                    </div>
+
+                    <div className="p-4 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] mb-4 flex flex-col gap-2 text-xs">
+                      <div className="flex justify-between items-center">
+                        <span className="text-[var(--text-muted)]">Router Contract:</span>
+                        <a
+                          href={`https://amoy.polygonscan.com/address/${MOCK_SWAP_ROUTER_ADDRESS}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="font-mono text-purple-400 hover:underline flex items-center gap-1"
+                        >
+                          {MOCK_SWAP_ROUTER_ADDRESS.slice(0, 8)}...{MOCK_SWAP_ROUTER_ADDRESS.slice(-6)}
+                          <ExternalLink size={11} />
+                        </a>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-[var(--text-muted)]">FDX Token:</span>
+                        <span className="font-mono text-white">{CONTRACT_ADDRESSES.FundryxToken.slice(0, 8)}...</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-[var(--text-muted)]">WPOL Token:</span>
+                        <span className="font-mono text-white">{SUPPORTED_TOKENS.WPOL.slice(0, 8)}...</span>
                       </div>
                     </div>
                   </div>
 
-                  <div className="mt-4 pt-4 border-t border-[var(--border)]">
+                  <div className="pt-3 border-t border-[var(--border)] mt-4 flex justify-between items-center">
+                    <span className="text-xs text-[var(--text-muted)]">Ready for instant swaps</span>
                     <button
-                      onClick={pairReserves.fdx === 0 || pairReserves.wpol === 0 ? handleSeedLiquidity : handleExecuteSwap}
-                      disabled={swapTxStatus === 'awaiting-wallet' || swapTxStatus === 'pending' || isSeeding}
-                      className="portal-btn-purple w-full disabled:opacity-60 disabled:cursor-not-allowed"
+                      type="button"
+                      onClick={() => setActiveTab('swap')}
+                      className="portal-btn-purple h-9 px-4 text-xs font-bold flex items-center gap-1.5 cursor-pointer"
                     >
-                      {isSeeding && 'Seeding Liquidity Pool...'}
-                      {!isSeeding && pairReserves.fdx === 0 && 'Seed Liquidity (10 POL) to Enable Swaps'}
-                      {!isSeeding && pairReserves.fdx > 0 && swapTxStatus === 'awaiting-wallet' && 'Confirm in Wallet...'}
-                      {!isSeeding && pairReserves.fdx > 0 && swapTxStatus === 'pending' && 'Swapping on-chain...'}
-                      {!isSeeding && pairReserves.fdx > 0 && swapTxStatus === 'confirmed' && 'Swap Confirmed!'}
-                      {!isSeeding && pairReserves.fdx > 0 && swapTxStatus === 'failed' && 'Swap Failed (Retry)'}
-                      {!isSeeding && pairReserves.fdx > 0 && swapTxStatus === 'ready' && 'Execute Liquidity Swap'}
+                      <ArrowLeftRight size={14} />
+                      <span>Open Instant Swap</span>
                     </button>
+                  </div>
+                </div>
+
+                {/* Staging Order Book Prototype Disclosure Card */}
+                <div className="portal-card portal-card-top-cyan flex flex-col justify-between">
+                  <div>
+                    <div className="portal-card-header">
+                      <div>
+                        <h2 className="portal-card-title">Centralized Order Book</h2>
+                        <span className="text-xs text-[var(--text-dim)]">Layer-2 Staging Prototype</span>
+                      </div>
+                      <span className="portal-badge portal-badge-cyan">Prototype Preview</span>
+                    </div>
+
+                    <p className="text-xs text-[var(--text-muted)] leading-relaxed mb-4">
+                      The high-frequency limit order book interface is a staging prototype for Layer-2 matching. All current live trading and liquidity on Fundrex settles deterministically via the on-chain constant-product AMM.
+                    </p>
+
+                    <div className="p-3.5 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] font-mono text-xs flex justify-between items-center">
+                      <span className="text-[var(--text-dim)]">Prototype Engine:</span>
+                      <span className="text-white font-semibold">Offchain Sequencer (Staging)</span>
+                    </div>
+                  </div>
+
+                  <div className="pt-3 border-t border-[var(--border)] mt-4 flex justify-between items-center text-xs text-[var(--text-dim)]">
+                    <span>USDC Market in testnet review</span>
+                    <span className="font-semibold text-emerald-400">AMM Active on Polygon</span>
                   </div>
                 </div>
               </div>
@@ -2484,7 +3140,10 @@ export default function FundryxAppPortal({
               {/* Row 3: Trades Table */}
               <div className="portal-card">
                 <div className="portal-card-header">
-                  <h2 className="portal-card-title">Recent Executed Market Trades</h2>
+                  <div>
+                    <h2 className="portal-card-title">Recent Executed Market Trades</h2>
+                    <span className="text-xs text-[var(--text-dim)]">On-chain AMM settlements</span>
+                  </div>
                   <span className="portal-badge portal-badge-neutral">Atomic Settlement</span>
                 </div>
                 <div className="portal-table-wrapper">
@@ -2513,7 +3172,21 @@ export default function FundryxAppPortal({
                           <td className="font-mono text-right tabular-nums text-white">{t.price}</td>
                           <td className="font-mono text-right tabular-nums text-[var(--text-muted)]">{t.size}</td>
                           <td className="text-right text-xs text-[var(--text-muted)]">{t.time}</td>
-                          <td className="font-mono text-xs text-[var(--accent-3)] truncate max-w-[130px]">{t.hash}</td>
+                          <td className="font-mono text-xs text-[var(--accent-3)] truncate max-w-[130px]">
+                            {t.txHash ? (
+                              <a
+                                href={explorerTxLink(t.txHash)}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-purple-400 hover:underline flex items-center gap-1"
+                              >
+                                {t.txHash.slice(0, 6)}...{t.txHash.slice(-4)}
+                                <ExternalLink size={10} />
+                              </a>
+                            ) : (
+                              t.hash || 'Onchain Event'
+                            )}
+                          </td>
                         </tr>
                       ))}
                     </tbody>
