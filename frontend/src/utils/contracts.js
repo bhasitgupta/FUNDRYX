@@ -9,6 +9,21 @@ import {
 // CENTRALIZED MULTI-CHAIN CONFIGURATION REGISTRY
 // ─────────────────────────────────────────────────────────────
 export const SUPPORTED_NETWORKS = {
+  10143: {
+    chainId: 10143,
+    hexChainId: '0x279f',
+    name: 'Monad',
+    shortName: 'Monad',
+    nativeCurrency: { name: 'MON', symbol: 'MON', decimals: 18 },
+    rpcUrl: 'https://testnet-rpc.monad.xyz/',
+    explorerUrl: 'https://testnet.monadexplorer.com',
+    status: 'PENDING_DEPLOYMENT',
+    contractsDeployed: false,
+    statusLabel: 'Contracts Staging',
+    iconColor: '#836EF9',
+    contracts: {},
+    tokens: {},
+  },
   80002: {
     chainId: 80002,
     hexChainId: '0x13882',
@@ -38,18 +53,18 @@ export const SUPPORTED_NETWORKS = {
       USDC:   '0x41E94Eb019C0762fFF8923a1aF1b3F931818B006',
     },
   },
-  10143: {
-    chainId: 10143,
-    hexChainId: '0x279f',
-    name: 'Monad',
-    shortName: 'Monad',
-    nativeCurrency: { name: 'MON', symbol: 'MON', decimals: 18 },
-    rpcUrl: 'https://testnet-rpc.monad.xyz/',
-    explorerUrl: 'https://testnet.monadexplorer.com',
+  43114: {
+    chainId: 43114,
+    hexChainId: '0xa86a',
+    name: 'Avalanche',
+    shortName: 'Avalanche',
+    nativeCurrency: { name: 'Avalanche', symbol: 'AVAX', decimals: 18 },
+    rpcUrl: 'https://api.avax.network/ext/bc/C/rpc',
+    explorerUrl: 'https://snowtrace.io',
     status: 'PENDING_DEPLOYMENT',
     contractsDeployed: false,
     statusLabel: 'Contracts Staging',
-    iconColor: '#836EF9',
+    iconColor: '#E84142',
     contracts: {},
     tokens: {},
   },
@@ -68,42 +83,11 @@ export const SUPPORTED_NETWORKS = {
     contracts: {},
     tokens: {},
   },
-  43114: {
-    chainId: 43114,
-    hexChainId: '0xa86a',
-    name: 'Avalanche',
-    shortName: 'Avalanche',
-    nativeCurrency: { name: 'Avalanche', symbol: 'AVAX', decimals: 18 },
-    rpcUrl: 'https://api.avax.network/ext/bc/C/rpc',
-    explorerUrl: 'https://snowtrace.io',
-    status: 'PENDING_DEPLOYMENT',
-    contractsDeployed: false,
-    statusLabel: 'Contracts Staging',
-    iconColor: '#E84142',
-    contracts: {},
-    tokens: {},
-  },
-  42161: {
-    chainId: 42161,
-    hexChainId: '0xa4b1',
-    name: 'Arbitrum',
-    shortName: 'Arbitrum',
-    nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
-    rpcUrl: 'https://arb1.arbitrum.io/rpc',
-    explorerUrl: 'https://arbiscan.io',
-    status: 'PENDING_DEPLOYMENT',
-    contractsDeployed: false,
-    statusLabel: 'Contracts Staging',
-    iconColor: '#28A0F0',
-    contracts: {},
-    tokens: {},
-  },
 };
 
 // Aliases for dev/staging testnets
-SUPPORTED_NETWORKS[84532] = { ...SUPPORTED_NETWORKS[8453], chainId: 84532, hexChainId: '0x14a34', rpcUrl: 'https://sepolia.base.org', explorerUrl: 'https://sepolia.basescan.org' };
 SUPPORTED_NETWORKS[43113] = { ...SUPPORTED_NETWORKS[43114], chainId: 43113, hexChainId: '0xa869', rpcUrl: 'https://api.avax-test.network/ext/bc/C/rpc', explorerUrl: 'https://testnet.snowtrace.io' };
-SUPPORTED_NETWORKS[421614] = { ...SUPPORTED_NETWORKS[42161], chainId: 421614, hexChainId: '0x66eee', rpcUrl: 'https://sepolia-rollup.arbitrum.io/rpc', explorerUrl: 'https://sepolia.arbiscan.io' };
+SUPPORTED_NETWORKS[84532] = { ...SUPPORTED_NETWORKS[8453], chainId: 84532, hexChainId: '0x14a34', rpcUrl: 'https://sepolia.base.org', explorerUrl: 'https://sepolia.basescan.org' };
 
 export const POLYGON_AMOY_CONFIG = {
   chainId: '0x13882',
@@ -114,7 +98,7 @@ export const POLYGON_AMOY_CONFIG = {
 };
 
 export function getNetworkConfig(chainId) {
-  if (!chainId) return SUPPORTED_NETWORKS[80002];
+  if (!chainId) return SUPPORTED_NETWORKS[10143] || SUPPORTED_NETWORKS[80002];
   const numId = typeof chainId === 'string' ? (chainId.startsWith('0x') ? parseInt(chainId, 16) : Number(chainId)) : chainId;
   return SUPPORTED_NETWORKS[numId] || null;
 }

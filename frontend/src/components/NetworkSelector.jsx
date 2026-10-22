@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { ChevronDown, Check, Globe, AlertCircle, Loader2 } from 'lucide-react';
 import { SUPPORTED_NETWORKS } from '../utils/contracts';
 
-const PRIMARY_CHAINS = [80002, 10143, 8453, 43114, 42161];
+const PRIMARY_CHAINS = [10143, 80002, 43114, 8453];
 
 export default function NetworkSelector({ currentChainId, onSwitchNetwork, isSwitching }) {
   const [isOpen, setIsOpen] = useState(false);
