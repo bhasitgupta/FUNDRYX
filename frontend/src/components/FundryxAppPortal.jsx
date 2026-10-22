@@ -75,6 +75,7 @@ import {
   addTokenToWallet,
   getCrossChainQuote,
   verifyCrossChainRoute,
+  getRouteMatrix,
   executeCrossChainSwap,
   CROSS_CHAIN_STATUS,
   explorerTxLink,
@@ -141,22 +142,78 @@ export default function FundryxAppPortal({
   const [isSeeding, setIsSeeding] = useState(false);
   const [slippageBps, setSlippageBps] = useState(50); // 50 bps = 0.50%
   const [swapSubTab, setSwapSubTab] = useState('same-chain'); // 'same-chain' | 'cross-chain' | 'pool'
+  const [networkMode, setNetworkMode] = useState('testnet'); // 'testnet' | 'mainnet'
+  const [crossSourceChain, setCrossSourceChain] = useState(80002);
   const [crossDestChain, setCrossDestChain] = useState(10143);
   const [crossSourceToken, setCrossSourceToken] = useState('FDX');
   const [crossDestToken, setCrossDestToken] = useState('MON');
   const [crossAmount, setCrossAmount] = useState('10');
+  const [crossQuote, setCrossQuote] = useState(null);
+  const [isFetchingQuote, setIsFetchingQuote] = useState(false);
+  const [showRouteMatrixModal, setShowRouteMatrixModal] = useState(false);
   const [crossLifecycle, setCrossLifecycle] = useState({
     status: 'IDLE',
     step: 0,
-    totalSteps: 6,
+    totalSteps: 5,
     sourceTxHash: null,
-    bridgeMessageId: null,
     destTxHash: null,
+    lifiExplorerUrl: null,
     error: null,
   });
   const [isHowSwapWorksOpen, setIsHowSwapWorksOpen] = useState(false);
   const [isHowBridgeWorksOpen, setIsHowBridgeWorksOpen] = useState(false);
   const [marketView, setMarketView] = useState('amm'); // 'amm' | 'orderbook'
+
+  // Debounced live quote discovery for Cross-Chain Bridge
+  useEffect(() => {
+    let isCancelled = false;
+    async function loadQuote() {
+      if (!crossAmount || Number(crossAmount) <= 0 || isNaN(Number(crossAmount))) {
+        setCrossQuote(null);
+        return;
+      }
+      setIsFetchingQuote(true);
+      try {
+        const q = await getCrossChainQuote(
+          crossSourceChain,
+          crossDestChain,
+          crossSourceToken,
+          crossDestToken,
+          crossAmount,
+          wallet?.address || null,
+          slippageBps / 100
+        );
+        if (!isCancelled) {
+          setCrossQuote(q);
+        }
+      } catch (err) {
+        if (!isCancelled) {
+          setCrossQuote({
+            canExecute: false,
+            sourceChainId: crossSourceChain,
+            destChainId: crossDestChain,
+            sourceSymbol: crossSourceToken,
+            destSymbol: crossDestToken,
+            auditVerification: {
+              verified: false,
+              isAudited: false,
+              reason: err.message,
+            },
+          });
+        }
+      } finally {
+        if (!isCancelled) {
+          setIsFetchingQuote(false);
+        }
+      }
+    }
+
+    const timer = setTimeout(loadQuote, 250);
+    return () => {
+      isCancelled = true;
+      clearTimeout(timer);
+    };
+  }, [crossSourceChain, crossDestChain, crossSourceToken, crossDestToken, crossAmount, slippageBps, wallet?.address]);
 
   // User balances from chain
   const [userFdxBalance, setUserFdxBalance] = useState(null);
@@ -991,26 +1048,26 @@ export default function FundryxAppPortal({
       return;
     }
 
-    const quote = getCrossChainQuote(
-      CHAIN_ID,
-      crossDestChain,
-      crossSourceToken,
-      crossDestToken,
-      crossAmount
-    );
-
-    if (!quote) {
+    if (wallet.chainId !== crossSourceChain) {
       setTxNotification({
-        type: 'danger',
-        message: 'Please enter a valid cross-chain transfer amount.',
+        type: 'warning',
+        message: `Wallet mismatch: Please switch your wallet to ${SUPPORTED_NETWORKS[crossSourceChain]?.name || 'source network'} (Chain ID ${crossSourceChain}) before bridging.`,
       });
       return;
     }
 
-    if (!quote.canExecute) {
+    if (!crossQuote) {
+      setTxNotification({
+        type: 'danger',
+        message: 'Please enter a valid transfer amount to calculate route quote.',
+      });
+      return;
+    }
+
+    if (!crossQuote.canExecute) {
       setTxNotification({
         type: 'warning',
-        message: `Cross-Chain Gated: ${quote.auditVerification.reason}`,
+        message: `Cross-Chain Gated: ${crossQuote.auditVerification?.reason || 'Route currently unavailable'}`,
       });
       return;
     }
@@ -1019,38 +1076,46 @@ export default function FundryxAppPortal({
       setCrossLifecycle({
         status: 'AWAITING_APPROVAL',
         step: 1,
-        totalSteps: 6,
+        totalSteps: 5,
         sourceTxHash: null,
-        bridgeMessageId: null,
         destTxHash: null,
+        lifiExplorerUrl: null,
         error: null,
       });
 
-      const res = await executeCrossChainSwap(wallet.signer, quote, (progress) => {
+      const res = await executeCrossChainSwap(wallet.signer, crossQuote, (progress) => {
         setCrossLifecycle((prev) => ({
           ...prev,
           status: progress.status,
           step: progress.step,
           sourceTxHash: progress.sourceTxHash || prev.sourceTxHash,
-          bridgeMessageId: progress.bridgeMessageId || prev.bridgeMessageId,
           destTxHash: progress.destTxHash || prev.destTxHash,
+          lifiExplorerUrl: progress.lifiExplorerUrl || prev.lifiExplorerUrl,
         }));
       });
 
       setCrossLifecycle((prev) => ({
         ...prev,
         status: res.status || 'COMPLETED',
-        step: 6,
+        step: res.status === 'COMPLETED' ? 5 : 4,
         sourceTxHash: res.sourceTxHash || prev.sourceTxHash,
-        bridgeMessageId: res.bridgeMessageId || prev.bridgeMessageId,
         destTxHash: res.destTxHash || prev.destTxHash,
+        lifiExplorerUrl: res.lifiExplorerUrl || prev.lifiExplorerUrl,
       }));
 
-      setTxNotification({
-        type: 'success',
-        message: `Cross-Chain Bridge Completed! Dispatched from Polygon Amoy, verified & executed on ${quote.destChainName}.`,
-        txHash: res.sourceTxHash,
-      });
+      if (res.status === 'COMPLETED') {
+        setTxNotification({
+          type: 'success',
+          message: `Cross-Chain Bridge Completed! Dispatched from ${crossQuote.sourceChainName}, settled on ${crossQuote.destChainName}.`,
+          txHash: res.destTxHash || res.sourceTxHash,
+        });
+      } else {
+        setTxNotification({
+          type: 'info',
+          message: `Source transaction broadcast on ${crossQuote.sourceChainName}. Relayer bridging in flight.`,
+          txHash: res.sourceTxHash,
+        });
+      }
     } catch (err) {
       const reason = parseRevertReason(err);
       setCrossLifecycle((prev) => ({
@@ -1412,6 +1477,21 @@ export default function FundryxAppPortal({
 
             <NetworkSelector
               currentChainId={wallet?.chainId}
+              networkMode={networkMode}
+              onSelectMode={(mode) => {
+                setNetworkMode(mode);
+                if (mode === 'testnet') {
+                  setCrossSourceChain(80002);
+                  setCrossDestChain(10143);
+                  setCrossSourceToken('FDX');
+                  setCrossDestToken('MON');
+                } else {
+                  setCrossSourceChain(137);
+                  setCrossDestChain(8453);
+                  setCrossSourceToken('USDC');
+                  setCrossDestToken('USDC');
+                }
+              }}
               onSwitchNetwork={async (targetChainId) => {
                 if (onSwitchNetwork) {
                   try {
@@ -3092,30 +3172,48 @@ export default function FundryxAppPortal({
               )}
 
               {swapSubTab === 'cross-chain' && (() => {
-                const quote = getCrossChainQuote(
-                  CHAIN_ID,
-                  crossDestChain,
-                  crossSourceToken,
-                  crossDestToken,
-                  crossAmount
-                );
+                const quote = crossQuote;
+                const sourceNetwork = SUPPORTED_NETWORKS[crossSourceChain] || { name: `Chain ${crossSourceChain}` };
                 const destNetwork = SUPPORTED_NETWORKS[crossDestChain] || { name: `Chain ${crossDestChain}` };
+                const sourceTokens = getTokenRegistry(crossSourceChain);
                 const destTokens = getTokenRegistry(crossDestChain);
+
+                const currentModeChains = networkMode === 'mainnet'
+                  ? [137, 143, 8453, 43114]
+                  : [80002, 10143, 84532, 43113];
+
+                const isWalletMismatched = Boolean(
+                  wallet?.address && wallet?.chainId && Number(wallet.chainId) !== Number(crossSourceChain)
+                );
+
+                const routeMatrixData = getRouteMatrix(networkMode);
 
                 return (
                   <div className="portal-card p-6 flex flex-col gap-6">
-                    {/* Header Badge & Title */}
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-4 border-b border-[var(--border)]">
+                    {/* Header Badge, Title & Route Matrix Trigger */}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-[var(--border)]">
                       <div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <span className="portal-badge portal-badge-accent font-bold">Multi-Chain Bridge Router</span>
-                          <span className="text-xs text-[var(--text-dim)] font-mono">CCIP &amp; Relayer Architecture</span>
+                          <span className={`text-xs px-2 py-0.5 rounded font-mono font-bold ${networkMode === 'mainnet' ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30' : 'bg-purple-500/20 text-purple-300 border border-purple-500/30'}`}>
+                            {networkMode === 'mainnet' ? 'Mainnet Mode (LI.FI Aggregator)' : 'Testnet Mode (Chainlink CCIP / Sentinel)'}
+                          </span>
                         </div>
                         <p className="text-xs text-[var(--text-muted)] mt-1">
-                          Bridge and swap assets across Polygon, Monad, Avalanche, and Base with zero-trust audit verification.
+                          Enterprise cross-chain liquidity across Polygon, Monad, Base, and Avalanche with strict zero-trust audit verification.
                         </p>
                       </div>
+
                       <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setShowRouteMatrixModal(!showRouteMatrixModal)}
+                          className="px-3 py-1.5 rounded-lg bg-[var(--surface-2)] hover:bg-[var(--surface-hover)] border border-[var(--border)] text-xs font-semibold text-white transition cursor-pointer flex items-center gap-1.5"
+                        >
+                          <Globe size={13} className="text-[var(--accent-1)]" />
+                          <span>12-Route Matrix</span>
+                        </button>
+
                         {quote && quote.auditVerification && (
                           <span
                             className={`text-xs px-2.5 py-1 rounded-full font-mono font-semibold flex items-center gap-1.5 ${
@@ -3125,48 +3223,92 @@ export default function FundryxAppPortal({
                             }`}
                           >
                             <span className={`w-1.5 h-1.5 rounded-full ${quote.auditVerification.isAudited ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
-                            {quote.auditVerification.isAudited ? 'Audit Verified' : 'Audit Safeguard Active'}
+                            {quote.auditVerification.isAudited ? 'Audit Verified' : 'Audit Safeguard Gated'}
                           </span>
                         )}
                       </div>
                     </div>
+
+                    {/* Wallet Network Mismatch Alert Banner */}
+                    {isWalletMismatched && (
+                      <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs animate-fade-in">
+                        <div className="flex items-start gap-2.5">
+                          <AlertTriangle size={16} className="text-amber-400 shrink-0 mt-0.5" />
+                          <div>
+                            <span className="font-bold text-amber-200 block">Wallet Network Mismatch</span>
+                            <span className="text-amber-300/80 leading-relaxed block mt-0.5">
+                              Wallet is connected to Chain ID {wallet.chainId} ({SUPPORTED_NETWORKS[wallet.chainId]?.name || 'External'}), but bridge source is set to {sourceNetwork.name} ({crossSourceChain}).
+                            </span>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => onSwitchNetwork?.(crossSourceChain)}
+                          className="px-3 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-200 font-bold text-xs shrink-0 cursor-pointer transition flex items-center justify-center gap-1.5"
+                        >
+                          <RefreshCw size={12} className="animate-spin-slow" />
+                          <span>Switch Wallet to {sourceNetwork.shortName}</span>
+                        </button>
+                      </div>
+                    )}
 
                     {/* Network & Token Pair Configuration */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {/* Source Network Card */}
                       <div className="p-4 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] flex flex-col gap-3">
                         <div className="flex justify-between items-center">
-                          <span className="portal-label">Source Network</span>
+                          <span className="portal-label">Source Network ({networkMode.toUpperCase()})</span>
                           <span className="text-xs font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
-                            Polygon Amoy (80002)
+                            Chain ID: {crossSourceChain}
                           </span>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <div className="w-8 h-8 rounded-lg bg-purple-500/20 border border-purple-500/40 flex items-center justify-center font-bold text-xs text-purple-300">
-                            POL
-                          </div>
-                          <div>
-                            <span className="font-bold text-white text-sm block">Polygon Amoy Testnet</span>
-                            <span className="text-xs text-[var(--text-dim)]">Primary Deployed Protocol Chain</span>
-                          </div>
+                        <div>
+                          <select
+                            value={crossSourceChain}
+                            onChange={(e) => {
+                              const newChain = Number(e.target.value);
+                              setCrossSourceChain(newChain);
+                              const avail = getTokenRegistry(newChain);
+                              if (avail && avail.length > 0) {
+                                setCrossSourceToken(avail[0].symbol);
+                              }
+                              // Prevent identical source and dest
+                              if (newChain === crossDestChain) {
+                                const nextDest = currentModeChains.find((c) => c !== newChain) || currentModeChains[0];
+                                setCrossDestChain(nextDest);
+                                const dAvail = getTokenRegistry(nextDest);
+                                if (dAvail && dAvail.length > 0) setCrossDestToken(dAvail[0].symbol);
+                              }
+                            }}
+                            className="w-full h-10 px-3 rounded-lg bg-[var(--surface-1)] border border-[var(--border)] font-bold text-white text-sm outline-none focus:border-[var(--accent-1)] transition cursor-pointer"
+                          >
+                            {currentModeChains.map((cId) => {
+                              const n = SUPPORTED_NETWORKS[cId];
+                              return (
+                                <option key={cId} value={cId} className="bg-[#0c1218] text-white">
+                                  {n.name} ({cId}) {n.contractsDeployed ? '· Stack Live' : ''}
+                                </option>
+                              );
+                            })}
+                          </select>
                         </div>
                         <div>
                           <label className="text-[11px] text-[var(--text-dim)] uppercase font-semibold block mb-1">Source Asset</label>
-                          <div className="grid grid-cols-3 gap-2">
-                            {['FDX', 'fUSD', 'WPOL'].map((sym) => (
+                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                            {sourceTokens.map((tok) => (
                               <button
-                                key={sym}
+                                key={tok.symbol}
                                 type="button"
-                                onClick={() => setCrossSourceToken(sym)}
-                                className={`px-3 py-2 rounded-lg text-xs font-bold border transition cursor-pointer flex flex-col items-center gap-0.5 ${
-                                  crossSourceToken === sym
+                                onClick={() => setCrossSourceToken(tok.symbol)}
+                                className={`px-2.5 py-1.5 rounded-lg text-xs font-bold border transition cursor-pointer flex flex-col items-center gap-0.5 ${
+                                  crossSourceToken === tok.symbol
                                     ? 'bg-[var(--accent-1)]/20 border-[var(--accent-1)] text-[var(--accent-1)]'
                                     : 'bg-[var(--surface-1)] border-[var(--border)] text-[var(--text-muted)] hover:text-white'
                                 }`}
                               >
-                                <span>{sym}</span>
+                                <span>{tok.symbol}</span>
                                 <span className="text-[10px] font-normal opacity-70">
-                                  {sym === 'fUSD' ? '6 dec' : '18 dec'}
+                                  {tok.decimals} dec
                                 </span>
                               </button>
                             ))}
@@ -3177,7 +3319,7 @@ export default function FundryxAppPortal({
                       {/* Destination Network Card */}
                       <div className="p-4 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] flex flex-col gap-3">
                         <div className="flex justify-between items-center">
-                          <span className="portal-label">Destination Network</span>
+                          <span className="portal-label">Destination Network ({networkMode.toUpperCase()})</span>
                           <span className="text-xs font-mono text-[var(--accent-1)] bg-[var(--accent-1)]/10 px-2 py-0.5 rounded border border-[var(--accent-1)]/20">
                             Target Chain ID: {crossDestChain}
                           </span>
@@ -3195,10 +3337,16 @@ export default function FundryxAppPortal({
                             }}
                             className="w-full h-10 px-3 rounded-lg bg-[var(--surface-1)] border border-[var(--border)] font-bold text-white text-sm outline-none focus:border-[var(--accent-1)] transition cursor-pointer"
                           >
-                            <option value={10143} className="bg-[#0c1218] text-white">Monad Testnet (10143) · Parallel EVM</option>
-                            <option value={43113} className="bg-[#0c1218] text-white">Avalanche Fuji Testnet (43113) · Subnet Protocol</option>
-                            <option value={43114} className="bg-[#0c1218] text-white">Avalanche C-Chain (43114) · Primary Network</option>
-                            <option value={8453} className="bg-[#0c1218] text-white">Base Mainnet (8453) · Optimistic L2</option>
+                            {currentModeChains
+                              .filter((cId) => cId !== crossSourceChain)
+                              .map((cId) => {
+                                const n = SUPPORTED_NETWORKS[cId];
+                                return (
+                                  <option key={cId} value={cId} className="bg-[#0c1218] text-white">
+                                    {n.name} ({cId})
+                                  </option>
+                                );
+                              })}
                           </select>
                         </div>
                         <div>
@@ -3209,7 +3357,7 @@ export default function FundryxAppPortal({
                                 key={tok.symbol}
                                 type="button"
                                 onClick={() => setCrossDestToken(tok.symbol)}
-                                className={`px-3 py-2 rounded-lg text-xs font-bold border transition cursor-pointer flex flex-col items-center gap-0.5 ${
+                                className={`px-2.5 py-1.5 rounded-lg text-xs font-bold border transition cursor-pointer flex flex-col items-center gap-0.5 ${
                                   crossDestToken === tok.symbol
                                     ? 'bg-[var(--accent-1)]/20 border-[var(--accent-1)] text-[var(--accent-1)]'
                                     : 'bg-[var(--surface-1)] border-[var(--border)] text-[var(--text-muted)] hover:text-white'
@@ -3262,10 +3410,17 @@ export default function FundryxAppPortal({
                     </div>
 
                     {/* Live Quote & Route Discovery Card */}
-                    {quote && (
-                      <div className="p-4 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] flex flex-col gap-3">
+                    {isFetchingQuote ? (
+                      <div className="p-6 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] flex items-center justify-center gap-3 text-xs text-[var(--text-muted)]">
+                        <Loader2 size={16} className="animate-spin text-[var(--accent-1)]" />
+                        <span>Discovering live provider routes and simulating execution...</span>
+                      </div>
+                    ) : quote ? (
+                      <div className="p-4 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] flex flex-col gap-3 animate-fade-in">
                         <div className="flex justify-between items-center">
-                          <span className="text-xs uppercase font-bold text-[var(--text-dim)] tracking-wider">Bridge Quote &amp; Execution Route</span>
+                          <span className="text-xs uppercase font-bold text-[var(--text-dim)] tracking-wider">
+                            Route Quote &amp; Execution Pathway ({quote.provider === 'lifi' ? 'LI.FI Aggregator' : 'Sentinel Quorum'})
+                          </span>
                           <span className="font-mono text-xs text-[var(--text-muted)]">Relayer: {quote.relayer}</span>
                         </div>
 
@@ -3283,15 +3438,15 @@ export default function FundryxAppPortal({
                             </span>
                           </div>
                           <div>
-                            <span className="text-[11px] text-[var(--text-dim)] block">Relayer Fee</span>
+                            <span className="text-[11px] text-[var(--text-dim)] block">Protocol / Bridge Fee</span>
                             <span className="font-mono text-xs font-semibold text-white">
-                              {quote.bridgeFee} {quote.sourceToken} ({quote.feeBps / 100}%)
+                              {quote.bridgeFee}
                             </span>
                           </div>
                           <div>
                             <span className="text-[11px] text-[var(--text-dim)] block">Est. Settlement</span>
                             <span className="font-mono text-xs font-semibold text-[var(--accent-1)]">
-                              {quote.estimatedTimeSeconds}s (~30 blocks)
+                              {quote.estimatedDuration}
                             </span>
                           </div>
                         </div>
@@ -3299,27 +3454,27 @@ export default function FundryxAppPortal({
                         {/* Audit Verification Safeguard Banner */}
                         <div
                           className={`p-3.5 rounded-lg border text-xs leading-relaxed ${
-                            quote.auditVerification.isAudited
+                            quote.auditVerification?.isAudited
                               ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-200'
                               : 'bg-amber-500/10 border-amber-500/30 text-amber-200'
                           }`}
                         >
                           <div className="flex items-start gap-2">
                             <span className="font-bold shrink-0">
-                              {quote.auditVerification.isAudited ? '✓ Audit Verified:' : '⚠ Audit Safeguard Active:'}
+                              {quote.auditVerification?.isAudited ? '✓ Audit Verified:' : '⚠ Audit Safeguard Active:'}
                             </span>
-                            <span>{quote.auditVerification.reason}</span>
+                            <span>{quote.auditVerification?.reason || 'Audit verification check completed.'}</span>
                           </div>
                         </div>
                       </div>
-                    )}
+                    ) : null}
 
                     {/* Transaction Lifecycle Status Panel */}
                     {crossLifecycle.status !== 'IDLE' && (
-                      <div className="p-4 rounded-xl bg-[var(--surface-1)] border border-[var(--accent-1)]/40 flex flex-col gap-3">
+                      <div className="p-4 rounded-xl bg-[var(--surface-1)] border border-[var(--accent-1)]/40 flex flex-col gap-3 animate-fade-in">
                         <div className="flex justify-between items-center">
                           <span className="text-xs uppercase font-bold text-[var(--accent-1)]">
-                            Cross-Chain Lifecycle Progress (Step {crossLifecycle.step} / {crossLifecycle.totalSteps})
+                            Cross-Chain Lifecycle (Step {crossLifecycle.step} / {crossLifecycle.totalSteps})
                           </span>
                           <span className="text-xs font-mono font-bold text-white bg-[var(--surface-2)] px-2 py-0.5 rounded border border-[var(--border)]">
                             {crossLifecycle.status}
@@ -3339,10 +3494,10 @@ export default function FundryxAppPortal({
 
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-mono">
                           <div>
-                            <span className="text-[var(--text-dim)] block">Source Chain TX (Polygon Amoy):</span>
+                            <span className="text-[var(--text-dim)] block">Source Chain TX ({sourceNetwork.name}):</span>
                             {crossLifecycle.sourceTxHash ? (
                               <a
-                                href={`https://amoy.polygonscan.com/tx/${crossLifecycle.sourceTxHash}`}
+                                href={`${sourceNetwork.explorerUrl}/tx/${crossLifecycle.sourceTxHash}`}
                                 target="_blank"
                                 rel="noreferrer"
                                 className="text-[var(--accent-1)] hover:underline inline-flex items-center gap-1"
@@ -3355,7 +3510,7 @@ export default function FundryxAppPortal({
                             )}
                           </div>
                           <div>
-                            <span className="text-[var(--text-dim)] block">Destination Execution TX ({destNetwork.name}):</span>
+                            <span className="text-[var(--text-dim)] block">Destination Settlement ({destNetwork.name}):</span>
                             {crossLifecycle.destTxHash ? (
                               <a
                                 href={`${destNetwork.explorerUrl}/tx/${crossLifecycle.destTxHash}`}
@@ -3364,6 +3519,16 @@ export default function FundryxAppPortal({
                                 className="text-emerald-400 hover:underline inline-flex items-center gap-1 font-mono"
                               >
                                 <span>{crossLifecycle.destTxHash.slice(0, 10)}...{crossLifecycle.destTxHash.slice(-8)}</span>
+                                <ExternalLink size={11} />
+                              </a>
+                            ) : crossLifecycle.lifiExplorerUrl ? (
+                              <a
+                                href={crossLifecycle.lifiExplorerUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-cyan-400 hover:underline inline-flex items-center gap-1 font-mono"
+                              >
+                                <span>In Flight · Track on LI.FI Explorer</span>
                                 <ExternalLink size={11} />
                               </a>
                             ) : (
@@ -3383,33 +3548,99 @@ export default function FundryxAppPortal({
                     )}
 
                     {/* Action Button */}
-                    <button
-                      onClick={handleExecuteCrossChainSwap}
-                      disabled={
-                        !quote ||
-                        !quote.canExecute ||
-                        crossLifecycle.status === 'AWAITING_APPROVAL' ||
-                        crossLifecycle.status === 'SOURCE_PENDING' ||
-                        crossLifecycle.status === 'BRIDGE_ATTESTING' ||
-                        crossLifecycle.status === 'DEST_EXECUTING'
-                      }
-                      className={`h-12 w-full font-bold text-xs uppercase tracking-wider rounded-xl transition cursor-pointer ${
-                        quote && quote.canExecute
-                          ? 'portal-btn-primary hover:brightness-110 shadow-lg shadow-[var(--accent-1)]/20'
-                          : 'portal-btn-secondary opacity-60 cursor-not-allowed border border-amber-500/40 text-amber-200'
-                      }`}
-                    >
-                      {crossLifecycle.status === 'AWAITING_APPROVAL' && 'Awaiting Wallet Approval...'}
-                      {crossLifecycle.status === 'SOURCE_PENDING' && 'Broadcasting Source TX...'}
-                      {crossLifecycle.status === 'BRIDGE_ATTESTING' && 'Bridge Relayer Attesting...'}
-                      {crossLifecycle.status === 'DEST_EXECUTING' && 'Executing on Destination Chain...'}
-                      {crossLifecycle.status === 'COMPLETED' && 'Transfer Completed · Bridge Next'}
-                      {crossLifecycle.status === 'IDLE' && (
-                        quote && quote.canExecute
-                          ? `Bridge ${crossAmount} ${crossSourceToken} to ${destNetwork.name}`
-                          : 'Route Gated by Audit Safeguard (Zero-Trust)'
-                      )}
-                    </button>
+                    {isWalletMismatched ? (
+                      <button
+                        type="button"
+                        onClick={() => onSwitchNetwork?.(crossSourceChain)}
+                        className="h-12 w-full font-bold text-xs uppercase tracking-wider rounded-xl transition cursor-pointer bg-amber-500 hover:bg-amber-400 text-black shadow-lg"
+                      >
+                        Switch Wallet to {sourceNetwork.name} ({crossSourceChain})
+                      </button>
+                    ) : (
+                      <button
+                        onClick={handleExecuteCrossChainSwap}
+                        disabled={
+                          !quote ||
+                          !quote.canExecute ||
+                          isFetchingQuote ||
+                          crossLifecycle.status === 'WALLET_APPROVAL' ||
+                          crossLifecycle.status === 'SOURCE_SUBMITTED' ||
+                          crossLifecycle.status === 'BRIDGE_PENDING'
+                        }
+                        className={`h-12 w-full font-bold text-xs uppercase tracking-wider rounded-xl transition cursor-pointer ${
+                          quote && quote.canExecute && !isFetchingQuote
+                            ? 'portal-btn-primary hover:brightness-110 shadow-lg shadow-[var(--accent-1)]/20'
+                            : 'portal-btn-secondary opacity-60 cursor-not-allowed border border-amber-500/40 text-amber-200'
+                        }`}
+                      >
+                        {isFetchingQuote && 'Calculating Live Route Quote...'}
+                        {!isFetchingQuote && crossLifecycle.status === 'WALLET_APPROVAL' && 'Awaiting Wallet Approval...'}
+                        {!isFetchingQuote && crossLifecycle.status === 'SOURCE_SUBMITTED' && 'Broadcasting Source TX...'}
+                        {!isFetchingQuote && crossLifecycle.status === 'BRIDGE_PENDING' && 'Bridge Relayer In Flight...'}
+                        {!isFetchingQuote && crossLifecycle.status === 'COMPLETED' && 'Transfer Completed · Bridge Next'}
+                        {!isFetchingQuote && crossLifecycle.status === 'IDLE' && (
+                          quote && quote.canExecute
+                            ? `Bridge ${crossAmount} ${crossSourceToken} to ${destNetwork.name}`
+                            : 'Route Gated by Audit Safeguard (Zero-Trust)'
+                        )}
+                      </button>
+                    )}
+
+                    {/* 12-Route Matrix Modal */}
+                    {showRouteMatrixModal && (
+                      <div className="p-4 rounded-xl border border-[var(--border)] bg-[var(--surface-1)] flex flex-col gap-3 animate-fade-in">
+                        <div className="flex justify-between items-center">
+                          <span className="text-xs font-bold text-white uppercase tracking-wider">
+                            Multi-Chain 12-Route Matrix ({networkMode.toUpperCase()})
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setShowRouteMatrixModal(false)}
+                            className="text-xs text-[var(--text-dim)] hover:text-white"
+                          >
+                            ✕ Close
+                          </button>
+                        </div>
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-left text-xs font-mono">
+                            <thead>
+                              <tr className="border-b border-[var(--border)] text-[var(--text-dim)]">
+                                <th className="p-2">Route</th>
+                                <th className="p-2">Environment</th>
+                                <th className="p-2">Provider</th>
+                                <th className="p-2">Status</th>
+                                <th className="p-2">Security Verification / Reason</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {routeMatrixData.map((r) => (
+                                <tr key={r.direction} className="border-b border-[var(--border)]/50 hover:bg-[var(--surface-2)]">
+                                  <td className="p-2 font-bold text-white">{r.direction}</td>
+                                  <td className="p-2 uppercase text-[10px] text-[var(--text-muted)]">{r.networkMode}</td>
+                                  <td className="p-2 text-[var(--accent-1)]">{r.provider}</td>
+                                  <td className="p-2">
+                                    <span
+                                      className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                                        r.status === 'ACTIVE'
+                                          ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'
+                                          : r.status === 'GATED_PENDING_DEPLOYMENT'
+                                          ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+                                          : 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
+                                      }`}
+                                    >
+                                      {r.status}
+                                    </span>
+                                  </td>
+                                  <td className="p-2 text-[11px] text-[var(--text-muted)] max-w-xs truncate" title={r.reason}>
+                                    {r.reason}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    )}
 
                     {/* Collapsible "How Cross-Chain Bridging Works" */}
                     <div className="border border-[var(--border)] rounded-xl overflow-hidden bg-[var(--surface-2)]">
@@ -3431,24 +3662,20 @@ export default function FundryxAppPortal({
                       {isHowBridgeWorksOpen && (
                         <div className="p-4 pt-2 border-t border-[var(--border)] text-xs text-[var(--text-muted)] space-y-3 leading-relaxed">
                           <div>
-                            <strong className="text-white block mb-0.5">1. Route Discovery &amp; Quote Calculation</strong>
-                            The router identifies liquidity pathways between Polygon Amoy (Chain 80002) and destination networks ({destNetwork.name}). Dynamic exchange rates, relayer fees (0.10%), and slippage caps (0.50%) are calculated before any user transaction is signed.
+                            <strong className="text-white block mb-0.5">1. Route Discovery &amp; Dynamic Pricing</strong>
+                            The engine evaluates all 6 network pairs across Polygon, Monad, Base, and Avalanche. In mainnet mode, real liquidity quotes are fetched live from LI.FI aggregator with verified slippage bounds. In testnet mode, protocol rates and CCIP messaging parameters are enforced.
                           </div>
                           <div>
-                            <strong className="text-white block mb-0.5">2. Wallet Signature &amp; Source Lock</strong>
-                            The user executes an on-chain lock or burn of the source asset on Polygon Amoy. A unique cross-chain message ID is emitted in the source transaction receipt.
+                            <strong className="text-white block mb-0.5">2. Network Segregation (Zero-Trust Boundary)</strong>
+                            Fundrex strictly isolates testnet environments from mainnets. Cross-environment routing (e.g. testnet to mainnet) is physically rejected by protocol routing validators.
                           </div>
                           <div>
-                            <strong className="text-white block mb-0.5">3. Decentralized Relayer Attestation</strong>
-                            Decentralized oracles and relayers observe the confirmed source block, sign cryptographic quorum attestations, and forward the message envelope to the destination chain.
+                            <strong className="text-white block mb-0.5">3. Multi-Sig Audit Verification Safeguard</strong>
+                            Capital transfers to any destination chain remain locked until receiver contracts and sentinel quorum verifiers complete formal on-chain verification and multi-signature certification.
                           </div>
                           <div>
-                            <strong className="text-white block mb-0.5">4. Audit Safeguards &amp; Zero-Trust Gating</strong>
-                            Fundrex strictly enforces audit verification before enabling capital movement to any network. If destination verifiers or relayers have not completed formal security review or multi-sig signoff, transfers are locked to protect user funds against bridge drain vulnerabilities.
-                          </div>
-                          <div>
-                            <strong className="text-white block mb-0.5">5. Destination Settlement &amp; Refund Recovery</strong>
-                            Upon destination verifier confirmation, destination tokens are minted or released to the user's wallet. If destination execution fails, the protocol provides an on-chain refund recovery mechanism back to the originating address.
+                            <strong className="text-white block mb-0.5">4. Cryptographic Lifecycle Settlement</strong>
+                            Transfers are marked complete only after the destination execution transaction is cryptographically confirmed on the destination network explorer.
                           </div>
                         </div>
                       )}

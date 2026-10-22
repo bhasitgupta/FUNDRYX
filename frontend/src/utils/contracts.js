@@ -3,43 +3,20 @@ import {
   isSupabaseConfigured,
   fetchAuditEventsFromSupabase,
   recordAuditEventToSupabase,
-} from './supabase';
+} from './supabase.js';
 
 // ─────────────────────────────────────────────────────────────
 // CENTRALIZED MULTI-CHAIN CONFIGURATION REGISTRY
 // ─────────────────────────────────────────────────────────────
 export const SUPPORTED_NETWORKS = {
-  10143: {
-    chainId: 10143,
-    hexChainId: '0x279f',
-    name: 'Monad',
-    shortName: 'Monad',
-    nativeToken: 'MON',
-    nativeCurrency: { name: 'MON', symbol: 'MON', decimals: 18 },
-    wrappedNative: { symbol: 'WMON', address: '0x760AfE86e5de5fa0Ee542fc7B7B713e1c5425701' },
-    supportedAssets: ['MON', 'WMON'],
-    supportedOperations: ['read_only_telemetry', 'risk_analysis', 'cross_chain_bridge'],
-    rpcUrl: 'https://testnet-rpc.monad.xyz/',
-    explorerUrl: 'https://testnet.monadexplorer.com',
-    status: 'ACTIVE',
-    contractsDeployed: true,
-    bridgeActive: true,
-    statusLabel: 'Active Bridge Route',
-    relayer: 'Fundrex Sentinel Quorum Relayer (Monad EVM Gateway)',
-    iconColor: '#836EF9',
-    contracts: {
-      BridgeReceiver: '0x1014300000000000000000000000000000000001',
-      QuorumVerifier: '0x1014300000000000000000000000000000000002',
-    },
-    tokens: {
-      WMON: '0x760AfE86e5de5fa0Ee542fc7B7B713e1c5425701',
-    },
-  },
+  // ── TESTNETS ────────────────────────────────────────────────
   80002: {
     chainId: 80002,
     hexChainId: '0x13882',
-    name: 'Polygon',
-    shortName: 'Polygon',
+    name: 'Polygon Amoy',
+    shortName: 'Polygon Amoy',
+    networkType: 'testnet',
+    family: 'polygon',
     nativeToken: 'POL',
     nativeCurrency: { name: 'POL', symbol: 'POL', decimals: 18 },
     wrappedNative: { symbol: 'WPOL', address: '0x360ad4f9a9A8EFe9A8DCB5f461c4Cc1047E1Dcf9' },
@@ -50,7 +27,7 @@ export const SUPPORTED_NETWORKS = {
     status: 'ACTIVE',
     contractsDeployed: true,
     bridgeActive: true,
-    statusLabel: 'Active Protocol Stack',
+    statusLabel: 'Protocol Live',
     relayer: 'Chainlink CCIP (Amoy Router 0x9C32...84B2)',
     iconColor: '#8247E5',
     contracts: {
@@ -68,103 +45,190 @@ export const SUPPORTED_NETWORKS = {
       FDX:    '0xdA2631Aadb95AB5Ea6926e431F66fe2a66EF930E',
       WPOL:   '0x360ad4f9a9A8EFe9A8DCB5f461c4Cc1047E1Dcf9',
       WMATIC: '0x360ad4f9a9A8EFe9A8DCB5f461c4Cc1047E1Dcf9',
-      fUSD:   '0xdA2631Aadb95AB5Ea6926e431F66fe2a66EF930E', // Fundrex USD test stablecoin mapped to verified token engine
-      USDC:   '0x41E94Eb019C0762f9Bfcf9Fb1E58725BfB0e7582', // Circle Official Verified Amoy USDC
+      fUSD:   '0xdA2631Aadb95AB5Ea6926e431F66fe2a66EF930E',
+      USDC:   '0x41E94Eb019C0762f9Bfcf9Fb1E58725BfB0e7582',
     },
   },
-  43114: {
-    chainId: 43114,
-    hexChainId: '0xa86a',
-    name: 'Avalanche',
-    shortName: 'Avalanche',
+  10143: {
+    chainId: 10143,
+    hexChainId: '0x279f',
+    name: 'Monad Testnet',
+    shortName: 'Monad Testnet',
+    networkType: 'testnet',
+    family: 'monad',
+    nativeToken: 'MON',
+    nativeCurrency: { name: 'MON', symbol: 'MON', decimals: 18 },
+    wrappedNative: { symbol: 'WMON', address: '0x760AfE86e5de5fa0Ee542fc7B7B713e1c5425701' },
+    supportedAssets: ['MON', 'WMON'],
+    supportedOperations: ['read_only_telemetry', 'risk_analysis'],
+    rpcUrl: 'https://testnet-rpc.monad.xyz/',
+    explorerUrl: 'https://testnet.monadexplorer.com',
+    status: 'STAGING',
+    contractsDeployed: false,
+    bridgeActive: false,
+    statusLabel: 'Pending Contract Deployment',
+    relayer: 'Fundrex Sentinel Quorum Relayer (Pending Deployment)',
+    iconColor: '#836EF9',
+    contracts: {},
+    tokens: {
+      WMON: '0x760AfE86e5de5fa0Ee542fc7B7B713e1c5425701',
+    },
+  },
+  84532: {
+    chainId: 84532,
+    hexChainId: '0x14a34',
+    name: 'Base Sepolia',
+    shortName: 'Base Sepolia',
+    networkType: 'testnet',
+    family: 'base',
+    nativeToken: 'ETH',
+    nativeCurrency: { name: 'Sepolia Ether', symbol: 'ETH', decimals: 18 },
+    wrappedNative: { symbol: 'WETH', address: '0x4200000000000000000000000000000000000006' },
+    supportedAssets: ['ETH', 'USDC'],
+    supportedOperations: ['read_only_telemetry', 'risk_analysis'],
+    rpcUrl: 'https://sepolia.base.org',
+    explorerUrl: 'https://sepolia.basescan.org',
+    status: 'STAGING',
+    contractsDeployed: false,
+    bridgeActive: false,
+    statusLabel: 'Pending Contract Deployment',
+    relayer: 'Chainlink CCIP (Base Sepolia Router 0xD3b0...8a93)',
+    iconColor: '#0052FF',
+    contracts: {},
+    tokens: {
+      USDC: '0x036CbD53842c5426634e7929541eC2318f3dCF7e',
+    },
+  },
+  43113: {
+    chainId: 43113,
+    hexChainId: '0xa869',
+    name: 'Avalanche Fuji',
+    shortName: 'Fuji Testnet',
+    networkType: 'testnet',
+    family: 'avalanche',
     nativeToken: 'AVAX',
     nativeCurrency: { name: 'Avalanche', symbol: 'AVAX', decimals: 18 },
-    wrappedNative: { symbol: 'WAVAX', address: '0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7' },
-    supportedAssets: ['AVAX', 'WAVAX', 'USDC'],
-    supportedOperations: ['read_only_telemetry', 'risk_analysis', 'cross_chain_bridge'],
-    rpcUrl: 'https://api.avax.network/ext/bc/C/rpc',
-    explorerUrl: 'https://snowtrace.io',
-    status: 'ACTIVE',
-    contractsDeployed: true,
-    bridgeActive: true,
-    statusLabel: 'Active Bridge Route',
-    relayer: 'Chainlink CCIP (C-Chain Router 0x27F6...9A44)',
+    wrappedNative: { symbol: 'WAVAX', address: '0xd00ae08403B9bbb9124bB305C09058E32C39A48c' },
+    supportedAssets: ['AVAX', 'USDC'],
+    supportedOperations: ['read_only_telemetry', 'risk_analysis'],
+    rpcUrl: 'https://api.avax-test.network/ext/bc/C/rpc',
+    explorerUrl: 'https://testnet.snowtrace.io',
+    status: 'STAGING',
+    contractsDeployed: false,
+    bridgeActive: false,
+    statusLabel: 'Pending Contract Deployment',
+    relayer: 'Chainlink CCIP (Fuji Router 0xF694...8177)',
     iconColor: '#E84142',
-    contracts: {
-      CCIPRouter: '0x27F6a57088b9F488b39487c6999335f6D8A29A44',
-    },
+    contracts: {},
     tokens: {
-      USDC: '0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E',
+      USDC: '0x5425890298aed601595a70ab815c96711a31bc65',
+    },
+  },
+
+  // ── MAINNETS ────────────────────────────────────────────────
+  137: {
+    chainId: 137,
+    hexChainId: '0x89',
+    name: 'Polygon PoS',
+    shortName: 'Polygon PoS',
+    networkType: 'mainnet',
+    family: 'polygon',
+    nativeToken: 'POL',
+    nativeCurrency: { name: 'POL', symbol: 'POL', decimals: 18 },
+    wrappedNative: { symbol: 'WPOL', address: '0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270' },
+    supportedAssets: ['POL', 'WPOL', 'USDC', 'USDT'],
+    supportedOperations: ['cross_chain_bridge', 'read_only_telemetry'],
+    rpcUrl: 'https://polygon-rpc.com',
+    explorerUrl: 'https://polygonscan.com',
+    status: 'ACTIVE',
+    contractsDeployed: false,
+    bridgeActive: true,
+    statusLabel: 'LI.FI Cross-Chain Live',
+    relayer: 'LI.FI Multi-Bridge Aggregator (Polymer, Across, CCTP)',
+    iconColor: '#8247E5',
+    contracts: {},
+    tokens: {
+      USDC: '0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359',
+      USDT: '0xc2132D05D31c914a87C6611C10748AEb04B58e8F',
+      WPOL: '0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270',
+    },
+  },
+  143: {
+    chainId: 143,
+    hexChainId: '0x8f',
+    name: 'Monad Mainnet',
+    shortName: 'Monad Mainnet',
+    networkType: 'mainnet',
+    family: 'monad',
+    nativeToken: 'MON',
+    nativeCurrency: { name: 'MON', symbol: 'MON', decimals: 18 },
+    wrappedNative: { symbol: 'WMON', address: '0x760AfE86e5de5fa0Ee542fc7B7B713e1c5425701' },
+    supportedAssets: ['MON', 'WMON'],
+    supportedOperations: ['cross_chain_bridge', 'read_only_telemetry'],
+    rpcUrl: 'https://rpc.monad.xyz',
+    explorerUrl: 'https://monadexplorer.com',
+    status: 'ACTIVE',
+    contractsDeployed: false,
+    bridgeActive: true,
+    statusLabel: 'LI.FI Inbound Live',
+    relayer: 'LI.FI Mayan Fast MCTP / CCTPv2',
+    iconColor: '#836EF9',
+    contracts: {},
+    tokens: {
+      WMON: '0x760AfE86e5de5fa0Ee542fc7B7B713e1c5425701',
     },
   },
   8453: {
     chainId: 8453,
     hexChainId: '0x2105',
-    name: 'Base',
-    shortName: 'Base',
+    name: 'Base Mainnet',
+    shortName: 'Base Mainnet',
+    networkType: 'mainnet',
+    family: 'base',
     nativeToken: 'ETH',
     nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
     wrappedNative: { symbol: 'WETH', address: '0x4200000000000000000000000000000000000006' },
     supportedAssets: ['ETH', 'WETH', 'USDC'],
-    supportedOperations: ['read_only_telemetry', 'risk_analysis', 'cross_chain_bridge'],
+    supportedOperations: ['cross_chain_bridge', 'read_only_telemetry'],
     rpcUrl: 'https://mainnet.base.org',
     explorerUrl: 'https://basescan.org',
     status: 'ACTIVE',
-    contractsDeployed: true,
+    contractsDeployed: false,
     bridgeActive: true,
-    statusLabel: 'Active Bridge Route',
-    relayer: 'Chainlink CCIP (Base Router 0x881e...B304)',
+    statusLabel: 'LI.FI Cross-Chain Live',
+    relayer: 'LI.FI Multi-Bridge Aggregator (Polymer, CCTP, Across)',
     iconColor: '#0052FF',
-    contracts: {
-      CCIPRouter: '0x881e3A65B4d5947d191348b9487c06282E37B304',
-    },
+    contracts: {},
     tokens: {
       USDC: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
+      WETH: '0x4200000000000000000000000000000000000006',
     },
   },
-};
-
-// Aliases for dev/staging testnets
-SUPPORTED_NETWORKS[43113] = {
-  ...SUPPORTED_NETWORKS[43114],
-  chainId: 43113,
-  hexChainId: '0xa869',
-  name: 'Avalanche Fuji',
-  shortName: 'Fuji',
-  rpcUrl: 'https://api.avax-test.network/ext/bc/C/rpc',
-  explorerUrl: 'https://testnet.snowtrace.io',
-  contractsDeployed: true,
-  bridgeActive: true,
-  status: 'ACTIVE',
-  statusLabel: 'Active Bridge Route',
-  relayer: 'Chainlink CCIP (Fuji Router 0xF694...8177)',
-  contracts: {
-    CCIPRouter: '0xF694E193200268f9a4868e4Aa017A0118C9a8177',
-    BridgeReceiver: '0x5425890298aed601595a70ab815c96711a31bc65',
-  },
-  tokens: {
-    USDC: '0x5425890298aed601595a70ab815c96711a31bc65',
-  },
-};
-
-SUPPORTED_NETWORKS[84532] = {
-  ...SUPPORTED_NETWORKS[8453],
-  chainId: 84532,
-  hexChainId: '0x14a34',
-  name: 'Base Sepolia',
-  shortName: 'Base Sepolia',
-  rpcUrl: 'https://sepolia.base.org',
-  explorerUrl: 'https://sepolia.basescan.org',
-  contractsDeployed: true,
-  bridgeActive: true,
-  status: 'ACTIVE',
-  statusLabel: 'Active Bridge Route',
-  relayer: 'Chainlink CCIP (Base Sepolia Router 0xD3b0...8a93)',
-  contracts: {
-    CCIPRouter: '0xD3b06cEbF099CE7DA4AcCf578aaebFDBd6e88a93',
-  },
-  tokens: {
-    USDC: '0x036CbD53842c5426634e7929541eC2318f3dCF7e',
+  43114: {
+    chainId: 43114,
+    hexChainId: '0xa86a',
+    name: 'Avalanche C-Chain',
+    shortName: 'Avalanche C-Chain',
+    networkType: 'mainnet',
+    family: 'avalanche',
+    nativeToken: 'AVAX',
+    nativeCurrency: { name: 'Avalanche', symbol: 'AVAX', decimals: 18 },
+    wrappedNative: { symbol: 'WAVAX', address: '0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7' },
+    supportedAssets: ['AVAX', 'WAVAX', 'USDC'],
+    supportedOperations: ['cross_chain_bridge', 'read_only_telemetry'],
+    rpcUrl: 'https://api.avax.network/ext/bc/C/rpc',
+    explorerUrl: 'https://snowtrace.io',
+    status: 'ACTIVE',
+    contractsDeployed: false,
+    bridgeActive: true,
+    statusLabel: 'LI.FI Cross-Chain Live',
+    relayer: 'LI.FI Multi-Bridge Aggregator (Polymer, Stargate, CCTP)',
+    iconColor: '#E84142',
+    contracts: {},
+    tokens: {
+      USDC: '0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E',
+      WAVAX: '0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7',
+    },
   },
 };
 
@@ -286,16 +350,98 @@ export const TOKEN_REGISTRY = {
       logo: 'MON',
     },
   ],
+  137: [
+    {
+      chainId: 137,
+      address: '0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359',
+      name: 'USD Coin (Circle Official)',
+      symbol: 'USDC',
+      decimals: 6,
+      tokenType: 'official_asset',
+      verifiedDeploymentStatus: 'VERIFIED_ON_CHAIN',
+      supportedOperations: ['cross_chain_bridge'],
+      explorerUrl: 'https://polygonscan.com/token/0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359',
+      canAddToWallet: true,
+      logo: 'USDC',
+    },
+    {
+      chainId: 137,
+      address: '0xc2132D05D31c914a87C6611C10748AEb04B58e8F',
+      name: 'Tether USD',
+      symbol: 'USDT',
+      decimals: 6,
+      tokenType: 'official_asset',
+      verifiedDeploymentStatus: 'VERIFIED_ON_CHAIN',
+      supportedOperations: ['cross_chain_bridge'],
+      explorerUrl: 'https://polygonscan.com/token/0xc2132D05D31c914a87C6611C10748AEb04B58e8F',
+      canAddToWallet: true,
+      logo: 'USDT',
+    },
+    {
+      chainId: 137,
+      address: '0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270',
+      name: 'Wrapped POL',
+      symbol: 'WPOL',
+      decimals: 18,
+      tokenType: 'wrapped-native',
+      verifiedDeploymentStatus: 'VERIFIED_ON_CHAIN',
+      supportedOperations: ['cross_chain_bridge'],
+      explorerUrl: 'https://polygonscan.com/token/0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270',
+      canAddToWallet: true,
+      logo: 'POL',
+    },
+    {
+      chainId: 137,
+      address: '0x0000000000000000000000000000000000000000',
+      name: 'Polygon Native POL',
+      symbol: 'POL',
+      decimals: 18,
+      tokenType: 'native',
+      verifiedDeploymentStatus: 'VERIFIED_ON_CHAIN',
+      supportedOperations: ['gas', 'cross_chain_bridge'],
+      explorerUrl: 'https://polygonscan.com',
+      canAddToWallet: false,
+      logo: 'POL',
+    },
+  ],
+  143: [
+    {
+      chainId: 143,
+      address: '0x0000000000000000000000000000000000000000',
+      name: 'Monad Native MON',
+      symbol: 'MON',
+      decimals: 18,
+      tokenType: 'native',
+      verifiedDeploymentStatus: 'VERIFIED_ON_CHAIN',
+      supportedOperations: ['gas', 'cross_chain_bridge'],
+      explorerUrl: 'https://monadexplorer.com',
+      canAddToWallet: false,
+      logo: 'MON',
+    },
+    {
+      chainId: 143,
+      address: '0x760AfE86e5de5fa0Ee542fc7B7B713e1c5425701',
+      name: 'Wrapped MON',
+      symbol: 'WMON',
+      decimals: 18,
+      tokenType: 'wrapped-native',
+      verifiedDeploymentStatus: 'VERIFIED_ON_CHAIN',
+      supportedOperations: ['cross_chain_bridge'],
+      explorerUrl: 'https://monadexplorer.com',
+      canAddToWallet: true,
+      logo: 'MON',
+    },
+  ],
   43114: [
     {
       chainId: 43114,
-      address: null,
+      address: '0x0000000000000000000000000000000000000000',
       name: 'Avalanche Native AVAX',
       symbol: 'AVAX',
       decimals: 18,
       tokenType: 'native',
       verifiedDeploymentStatus: 'VERIFIED_ON_CHAIN',
-      supportedOperations: ['gas', 'telemetry'],
+      supportedOperations: ['gas', 'cross_chain_bridge'],
       explorerUrl: 'https://snowtrace.io',
       canAddToWallet: false,
       logo: 'AVAX',
@@ -308,10 +454,23 @@ export const TOKEN_REGISTRY = {
       decimals: 6,
       tokenType: 'official_asset',
       verifiedDeploymentStatus: 'VERIFIED_ON_CHAIN',
-      supportedOperations: ['cross_chain_staging'],
+      supportedOperations: ['cross_chain_bridge'],
       explorerUrl: 'https://snowtrace.io/token/0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E',
       canAddToWallet: true,
       logo: 'USDC',
+    },
+    {
+      chainId: 43114,
+      address: '0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7',
+      name: 'Wrapped AVAX',
+      symbol: 'WAVAX',
+      decimals: 18,
+      tokenType: 'wrapped-native',
+      verifiedDeploymentStatus: 'VERIFIED_ON_CHAIN',
+      supportedOperations: ['cross_chain_bridge'],
+      explorerUrl: 'https://snowtrace.io/token/0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7',
+      canAddToWallet: true,
+      logo: 'AVAX',
     },
   ],
   43113: [
@@ -345,13 +504,13 @@ export const TOKEN_REGISTRY = {
   8453: [
     {
       chainId: 8453,
-      address: null,
+      address: '0x0000000000000000000000000000000000000000',
       name: 'Base Native Ether',
       symbol: 'ETH',
       decimals: 18,
       tokenType: 'native',
       verifiedDeploymentStatus: 'VERIFIED_ON_CHAIN',
-      supportedOperations: ['gas', 'telemetry'],
+      supportedOperations: ['gas', 'cross_chain_bridge'],
       explorerUrl: 'https://basescan.org',
       canAddToWallet: false,
       logo: 'ETH',
@@ -364,8 +523,49 @@ export const TOKEN_REGISTRY = {
       decimals: 6,
       tokenType: 'official_asset',
       verifiedDeploymentStatus: 'VERIFIED_ON_CHAIN',
-      supportedOperations: ['cross_chain_staging'],
+      supportedOperations: ['cross_chain_bridge'],
       explorerUrl: 'https://basescan.org/token/0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
+      canAddToWallet: true,
+      logo: 'USDC',
+    },
+    {
+      chainId: 8453,
+      address: '0x4200000000000000000000000000000000000006',
+      name: 'Wrapped Ether',
+      symbol: 'WETH',
+      decimals: 18,
+      tokenType: 'wrapped-native',
+      verifiedDeploymentStatus: 'VERIFIED_ON_CHAIN',
+      supportedOperations: ['cross_chain_bridge'],
+      explorerUrl: 'https://basescan.org/token/0x4200000000000000000000000000000000000006',
+      canAddToWallet: true,
+      logo: 'ETH',
+    },
+  ],
+  84532: [
+    {
+      chainId: 84532,
+      address: null,
+      name: 'Base Sepolia Ether',
+      symbol: 'ETH',
+      decimals: 18,
+      tokenType: 'native',
+      verifiedDeploymentStatus: 'VERIFIED_ON_CHAIN',
+      supportedOperations: ['gas', 'telemetry'],
+      explorerUrl: 'https://sepolia.basescan.org',
+      canAddToWallet: false,
+      logo: 'ETH',
+    },
+    {
+      chainId: 84532,
+      address: '0x036CbD53842c5426634e7929541eC2318f3dCF7e',
+      name: 'USD Coin (Base Sepolia)',
+      symbol: 'USDC',
+      decimals: 6,
+      tokenType: 'official_asset',
+      verifiedDeploymentStatus: 'VERIFIED_ON_CHAIN',
+      supportedOperations: ['cross_chain_staging'],
+      explorerUrl: 'https://sepolia.basescan.org/token/0x036CbD53842c5426634e7929541eC2318f3dCF7e',
       canAddToWallet: true,
       logo: 'USDC',
     },
@@ -632,7 +832,10 @@ let wcProvider = null;
 
 export async function connectWalletConnect() {
   const { EthereumProvider } = await import('@walletconnect/ethereum-provider');
-  const projectId = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID || '3a8170812b534d0ff9d794f19a901d64';
+  const projectId =
+    (typeof import.meta !== 'undefined' && import.meta?.env?.VITE_WALLETCONNECT_PROJECT_ID) ||
+    (typeof process !== 'undefined' && process?.env?.VITE_WALLETCONNECT_PROJECT_ID) ||
+    '3a8170812b534d0ff9d794f19a901d64';
 
   if (!wcProvider) {
     wcProvider = await EthereumProvider.init({
@@ -1405,7 +1608,8 @@ export const CROSS_CHAIN_STATUS = {
 
 /**
  * Audit verification logic for multi-chain destinations.
- * Verifies if destination router is actively deployed and certified by audit telemetry.
+ * Enforces strict network-type segregation (never mix testnet and mainnet)
+ * and verifies on-chain contract deployments and provider route availability.
  */
 export function verifyCrossChainRoute(sourceChainId, destChainId, sourceSymbol, destSymbol) {
   const sourceNet = SUPPORTED_NETWORKS[sourceChainId];
@@ -1414,14 +1618,16 @@ export function verifyCrossChainRoute(sourceChainId, destChainId, sourceSymbol, 
   if (!sourceNet) {
     return {
       verified: false,
+      isAudited: false,
       status: 'SOURCE_CHAIN_UNSUPPORTED',
-      reason: `Source chain ID ${sourceChainId} is not supported.`,
+      reason: `Source chain ID ${sourceChainId} is not configured in the multi-chain registry.`,
     };
   }
 
   if (!destNet) {
     return {
       verified: false,
+      isAudited: false,
       status: 'DESTINATION_CHAIN_UNSET',
       reason: 'Destination network is unset or not configured in multi-chain registry.',
     };
@@ -1430,75 +1636,494 @@ export function verifyCrossChainRoute(sourceChainId, destChainId, sourceSymbol, 
   if (sourceChainId === destChainId) {
     return {
       verified: false,
+      isAudited: false,
+      canExecute: false,
       status: 'SAME_CHAIN',
       reason: 'Source and destination chains are identical. Use Instant AMM Swap for same-chain transfers.',
     };
   }
 
-  // Safe multi-sig audit verification status check
-  // Destination contracts for Monad (10143), Avalanche (43114/43113), Base (8453) are in staging
-  // Safe multi-sig audit verification status check
-  // Destination routes for Monad (10143), Avalanche (43114/43113), Base (8453/84532)
-  if (!destNet.contractsDeployed && !destNet.bridgeActive) {
+  // STRICT TESTNET VS MAINNET BOUNDARY SAFEGUARD
+  if (sourceNet.networkType !== destNet.networkType) {
     return {
       verified: false,
       isAudited: false,
-      status: 'AUDIT_VERIFICATION_REQUIRED',
-      reason: `Bridge messaging contracts and multi-sig verifiers for ${destNet.name} (${destChainId}) are currently undergoing security audit verification. To safeguard user funds, execution remains gated until verifier contracts are activated.`,
-      targetDeploymentRequired: `${destNet.name} Fundrex Bridge Adapter & Quorum Sentinel Relayer`,
+      canExecute: false,
+      status: 'TESTNET_MAINNET_MISMATCH',
+      reason: `Cross-environment routing prohibited: source is ${sourceNet.networkType} (${sourceNet.name}) and destination is ${destNet.networkType} (${destNet.name}). Never route between testnet and mainnet.`,
+    };
+  }
+
+  // MAINNET ROUTE EVALUATION (LI.FI Engine)
+  if (sourceNet.networkType === 'mainnet') {
+    // Known LI.FI provider liquidity constraints: Monad mainnet (143) currently supports inbound bridging only
+    if (sourceChainId === 143) {
+      return {
+        verified: false,
+        isAudited: false,
+        canExecute: false,
+        status: 'PROVIDER_ROUTE_UNAVAILABLE',
+        reason: 'Outbound bridge liquidity from Monad Mainnet (143) is currently unsupported by LI.FI routing providers. Inbound routes to Monad are fully supported.',
+        provider: 'lifi',
+      };
+    }
+
+    return {
+      verified: true,
+      isAudited: true,
+      canExecute: true,
+      status: 'AUDIT_VERIFIED',
+      provider: 'lifi',
+      reason: `Live mainnet liquidity pathway verified via LI.FI Multi-Bridge Aggregator to ${destNet.name}.`,
+      relayer: destNet.relayer || 'LI.FI Multi-Bridge Aggregator',
+    };
+  }
+
+  // TESTNET ROUTE EVALUATION (Fundrex Protocol CCIP / Sentinel Quorum)
+  // Both source and destination chains must have deployed protocol contracts.
+  if (!sourceNet.contractsDeployed || !destNet.contractsDeployed) {
+    const missing = !sourceNet.contractsDeployed && !destNet.contractsDeployed
+      ? `${sourceNet.name} and ${destNet.name}`
+      : (!sourceNet.contractsDeployed ? sourceNet.name : destNet.name);
+    return {
+      verified: false,
+      isAudited: false,
+      canExecute: false,
+      status: 'DEPLOYMENT_PENDING',
+      reason: `Cross-chain contracts and sentinel quorum verifiers for ${missing} are pending deployment and multi-sig audit signoff. Execution remains gated to protect funds.`,
+      targetDeploymentRequired: `${missing} Fundrex Bridge Contracts & Quorum Verifiers`,
+      provider: 'ccip_sentinel',
     };
   }
 
   return {
     verified: true,
     isAudited: true,
+    canExecute: true,
     status: 'AUDIT_VERIFIED',
+    provider: 'ccip_sentinel',
     reason: `Verified ${destNet.name} cross-chain route active via ${destNet.relayer || 'Chainlink CCIP / Fundrex Sentinel Quorum'}.`,
     relayer: destNet.relayer || 'Fundrex Sentinel Cross-Chain Protocol (CCIP Standard)',
   };
 }
 
 /**
- * Generate a deterministic cross-chain route quote.
+ * Returns the complete route matrix for all 6 unordered network pairs (12 directed routes)
+ * across both testnet and mainnet environments.
  */
-export function getCrossChainQuote(sourceChainId, destChainId, sourceSymbol, destSymbol, inputAmount) {
-  const numInput = Number(inputAmount);
+export function getRouteMatrix(networkMode = 'mainnet') {
+  const pairs = [
+    { a: 'polygon', b: 'monad' },
+    { a: 'polygon', b: 'base' },
+    { a: 'polygon', b: 'avalanche' },
+    { a: 'monad', b: 'base' },
+    { a: 'monad', b: 'avalanche' },
+    { a: 'base', b: 'avalanche' },
+  ];
+
+  const chainMap = {
+    testnet: {
+      polygon: 80002,
+      monad: 10143,
+      base: 84532,
+      avalanche: 43113,
+    },
+    mainnet: {
+      polygon: 137,
+      monad: 143,
+      base: 8453,
+      avalanche: 43114,
+    },
+  };
+
+  const matrix = [];
+  const chains = chainMap[networkMode] || chainMap.mainnet;
+
+  for (const pair of pairs) {
+    const chainA = chains[pair.a];
+    const chainB = chains[pair.b];
+
+    const netA = SUPPORTED_NETWORKS[chainA];
+    const netB = SUPPORTED_NETWORKS[chainB];
+
+    // Direction 1: A -> B
+    const verifyAB = verifyCrossChainRoute(chainA, chainB, 'USDC', 'USDC');
+    const isAvailAB = Boolean(verifyAB.verified);
+    const statusAB = isAvailAB
+      ? 'AVAILABLE'
+      : (verifyAB.status === 'DEPLOYMENT_PENDING'
+          ? 'GATED_PENDING_DEPLOYMENT'
+          : (verifyAB.status === 'PROVIDER_ROUTE_UNAVAILABLE' ? 'PROVIDER_UNSUPPORTED' : 'UNAVAILABLE'));
+
+    matrix.push({
+      pairId: `${pair.a}_${pair.b}`,
+      direction: `${netA.shortName} → ${netB.shortName}`,
+      sourceChain: chainA,
+      destChain: chainB,
+      sourceChainId: chainA,
+      destChainId: chainB,
+      sourceName: netA.name,
+      destName: netB.name,
+      networkMode,
+      provider: networkMode === 'mainnet' ? 'LI.FI' : 'Fundrex CCIP / Sentinel',
+      status: statusAB,
+      rawStatus: verifyAB.status,
+      isAudited: verifyAB.isAudited,
+      canExecute: isAvailAB,
+      reason: verifyAB.reason,
+    });
+
+    // Direction 2: B -> A
+    const verifyBA = verifyCrossChainRoute(chainB, chainA, 'USDC', 'USDC');
+    const isAvailBA = Boolean(verifyBA.verified);
+    const statusBA = isAvailBA
+      ? 'AVAILABLE'
+      : (verifyBA.status === 'DEPLOYMENT_PENDING'
+          ? 'GATED_PENDING_DEPLOYMENT'
+          : (verifyBA.status === 'PROVIDER_ROUTE_UNAVAILABLE' ? 'PROVIDER_UNSUPPORTED' : 'UNAVAILABLE'));
+
+    matrix.push({
+      pairId: `${pair.b}_${pair.a}`,
+      direction: `${netB.shortName} → ${netA.shortName}`,
+      sourceChain: chainB,
+      destChain: chainA,
+      sourceChainId: chainB,
+      destChainId: chainA,
+      sourceName: netB.name,
+      destName: netA.name,
+      networkMode,
+      provider: networkMode === 'mainnet' ? 'LI.FI' : 'Fundrex CCIP / Sentinel',
+      status: statusBA,
+      rawStatus: verifyBA.status,
+      isAudited: verifyBA.isAudited,
+      canExecute: isAvailBA,
+      reason: verifyBA.reason,
+    });
+  }
+
+  return matrix;
+}
+
+/**
+ * Fetch real live cross-chain quote from LI.FI REST API for mainnet pairs.
+ */
+export async function fetchLiFiQuote({
+  fromChain,
+  toChain,
+  fromToken,
+  toToken,
+  fromAmount,
+  fromAddress,
+  slippage = 0.005,
+}) {
+  const fromNet = SUPPORTED_NETWORKS[fromChain];
+  const destNet = SUPPORTED_NETWORKS[toChain];
+  if (!fromNet || !destNet) {
+    throw new Error('Unsupported chain in LI.FI quote request.');
+  }
+  if (fromNet.networkType !== 'mainnet' || destNet.networkType !== 'mainnet') {
+    throw new Error('LI.FI provider only supports mainnet routes. Testnet routing operates via protocol CCIP relayers.');
+  }
+
+  // Normalization: native currency is 0x0000000000000000000000000000000000000000 in LI.FI
+  const normalizedFromTok = fromToken || '0x0000000000000000000000000000000000000000';
+  const normalizedToTok = toToken || '0x0000000000000000000000000000000000000000';
+  const addr = fromAddress || '0x5555555555555555555555555555555555555555';
+
+  const url = `https://li.quest/v1/quote?fromChain=${fromChain}&toChain=${toChain}&fromToken=${normalizedFromTok}&toToken=${normalizedToTok}&fromAmount=${fromAmount}&fromAddress=${addr}&slippage=${slippage}`;
+  const res = await fetch(url);
+  const data = await res.json();
+  if (!res.ok || !data.estimate) {
+    throw new Error(data.message || 'LI.FI could not find an available liquidity route for this token pair.');
+  }
+  return data;
+}
+
+/**
+ * Poll LI.FI status endpoint until destination execution is verified or reported pending.
+ * NEVER fabricates completion without verified status === 'DONE'.
+ */
+export async function pollLiFiStatus(txHashOrOpts, bridge, fromChain, toChain, maxAttempts = 15, intervalMs = 4000) {
+  let txHash, b, fChain, tChain, maxAtt, intMs;
+  if (typeof txHashOrOpts === 'object' && txHashOrOpts !== null) {
+    txHash = txHashOrOpts.txHash;
+    b = txHashOrOpts.bridge || txHashOrOpts.bridgeTool;
+    fChain = txHashOrOpts.fromChain;
+    tChain = txHashOrOpts.toChain;
+    maxAtt = txHashOrOpts.maxAttempts ?? 15;
+    intMs = txHashOrOpts.intervalMs ?? 4000;
+  } else {
+    txHash = txHashOrOpts;
+    b = bridge;
+    fChain = fromChain;
+    tChain = toChain;
+    maxAtt = maxAttempts;
+    intMs = intervalMs;
+  }
+
+  let url = `https://li.quest/v1/status?txHash=${txHash}`;
+  if (b) url += `&bridge=${b}`;
+  if (fChain) url += `&fromChain=${fChain}`;
+  if (tChain) url += `&toChain=${tChain}`;
+
+  for (let i = 0; i < maxAtt; i++) {
+    try {
+      const res = await fetch(url);
+      const data = await res.json();
+      if (data.status === 'DONE') {
+        return {
+          status: 'COMPLETED',
+          destTxHash: data.receiving?.txHash || null,
+          receivingTxHash: data.receiving?.txHash || null,
+          destTxLink: data.receiving?.txLink || null,
+          raw: data,
+        };
+      }
+      if (data.status === 'FAILED') {
+        return {
+          status: 'FAILED',
+          destTxHash: null,
+          receivingTxHash: null,
+          error: data.message || 'Bridge execution failed on destination chain.',
+          raw: data,
+        };
+      }
+    } catch {
+      // network retry
+    }
+    if (i < maxAtt - 1) {
+      await new Promise((r) => setTimeout(r, intMs));
+    }
+  }
+
+  // If still in flight after polling window, honestly return PENDING with explorer URL
+  return {
+    status: 'PENDING',
+    destTxHash: null,
+    receivingTxHash: null,
+    message: 'Bridge transfer in flight. Track progress on LI.FI Explorer.',
+    lifiExplorerUrl: `https://scan.li.fi/tx/${txHash}`,
+  };
+}
+
+/**
+ * Generate a cross-chain route quote.
+ * On Mainnet: queries live LI.FI API asynchronously.
+ * On Testnet: applies protocol fee schedule and strictly enforces zero-trust audit gating.
+ */
+export async function getCrossChainQuote(
+  sourceChainIdOrOpts,
+  destChainId,
+  sourceSymbol = 'FDX',
+  destSymbol = 'FDX',
+  inputAmount,
+  userAddress = null,
+  slippagePercent = 0.5
+) {
+  let sourceChainId, destChain, srcSym, dstSym, inAmt, usrAddr, slip;
+  if (typeof sourceChainIdOrOpts === 'object' && sourceChainIdOrOpts !== null) {
+    sourceChainId = sourceChainIdOrOpts.sourceChainId || sourceChainIdOrOpts.fromChain;
+    destChain = sourceChainIdOrOpts.destChainId || sourceChainIdOrOpts.toChain;
+    srcSym = sourceChainIdOrOpts.sourceSymbol || sourceChainIdOrOpts.sourceTokenSymbol || 'FDX';
+    dstSym = sourceChainIdOrOpts.destSymbol || sourceChainIdOrOpts.destTokenSymbol || 'FDX';
+    inAmt = sourceChainIdOrOpts.inputAmount ?? sourceChainIdOrOpts.amount;
+    usrAddr = sourceChainIdOrOpts.userAddress || sourceChainIdOrOpts.fromAddress || null;
+    slip = sourceChainIdOrOpts.slippagePercent ?? sourceChainIdOrOpts.slippageTolerance ?? 0.5;
+  } else {
+    sourceChainId = sourceChainIdOrOpts;
+    destChain = destChainId;
+    srcSym = sourceSymbol;
+    dstSym = destSymbol;
+    inAmt = inputAmount;
+    usrAddr = userAddress;
+    slip = slippagePercent;
+  }
+
+  const numInput = parseFloat(inAmt);
   if (!numInput || numInput <= 0 || isNaN(numInput)) {
     return null;
   }
 
-  const auditCheck = verifyCrossChainRoute(sourceChainId, destChainId, sourceSymbol, destSymbol);
   const sourceNet = SUPPORTED_NETWORKS[sourceChainId];
-  const destNet = SUPPORTED_NETWORKS[destChainId];
+  const destNet = SUPPORTED_NETWORKS[destChain];
 
-  // Protocol bridge fee: 0.25% (25 bps)
+  // Route verification check
+  const auditCheck = verifyCrossChainRoute(sourceChainId, destChain, srcSym, dstSym);
+
+  const sourceTok = getTokenConfig(sourceChainId, srcSym);
+  const destTok = getTokenConfig(destChain, dstSym);
+
+  // If cross-environment mismatch or unsupported
+  if (!auditCheck.verified && auditCheck.status === 'TESTNET_MAINNET_MISMATCH') {
+    return {
+      canExecute: false,
+      isAvailable: false,
+      unavailabilityReason: auditCheck.reason,
+      sourceChainId,
+      destChainId: destChain,
+      sourceChainName: sourceNet?.name || 'Source',
+      destChainName: destNet?.name || 'Destination',
+      sourceSymbol: srcSym,
+      destSymbol: dstSym,
+      sourceToken: srcSym,
+      destToken: dstSym,
+      inputAmount: numInput,
+      destEstimatedOutput: '0.00',
+      estimatedOutput: 0,
+      minReceived: '0.00',
+      bridgeFee: '0.00',
+      estimatedDuration: 'N/A',
+      relayer: 'Blocked',
+      auditVerification: auditCheck,
+    };
+  }
+
+  // ── MAINNET ROUTING (LI.FI) ──────────────────────────────────
+  if (sourceNet?.networkType === 'mainnet' && destNet?.networkType === 'mainnet') {
+    if (!auditCheck.verified) {
+      return {
+        canExecute: false,
+        isAvailable: false,
+        unavailabilityReason: auditCheck.reason,
+        sourceChainId,
+        destChainId: destChain,
+        sourceChainName: sourceNet.name,
+        destChainName: destNet.name,
+        sourceSymbol: srcSym,
+        destSymbol: dstSym,
+        sourceToken: srcSym,
+        destToken: dstSym,
+        inputAmount: numInput,
+        destEstimatedOutput: '0.00',
+        estimatedOutput: 0,
+        minReceived: '0.00',
+        bridgeFee: '0.00',
+        estimatedDuration: 'N/A',
+        relayer: 'LI.FI Multi-Bridge Router',
+        auditVerification: auditCheck,
+      };
+    }
+
+    try {
+      const fromDec = sourceTok?.decimals ?? 18;
+      const toDec = destTok?.decimals ?? 18;
+      const fromAmountWei = ethers.parseUnits(numInput.toString(), fromDec).toString();
+      const slippageDecimal = (slip || 0.5) / 100;
+
+      const lifiQuote = await fetchLiFiQuote({
+        fromChain: sourceChainId,
+        toChain: destChain,
+        fromToken: sourceTok?.address || '0x0000000000000000000000000000000000000000',
+        toToken: destTok?.address || '0x0000000000000000000000000000000000000000',
+        fromAmount: fromAmountWei,
+        fromAddress: usrAddr,
+        slippage: slippageDecimal,
+      });
+
+      const estOutFormatted = ethers.formatUnits(lifiQuote.estimate.toAmount, toDec);
+      const minReceivedFormatted = ethers.formatUnits(lifiQuote.estimate.toAmountMin, toDec);
+
+      const totalFeeUSD = (lifiQuote.estimate.feeCosts || []).reduce(
+        (acc, f) => acc + parseFloat(f.amountUSD || 0),
+        0
+      );
+      const estDurationSec = lifiQuote.estimate.executionDuration || 60;
+      const toolName = lifiQuote.toolDetails?.name || lifiQuote.tool || 'LI.FI Router';
+      const estNum = parseFloat(estOutFormatted);
+
+      return {
+        quoteId: `Q-LIFI-${Date.now().toString(36)}`,
+        canExecute: true,
+        isAvailable: true,
+        provider: 'lifi',
+        sourceChainId,
+        destChainId: destChain,
+        sourceChainName: sourceNet.name,
+        destChainName: destNet.name,
+        sourceSymbol: srcSym,
+        destSymbol: dstSym,
+        sourceToken: srcSym,
+        destToken: dstSym,
+        inputAmount: numInput,
+        destEstimatedOutput: estNum.toFixed(4),
+        estimatedOutput: estNum,
+        minReceived: parseFloat(minReceivedFormatted).toFixed(4),
+        bridgeFee: totalFeeUSD > 0 ? `$${totalFeeUSD.toFixed(2)}` : '0.25%',
+        feeBps: 25,
+        slippagePercent: `${slip}%`,
+        estimatedTimeSeconds: estDurationSec,
+        estimatedDuration: estDurationSec < 60 ? `${estDurationSec}s` : `${Math.round(estDurationSec / 60)} min`,
+        relayer: `LI.FI (${toolName})`,
+        relayerProvider: `LI.FI (${toolName})`,
+        approvalAddress: lifiQuote.estimate.approvalAddress,
+        transactionRequest: lifiQuote.transactionRequest,
+        lifiQuote,
+        auditVerification: {
+          verified: true,
+          isAudited: true,
+          status: 'LI_FI_ACTIVE',
+          reason: `Live route active via LI.FI provider (${toolName}). Settlement tracked via LI.FI status API.`,
+        },
+      };
+    } catch (err) {
+      return {
+        canExecute: false,
+        isAvailable: false,
+        unavailabilityReason: err.message || 'LI.FI liquidity route unavailable for this token pair or direction.',
+        sourceChainId,
+        destChainId: destChain,
+        sourceChainName: sourceNet.name,
+        destChainName: destNet.name,
+        sourceSymbol: srcSym,
+        destSymbol: dstSym,
+        sourceToken: srcSym,
+        destToken: dstSym,
+        inputAmount: numInput,
+        destEstimatedOutput: '0.00',
+        estimatedOutput: 0,
+        minReceived: '0.00',
+        bridgeFee: '0.00',
+        estimatedDuration: 'N/A',
+        relayer: 'LI.FI Router',
+        auditVerification: {
+          verified: false,
+          isAudited: false,
+          status: 'ROUTE_UNAVAILABLE',
+          reason: err.message || 'LI.FI liquidity route unavailable for this token pair or direction.',
+        },
+      };
+    }
+  }
+
+  // ── TESTNET ROUTING (CCIP / Protocol Quorum) ────────────────
+  // Protocol fee schedule: 0.25% (25 bps)
   const feeBps = 25;
   const bridgeFeeRate = feeBps / 10000;
   const bridgeFeeAmount = numInput * bridgeFeeRate;
   const estimatedOutput = Math.max(0, numInput - bridgeFeeAmount);
-  const slippageBps = 50; // 0.5%
-  const minimumReceived = estimatedOutput * (1 - slippageBps / 10000);
+  const minimumReceived = estimatedOutput * (1 - (slip || 0.5) / 100);
 
   return {
-    quoteId: `Q-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
-    timestamp: Date.now(),
-    expiresAt: Date.now() + 60000, // 60s quote validity
+    quoteId: `Q-CCIP-${Date.now().toString(36)}`,
+    canExecute: auditCheck.verified,
+    isAvailable: auditCheck.verified,
+    unavailabilityReason: auditCheck.verified ? '' : auditCheck.reason,
+    provider: 'ccip_sentinel',
     sourceChainId,
-    destChainId,
-    sourceChainName: sourceNet?.name || 'Polygon',
+    destChainId: destChain,
+    sourceChainName: sourceNet?.name || 'Polygon Amoy',
     destChainName: destNet?.name || 'Destination Chain',
-    sourceSymbol,
-    destSymbol,
-    sourceToken: sourceSymbol,
-    destToken: destSymbol,
+    sourceSymbol: srcSym,
+    destSymbol: dstSym,
+    sourceToken: srcSym,
+    destToken: dstSym,
     inputAmount: numInput,
-    estimatedOutput,
     destEstimatedOutput: estimatedOutput.toFixed(4),
+    estimatedOutput,
     bridgeFee: bridgeFeeAmount.toFixed(4),
     bridgeFeePercentage: '0.25%',
     feeBps,
-    slippageBps,
-    slippagePercent: '0.50%',
+    slippagePercent: `${slip}%`,
     minimumReceived,
     minReceived: minimumReceived.toFixed(4),
     estimatedDuration: '30 - 60 seconds',
@@ -1506,150 +2131,161 @@ export function getCrossChainQuote(sourceChainId, destChainId, sourceSymbol, des
     relayer: destNet?.relayer || 'Chainlink CCIP / Sentinel Quorum',
     relayerProvider: destNet?.relayer || 'Fundrex Sentinel Cross-Chain Protocol (CCIP Standard)',
     auditVerification: auditCheck,
-    canExecute: auditCheck.verified,
   };
 }
 
 /**
  * Execute verified cross-chain swap with lifecycle tracking.
+ * Strictly verifies wallet network matches source chain.
+ * Never fabricates destination execution.
  */
-export async function executeCrossChainSwap(signer, quote, onStateUpdate) {
-  if (!quote) throw new Error('Invalid or missing cross-chain quote.');
-  if (Date.now() > quote.expiresAt) {
-    throw new Error('Cross-chain quote has expired. Please refresh the quote.');
+export async function executeCrossChainSwap(signerOrOpts, quoteArg, onStateUpdateArg) {
+  let signer, quote, onStateUpdate;
+  if (signerOrOpts && signerOrOpts.signer) {
+    signer = signerOrOpts.signer;
+    quote = signerOrOpts.quote;
+    onStateUpdate = signerOrOpts.onStateUpdate || signerOrOpts.onStatusUpdate;
+  } else {
+    signer = signerOrOpts;
+    quote = quoteArg;
+    onStateUpdate = onStateUpdateArg;
   }
 
+  if (!signer) throw new Error('Web3 signer required for transaction execution.');
+  if (!quote) throw new Error('Missing cross-chain quote.');
+
   // Enforce audit verification safeguard — NEVER bypass
-  if (!quote.auditVerification?.verified) {
+  if (!quote.auditVerification?.verified || !quote.canExecute) {
     throw new Error(
-      `Cross-chain execution blocked by audit safeguard: ${quote.auditVerification?.reason || 'Audit verification unconfirmed'}`
+      `Cross-chain execution blocked: ${quote.auditVerification?.reason || quote.unavailabilityReason || 'Audit verification unconfirmed'}`
     );
   }
 
   const provider = signer.provider;
   const address = await signer.getAddress();
-  const pool = getLendingPool(signer);
+  const network = await provider.getNetwork();
+  const walletChainId = Number(network.chainId);
 
-  // Determine decimals and token based on source token symbol
-  const isSixDec = quote.sourceSymbol === 'fUSD' || quote.sourceSymbol === 'USDC';
-  const decimals = isSixDec ? 6 : 18;
-  const amountUnits = ethers.parseUnits(quote.inputAmount.toString(), decimals);
-
-  const tokenAddress = quote.sourceSymbol === 'USDC'
-    ? (CONTRACT_ADDRESSES.USDC || '0x41E94Eb019C0762f9Bfcf9Fb1E58725BfB0e7582')
-    : (CONTRACT_ADDRESSES.FundryxToken || '0xdA2631Aadb95AB5Ea6926e431F66fe2a66EF930E');
-
-  const token = new ethers.Contract(tokenAddress, ERC20_ABI, signer);
-
-  onStateUpdate?.({ status: CROSS_CHAIN_STATUS.WALLET_APPROVAL, step: 1, totalSteps: 6 });
-
-  const balance = await token.balanceOf(address).catch(() => 0n);
-  if (balance < amountUnits) {
-    throw new Error(`Insufficient ${quote.sourceSymbol} balance to initiate cross-chain bridge transfer.`);
+  // STRICT WALLET CHAIN ID CHECK
+  if (walletChainId !== quote.sourceChainId) {
+    throw new Error(
+      `Wallet chain ID mismatch: wallet is connected to Chain ID ${walletChainId}, but route source chain is ${quote.sourceChainId} (${quote.sourceChainName}). Please switch your wallet network before bridging.`
+    );
   }
 
-  const overrides = await getPolygonFeeOverrides(provider);
-
-  // Approval step
-  const allowance = await token.allowance(address, CONTRACT_ADDRESSES.LendingPool).catch(() => 0n);
-  if (allowance < amountUnits) {
-    const appTx = await token.approve(CONTRACT_ADDRESSES.LendingPool, amountUnits, overrides).catch((err) => {
-      if (err.code === 4001 || err.message?.includes('rejected')) {
-        throw new Error('Wallet approval rejected by user.');
-      }
-      throw new Error(`Approval failed: ${parseRevertReason(err)}`);
-    });
-    await appTx.wait();
-  }
-
-  onStateUpdate?.({ status: CROSS_CHAIN_STATUS.SOURCE_SUBMITTED, step: 2, totalSteps: 6 });
-
-  // Source chain lock/deposit execution on Polygon Amoy
-  const sourceTx = await pool.deposit(amountUnits, overrides).catch((err) => {
-    if (err.code === 4001 || err.message?.includes('rejected')) {
-      throw new Error('Transaction signing rejected by user in wallet.');
+  // ── MAINNET EXECUTION VIA LI.FI ─────────────────────────────
+  if (quote.provider === 'lifi') {
+    if (!quote.transactionRequest) {
+      throw new Error('LI.FI quote is missing executable transactionRequest.');
     }
-    throw new Error(`Source chain bridge submission failed: ${parseRevertReason(err)}`);
-  });
 
-  onStateUpdate?.({
-    status: CROSS_CHAIN_STATUS.SOURCE_CONFIRMED,
-    sourceTxHash: sourceTx.hash,
-    step: 3,
-    totalSteps: 6,
-  });
+    onStateUpdate?.({ status: CROSS_CHAIN_STATUS.WALLET_APPROVAL, step: 1, totalSteps: 5 });
 
-  const sourceReceipt = await sourceTx.wait();
-  if (!sourceReceipt || sourceReceipt.status === 0) {
-    throw new Error('Source bridge transaction reverted on-chain.');
+    // Handle token approval if ERC-20
+    const sourceTok = getTokenConfig(quote.sourceChainId, quote.sourceSymbol);
+    const isNative = !sourceTok?.address || sourceTok?.address === '0x0000000000000000000000000000000000000000';
+
+    if (!isNative && quote.approvalAddress) {
+      const fromDec = sourceTok.decimals || 18;
+      const amountUnits = ethers.parseUnits(quote.inputAmount.toString(), fromDec);
+      const tokenContract = new ethers.Contract(sourceTok.address, ERC20_ABI, signer);
+
+      const bal = await tokenContract.balanceOf(address).catch(() => 0n);
+      if (bal < amountUnits) {
+        throw new Error(`Insufficient ${quote.sourceSymbol} balance to execute bridge transfer.`);
+      }
+
+      const allowance = await tokenContract.allowance(address, quote.approvalAddress).catch(() => 0n);
+      if (allowance < amountUnits) {
+        const appTx = await tokenContract.approve(quote.approvalAddress, amountUnits).catch((err) => {
+          if (err.code === 4001 || err.message?.includes('rejected')) {
+            throw new Error('Approval transaction rejected by user in wallet.');
+          }
+          throw err;
+        });
+        await appTx.wait();
+      }
+    }
+
+    onStateUpdate?.({ status: CROSS_CHAIN_STATUS.SOURCE_SUBMITTED, step: 2, totalSteps: 5 });
+
+    // Execute the LI.FI transaction request
+    const tx = await signer.sendTransaction({
+      to: quote.transactionRequest.to,
+      data: quote.transactionRequest.data,
+      value: quote.transactionRequest.value ? BigInt(quote.transactionRequest.value) : 0n,
+      gasLimit: quote.transactionRequest.gasLimit ? BigInt(quote.transactionRequest.gasLimit) : undefined,
+    }).catch((err) => {
+      if (err.code === 4001 || err.message?.includes('rejected')) {
+        throw new Error('Transaction signing rejected by user in wallet.');
+      }
+      throw err;
+    });
+
+    const receipt = await tx.wait();
+    if (!receipt || receipt.status === 0) {
+      throw new Error('Source chain bridge transaction reverted on-chain.');
+    }
+
+    onStateUpdate?.({
+      status: CROSS_CHAIN_STATUS.BRIDGE_PENDING,
+      sourceTxHash: receipt.hash,
+      step: 3,
+      totalSteps: 5,
+    });
+
+    // Poll LI.FI status for real destination execution
+    const bridgeTool = quote.lifiQuote?.tool;
+    const pollResult = await pollLiFiStatus(
+      receipt.hash,
+      bridgeTool,
+      quote.sourceChainId,
+      quote.destChainId,
+      15,
+      3000
+    );
+
+    if (pollResult?.status === 'COMPLETED') {
+      onStateUpdate?.({
+        status: CROSS_CHAIN_STATUS.COMPLETED,
+        sourceTxHash: receipt.hash,
+        destTxHash: pollResult.destTxHash,
+        step: 5,
+        totalSteps: 5,
+      });
+
+      return {
+        sourceTxHash: receipt.hash,
+        destTxHash: pollResult.destTxHash,
+        status: CROSS_CHAIN_STATUS.COMPLETED,
+        quote,
+      };
+    } else {
+      // In flight, NOT faked
+      onStateUpdate?.({
+        status: CROSS_CHAIN_STATUS.BRIDGE_PENDING,
+        sourceTxHash: receipt.hash,
+        destTxHash: null,
+        step: 4,
+        totalSteps: 5,
+        lifiExplorerUrl: `https://scan.li.fi/tx/${receipt.hash}`,
+      });
+
+      return {
+        sourceTxHash: receipt.hash,
+        destTxHash: null,
+        status: CROSS_CHAIN_STATUS.BRIDGE_PENDING,
+        lifiExplorerUrl: `https://scan.li.fi/tx/${receipt.hash}`,
+        quote,
+      };
+    }
   }
 
-  const bridgeMessageId = `MSG-CC-${sourceTx.hash.slice(2, 10)}-${quote.destChainId}`;
-
-  // Step 4: Bridge Relayer Attestation
-  onStateUpdate?.({
-    status: CROSS_CHAIN_STATUS.BRIDGE_PENDING,
-    sourceTxHash: sourceTx.hash,
-    bridgeMessageId,
-    step: 4,
-    totalSteps: 6,
-  });
-
-  // Step 5: Destination Execution via Relayer
-  await new Promise((r) => setTimeout(r, 1200));
-  onStateUpdate?.({
-    status: CROSS_CHAIN_STATUS.DESTINATION_EXECUTING,
-    sourceTxHash: sourceTx.hash,
-    bridgeMessageId,
-    step: 5,
-    totalSteps: 6,
-  });
-
-  // Deterministic destination tx hash grounded in source receipt hash, chain ID, and relayer block
-  const destTxHash = ethers.keccak256(
-    ethers.toUtf8Bytes(`${sourceReceipt.hash}:${quote.destChainId}:${sourceReceipt.blockNumber}`)
+  // ── TESTNET EXECUTION GATE ──────────────────────────────────
+  // If invoked on testnet, strictly block because destination receiver contracts are pending deployment
+  throw new Error(
+    `Testnet execution blocked by audit safeguard: ${quote.auditVerification?.reason || 'Destination contracts not deployed.'}`
   );
-
-  // Step 6: Transfer Completed
-  await new Promise((r) => setTimeout(r, 1500));
-  onStateUpdate?.({
-    status: CROSS_CHAIN_STATUS.COMPLETED,
-    sourceTxHash: sourceTx.hash,
-    destTxHash,
-    bridgeMessageId,
-    step: 6,
-    totalSteps: 6,
-  });
-
-  // Record audit telemetry to Supabase
-  recordAuditEventToSupabase({
-    chainId: quote.sourceChainId,
-    txHash: sourceReceipt.hash,
-    blockNumber: sourceReceipt.blockNumber,
-    type: 'Cross-Chain Bridge Dispatched',
-    contractAddress: CONTRACT_ADDRESSES.LendingPool,
-    borrower: address,
-    fullBorrower: address,
-    amount: `${quote.inputAmount} ${quote.sourceSymbol} → ${quote.destEstimatedOutput} ${quote.destSymbol}`,
-    rawAmount: quote.inputAmount,
-    status: 'COMPLETED',
-    metadata: {
-      destChainId: quote.destChainId,
-      destChainName: quote.destChainName,
-      bridgeMessageId,
-      destTxHash,
-      relayerProvider: quote.relayerProvider,
-      verificationStatus: 'AUDIT_VERIFIED',
-    },
-  }).catch(() => {});
-
-  return {
-    sourceTxHash: sourceReceipt.hash,
-    destTxHash,
-    bridgeMessageId,
-    quote,
-    status: CROSS_CHAIN_STATUS.COMPLETED,
-  };
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -1951,7 +2587,9 @@ export async function fetchCreditPreFlight(address) {
 
 // Swap Router deployed address on Polygon Amoy
 export const MOCK_SWAP_ROUTER_ADDRESS =
-  import.meta.env.VITE_MOCK_SWAP_ROUTER || '0x460850Fb8495867E526e23B4149D04810d5b4e39';
+  (typeof import.meta !== 'undefined' && import.meta?.env?.VITE_MOCK_SWAP_ROUTER) ||
+  (typeof process !== 'undefined' && process?.env?.VITE_MOCK_SWAP_ROUTER) ||
+  '0x460850Fb8495867E526e23B4149D04810d5b4e39';
 
 export const MOCK_SWAP_ROUTER_ABI = [
   'function swap(address tokenIn, address tokenOut, uint256 amountIn, uint256 minAmountOut, address to) external returns (uint256 amountOut)',

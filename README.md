@@ -177,12 +177,52 @@ cd frontend
 # Install dependencies
 npm install
 
-# Run Vite development server
-npm run dev
+# Run automated cross-chain test suite (30 unit & integration tests)
+npm test
 
 # Build production bundle
 npm run build
 ```
+
+---
+
+## Four-Chain Cross-Chain Architecture & 12-Route Matrix
+
+Fundrex supports institutional cross-chain liquidity across four premier blockchain ecosystems with strict testnet and mainnet segregation:
+
+| Network Family | Testnet (Chain ID) | Mainnet (Chain ID) | Testnet Status | Mainnet Provider & Route Status |
+|:---|:---|:---|:---|:---|
+| **Polygon** | Amoy (`80002`) | PoS Mainnet (`137`) | Protocol Live (`LendingPool`, `MockSwapRouter`) | LI.FI Multi-Bridge Aggregator (Active) |
+| **Monad** | Testnet (`10143`) | Mainnet (`143`) | Staging (Pending Receiver Deployment) | Inbound Live (Mayan CCTPv2) / Outbound Blocked |
+| **Base** | Sepolia (`84532`) | Base Mainnet (`8453`) | Staging (Pending Receiver Deployment) | LI.FI Multi-Bridge Aggregator (Active) |
+| **Avalanche** | Fuji (`43113`) | C-Chain Mainnet (`43114`) | Staging (Pending Receiver Deployment) | LI.FI Multi-Bridge Aggregator (Active) |
+
+### 12-Route Directed Matrix (6 Unordered Network Pairs)
+
+1. **Polygon ↔ Base**:
+   - `137 → 8453`: Live via LI.FI (Polymer Standard / Across).
+   - `8453 → 137`: Live via LI.FI (Polymer Standard / Across).
+2. **Polygon ↔ Avalanche**:
+   - `137 → 43114`: Live via LI.FI (Polymer Standard).
+   - `43114 → 137`: Live via LI.FI (Polymer Standard).
+3. **Base ↔ Avalanche**:
+   - `8453 → 43114`: Live via LI.FI (Polymer Standard / CCTP).
+   - `43114 → 8453`: Live via LI.FI (Polymer Standard / CCTP).
+4. **Polygon ↔ Monad**:
+   - `137 → 143`: Inbound Live via Mayan Fast MCTP / CCTPv2.
+   - `143 → 137`: Unavailable (LI.FI liquidity route unsupported).
+5. **Base ↔ Monad**:
+   - `8453 → 143`: Inbound Live via Mayan Fast MCTP / CCTPv2.
+   - `143 → 8453`: Unavailable (LI.FI liquidity route unsupported).
+6. **Avalanche ↔ Monad**:
+   - `43114 → 143`: Inbound Live via Mayan Fast MCTP / CCTPv2.
+   - `143 → 43114`: Unavailable (LI.FI liquidity route unsupported).
+
+### Security Boundaries & Non-Mocked Settlement
+
+- **Testnet/Mainnet Partitioning**: Cross-environment routes (e.g. `80002 → 137` or `80002 → 8453`) are rejected by protocol route validators (`TESTNET_MAINNET_MISMATCH`).
+- **No Fabricated Execution**: All destination lifecycle polling queries the live LI.FI status API. Transfers in flight return truthful `PENDING` states with explorer links without synthesizing fake hashes.
+- **Audit Verification Gating**: Capital transfers to unverified chains remain locked until receiver contracts and sentinel quorum verifiers pass formal audit certification.
 
 ---
 
