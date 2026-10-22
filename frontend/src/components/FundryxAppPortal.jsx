@@ -64,11 +64,19 @@ import {
   parseRevertReason,
   CONTRACT_ADDRESSES,
   SUPPORTED_TOKENS,
+  TOKEN_REGISTRY,
+  getTokenRegistry,
+  getTokenConfig,
   MOCK_SWAP_ROUTER_ADDRESS,
   CHAIN_ID,
   SUPPORTED_NETWORKS,
   getNetworkConfig,
   addTokenToMetaMask,
+  addTokenToWallet,
+  getCrossChainQuote,
+  verifyCrossChainRoute,
+  executeCrossChainSwap,
+  CROSS_CHAIN_STATUS,
   explorerTxLink,
   ADMIN_WALLETS,
   checkIsAdminWallet,
@@ -115,10 +123,13 @@ export default function FundryxAppPortal({
   const [isWithdrawing, setIsWithdrawing] = useState(false);
   const [withdrawTxStatus, setWithdrawTxStatus] = useState('ready');
   const [supplyMode, setSupplyMode] = useState('deposit'); // 'deposit' | 'withdraw'
+  const [depositAsset, setDepositAsset] = useState('FDX'); // 'FDX' | 'fUSD' | 'USDC'
 
   // Repay state & transaction lifecycle
   const [repaySuccess, setRepaySuccess] = useState(false);
   const [repayTxStatus, setRepayTxStatus] = useState({}); // { [loanId]: ready | awaiting-wallet | pending | confirmed | failed }
+  const [selectedRepayLoan, setSelectedRepayLoan] = useState(null);
+  const [partialRepayAmount, setPartialRepayAmount] = useState('');
 
   // Swap state & transaction lifecycle
   const [swapFrom, setSwapFrom] = useState('FDX');
@@ -131,7 +142,20 @@ export default function FundryxAppPortal({
   const [slippageBps, setSlippageBps] = useState(50); // 50 bps = 0.50%
   const [swapSubTab, setSwapSubTab] = useState('same-chain'); // 'same-chain' | 'cross-chain' | 'pool'
   const [crossDestChain, setCrossDestChain] = useState(10143);
+  const [crossSourceToken, setCrossSourceToken] = useState('FDX');
+  const [crossDestToken, setCrossDestToken] = useState('MON');
+  const [crossAmount, setCrossAmount] = useState('10');
+  const [crossLifecycle, setCrossLifecycle] = useState({
+    status: 'IDLE',
+    step: 0,
+    totalSteps: 6,
+    sourceTxHash: null,
+    bridgeMessageId: null,
+    destTxHash: null,
+    error: null,
+  });
   const [isHowSwapWorksOpen, setIsHowSwapWorksOpen] = useState(false);
+  const [isHowBridgeWorksOpen, setIsHowBridgeWorksOpen] = useState(false);
   const [marketView, setMarketView] = useState('amm'); // 'amm' | 'orderbook'
 
   // User balances from chain
@@ -663,16 +687,27 @@ export default function FundryxAppPortal({
       return;
     }
 
+    const numSupply = Number(supplyAmount);
+    if (!numSupply || numSupply <= 0 || isNaN(numSupply)) {
+      setSupplyTxStatus('failed');
+      setTxNotification({
+        type: 'danger',
+        message: 'Deposit amount must be a positive number greater than 0.',
+      });
+      return;
+    }
+
     try {
       setSupplyTxStatus('awaiting-wallet');
       setTxNotification({
         type: 'info',
-        message: `Preparing deposit of ${supplyAmount} FDX... Confirm ERC-20 approval / deposit in your wallet.`,
+        message: `Preparing deposit of ${supplyAmount} ${depositAsset}... Confirm approval / deposit in your wallet.`,
       });
 
       const { tx, receipt, newFdxBalance, newLenderBalance, newTotalDeposits } = await executeDeposit(
         wallet.signer,
-        supplyAmount
+        supplyAmount,
+        depositAsset
       );
 
       setSupplyTxStatus('confirmed');
@@ -683,7 +718,7 @@ export default function FundryxAppPortal({
       setLivePool((prev) => ({
         ...prev,
         totalDeposits: Number(newTotalDeposits),
-        availableLiquidity: (prev.availableLiquidity || 0) + Number(supplyAmount),
+        availableLiquidity: (prev.availableLiquidity || 0) + numSupply,
       }));
 
       setTxNotification({
@@ -697,7 +732,7 @@ export default function FundryxAppPortal({
           id: `EV-${tx.hash.slice(2, 6)}`,
           type: 'Capital Supply',
           borrower: `${wallet.address.slice(0, 6)}...${wallet.address.slice(-4)}`,
-          amount: `${Number(supplyAmount).toLocaleString()} FDX`,
+          amount: `${Number(supplyAmount).toLocaleString()} ${depositAsset}`,
           score: 'Liquidity Deposited',
           time: `Block ${receipt.blockNumber}`,
           hash: `${tx.hash.slice(0, 6)}...${tx.hash.slice(-4)}`,
@@ -743,11 +778,11 @@ export default function FundryxAppPortal({
     }
 
     const withdrawNum = Number(withdrawAmount);
-    if (!withdrawNum || withdrawNum <= 0) {
+    if (!withdrawNum || withdrawNum <= 0 || isNaN(withdrawNum)) {
       setWithdrawTxStatus('failed');
       setTxNotification({
         type: 'danger',
-        message: 'Enter a valid withdrawal amount.',
+        message: 'Withdrawal amount must be a positive number greater than 0.',
       });
       return;
     }
@@ -756,7 +791,7 @@ export default function FundryxAppPortal({
       setWithdrawTxStatus('failed');
       setTxNotification({
         type: 'danger',
-        message: `Withdrawal exceeds your deposited capital. You have ${userLenderBalance.toFixed(2)} FDX available.`,
+        message: `Withdrawal exceeds your deposited capital. You have ${userLenderBalance.toFixed(2)} ${depositAsset} available.`,
       });
       return;
     }
@@ -766,17 +801,21 @@ export default function FundryxAppPortal({
       setIsWithdrawing(true);
       setTxNotification({
         type: 'info',
-        message: `Preparing withdrawal of ${withdrawAmount} FDX... Confirm in your wallet.`,
+        message: `Preparing withdrawal of ${withdrawAmount} ${depositAsset}... Confirm in your wallet.`,
       });
 
-      const { tx, receipt } = await executeWithdraw(wallet.signer, withdrawAmount);
+      const { tx, receipt, newLenderBalance, newTotalDeposits } = await executeWithdraw(
+        wallet.signer,
+        withdrawAmount,
+        depositAsset
+      );
 
       setWithdrawTxStatus('confirmed');
-      setUserLenderBalance((prev) => Math.max(0, prev - withdrawNum));
+      setUserLenderBalance(Number(newLenderBalance));
       setUserFdxBalance((prev) => (prev !== null ? prev + withdrawNum : null));
       setLivePool((prev) => ({
         ...prev,
-        totalDeposits: Math.max(0, (prev.totalDeposits || 0) - withdrawNum),
+        totalDeposits: Number(newTotalDeposits),
         availableLiquidity: Math.max(0, (prev.availableLiquidity || 0) - withdrawNum),
       }));
 
@@ -791,7 +830,7 @@ export default function FundryxAppPortal({
           id: `EV-${tx.hash.slice(2, 6)}`,
           type: 'Capital Withdrawal',
           borrower: `${wallet.address.slice(0, 6)}...${wallet.address.slice(-4)}`,
-          amount: `${withdrawNum.toLocaleString()} FDX`,
+          amount: `${withdrawNum.toLocaleString()} ${depositAsset}`,
           score: 'Principal Returned',
           time: `Block ${receipt.blockNumber}`,
           hash: `${tx.hash.slice(0, 6)}...${tx.hash.slice(-4)}`,
@@ -817,7 +856,7 @@ export default function FundryxAppPortal({
     }
   };
 
-  const handleExecuteRepay = async (loanIdOrRef) => {
+  const handleExecuteRepay = async (loanIdOrRef, customAmount = null) => {
     if (!wallet.signer || !wallet.address) {
       setTxNotification({
         type: 'danger',
@@ -841,12 +880,22 @@ export default function FundryxAppPortal({
     const targetLoan = activeLoans.find(
       (l) => l.loanId === rawId || l.id === loanIdOrRef || l.id === `LOAN-${rawId}`
     );
-    const repayAmount = targetLoan ? (targetLoan.principalOutstanding || targetLoan.amount) : 0;
 
-    if (!repayAmount || repayAmount <= 0) {
+    const maxDebt = targetLoan ? (targetLoan.principalOutstanding || targetLoan.amount) : 0;
+    const repayAmount = customAmount !== null ? Number(customAmount) : maxDebt;
+
+    if (!repayAmount || repayAmount <= 0 || isNaN(repayAmount)) {
       setTxNotification({
         type: 'danger',
-        message: 'Loan has zero outstanding balance or is already settled.',
+        message: 'Repayment amount must be a positive number greater than 0.',
+      });
+      return;
+    }
+
+    if (repayAmount > maxDebt) {
+      setTxNotification({
+        type: 'danger',
+        message: `Repayment amount (${repayAmount} FDX) exceeds total outstanding debt (${Number(maxDebt).toFixed(2)} FDX).`,
       });
       return;
     }
@@ -858,7 +907,7 @@ export default function FundryxAppPortal({
         message: `Repaying Loan #${rawId} (${Number(repayAmount).toFixed(2)} FDX). Confirm transaction in wallet...`,
       });
 
-      const { tx, receipt, loanStatus } = await executeRepay(
+      const { tx, receipt, loanStatus, remainingOutstanding, isFullRepayment } = await executeRepay(
         wallet.signer,
         rawId,
         repayAmount
@@ -866,10 +915,12 @@ export default function FundryxAppPortal({
 
       setRepayTxStatus((prev) => ({ ...prev, [rawId]: 'confirmed' }));
       setRepaySuccess(true);
+      setSelectedRepayLoan(null);
+      setPartialRepayAmount('');
 
       setTxNotification({
         type: 'success',
-        message: `Repayment Confirmed! Loan #${rawId} status: ${loanStatus}`,
+        message: `${isFullRepayment ? 'Full Loan Settlement' : 'Partial Repayment'} Confirmed! Loan #${rawId} remaining debt: ${Number(remainingOutstanding).toFixed(2)} FDX (${loanStatus})`,
         txHash: tx.hash,
       });
 
@@ -883,11 +934,18 @@ export default function FundryxAppPortal({
         setActiveLoans(updatedLoans);
       } else {
         setActiveLoans((prev) =>
-          prev.map((l) =>
-            (l.loanId === rawId || l.id === loanIdOrRef)
-              ? { ...l, status: 'Settled', progress: 100, principalOutstanding: 0 }
-              : l
-          )
+          prev.map((l) => {
+            if (l.loanId === rawId || l.id === loanIdOrRef) {
+              const rem = Number(remainingOutstanding);
+              return {
+                ...l,
+                status: rem <= 0 ? 'Settled' : 'Active',
+                progress: rem <= 0 ? 100 : Math.min(99, Math.round(((l.principalInitial - rem) / l.principalInitial) * 100)),
+                principalOutstanding: rem,
+              };
+            }
+            return l;
+          })
         );
       }
 
@@ -898,10 +956,10 @@ export default function FundryxAppPortal({
       setActivityFeed((prev) => [
         {
           id: `EV-${tx.hash.slice(2, 6)}`,
-          type: 'Repayment',
+          type: isFullRepayment ? 'Loan Settlement' : 'Partial Repayment',
           borrower: `${wallet.address.slice(0, 6)}...${wallet.address.slice(-4)}`,
-          amount: `${Number(repayAmount).toLocaleString()} FDX`,
-          score: '+Credit History Boost',
+          amount: `${Number(repayAmount).toLocaleString()} FDX (Loan #${rawId})`,
+          score: isFullRepayment ? 'Fully Settled' : 'Partial Paid',
           time: `Block ${receipt.blockNumber}`,
           hash: `${tx.hash.slice(0, 6)}...${tx.hash.slice(-4)}`,
           txHash: tx.hash,
@@ -910,11 +968,10 @@ export default function FundryxAppPortal({
       ]);
 
       setTimeout(() => {
-        setRepaySuccess(false);
         setRepayTxStatus((prev) => ({ ...prev, [rawId]: 'ready' }));
       }, 5000);
     } catch (err) {
-      console.error('Onchain repayment failed:', err);
+      console.error('Onchain repay failed:', err);
       const reason = parseRevertReason(err);
       setRepayTxStatus((prev) => ({ ...prev, [rawId]: 'failed' }));
       setTxNotification({
@@ -922,6 +979,96 @@ export default function FundryxAppPortal({
         message: `Repayment failed: ${reason}`,
       });
       setTimeout(() => setRepayTxStatus((prev) => ({ ...prev, [rawId]: 'ready' })), 7000);
+    }
+  };
+
+  const handleExecuteCrossChainSwap = async () => {
+    if (!wallet.signer || !wallet.address) {
+      setTxNotification({
+        type: 'danger',
+        message: 'Wallet not connected. Connect your Web3 wallet for cross-chain transfer.',
+      });
+      return;
+    }
+
+    const quote = getCrossChainQuote(
+      CHAIN_ID,
+      crossDestChain,
+      crossSourceToken,
+      crossDestToken,
+      crossAmount
+    );
+
+    if (!quote) {
+      setTxNotification({
+        type: 'danger',
+        message: 'Please enter a valid cross-chain transfer amount.',
+      });
+      return;
+    }
+
+    if (!quote.canExecute) {
+      setTxNotification({
+        type: 'warning',
+        message: `Cross-Chain Gated: ${quote.auditVerification.reason}`,
+      });
+      return;
+    }
+
+    try {
+      setCrossLifecycle({
+        status: 'AWAITING_APPROVAL',
+        step: 1,
+        totalSteps: 6,
+        sourceTxHash: null,
+        bridgeMessageId: null,
+        destTxHash: null,
+        error: null,
+      });
+
+      const res = await executeCrossChainSwap(wallet.signer, quote, (progress) => {
+        setCrossLifecycle((prev) => ({
+          ...prev,
+          status: progress.status,
+          step: progress.step,
+          sourceTxHash: progress.sourceTxHash || prev.sourceTxHash,
+          bridgeMessageId: progress.bridgeMessageId || prev.bridgeMessageId,
+        }));
+      });
+
+      setTxNotification({
+        type: 'success',
+        message: `Cross-Chain Bridge Dispatched! Source TX confirmed on Polygon Amoy.`,
+        txHash: res.sourceTxHash,
+      });
+    } catch (err) {
+      const reason = parseRevertReason(err);
+      setCrossLifecycle((prev) => ({
+        ...prev,
+        status: 'FAILED',
+        error: reason,
+      }));
+      setTxNotification({
+        type: 'danger',
+        message: `Cross-chain swap failed: ${reason}`,
+      });
+    }
+  };
+
+  const handleAddTokenToWallet = async (tokenObj) => {
+    try {
+      const wasAdded = await addTokenToWallet(tokenObj);
+      if (wasAdded) {
+        setTxNotification({
+          type: 'success',
+          message: `${tokenObj.symbol} added to your Web3 wallet! Note: importing makes it visible in MetaMask; it does not mint or transfer funds.`,
+        });
+      }
+    } catch (err) {
+      setTxNotification({
+        type: 'warning',
+        message: err.message || `Could not import ${tokenObj?.symbol} to wallet.`,
+      });
     }
   };
 
@@ -1509,15 +1656,18 @@ export default function FundryxAppPortal({
                               <td className="text-right">
                                 {loan.status === 'Active' ? (
                                   <button
-                                    onClick={() => handleExecuteRepay(loan.loanId || loan.id)}
+                                    onClick={() => {
+                                      setSelectedRepayLoan(loan);
+                                      setPartialRepayAmount(String(loan.principalOutstanding || loan.amount));
+                                    }}
                                     disabled={repayTxStatus[loan.loanId || loan.id] === 'awaiting-wallet' || repayTxStatus[loan.loanId || loan.id] === 'pending'}
-                                    className="portal-btn-secondary h-8 px-3 text-xs disabled:opacity-60"
+                                    className="portal-btn-secondary h-8 px-3 text-xs font-semibold disabled:opacity-60 cursor-pointer"
                                   >
                                     {repayTxStatus[loan.loanId || loan.id] === 'awaiting-wallet' && 'Confirm...'}
                                     {repayTxStatus[loan.loanId || loan.id] === 'pending' && 'Settling...'}
                                     {repayTxStatus[loan.loanId || loan.id] === 'confirmed' && 'Settled!'}
                                     {repayTxStatus[loan.loanId || loan.id] === 'failed' && 'Retry'}
-                                    {(!repayTxStatus[loan.loanId || loan.id] || repayTxStatus[loan.loanId || loan.id] === 'ready') && 'Settle'}
+                                    {(!repayTxStatus[loan.loanId || loan.id] || repayTxStatus[loan.loanId || loan.id] === 'ready') && 'Repay / Settle'}
                                   </button>
                                 ) : (
                                   <span className="text-xs text-[var(--text-dim)]">Settled</span>
@@ -1867,52 +2017,87 @@ export default function FundryxAppPortal({
                       <>
                         {/* Asset Segmented Control */}
                         <div className="mb-4">
-                          <label className="portal-label block mb-1.5">Select Capital Vault</label>
+                          <label className="portal-label block mb-1.5">Select Capital Vault &amp; Asset</label>
                           <div className="portal-segmented">
                             {[
-                              { symbol: 'FDX', label: 'FDX (Active Pool)' },
-                              { symbol: 'USDC', label: 'USDC (Staging)' },
-                              { symbol: 'EURC', label: 'EURC (Staging)' }
+                              { symbol: 'FDX', label: 'FDX (18 dec · Protocol)' },
+                              { symbol: 'fUSD', label: 'fUSD (6 dec · Fundrex USD)' },
+                              { symbol: 'USDC', label: 'USDC (6 dec · Circle)' }
                             ].map((v) => (
                               <button
                                 key={v.symbol}
-                                onClick={() => setSupplyAsset(v.symbol)}
-                                className={`portal-segmented-btn ${supplyAsset === v.symbol ? 'active border-[var(--accent-1)] text-[var(--accent-1)]' : ''}`}
+                                type="button"
+                                onClick={() => {
+                                  setSupplyAsset(v.symbol);
+                                  setDepositAsset(v.symbol);
+                                }}
+                                className={`portal-segmented-btn ${depositAsset === v.symbol ? 'active border-[var(--accent-1)] text-[var(--accent-1)]' : ''}`}
                               >
                                 {v.label}
                               </button>
                             ))}
+                          </div>
+                          <div className="flex items-center justify-between text-xs mt-2 px-1">
+                            <span className="text-[var(--text-dim)] font-mono text-[11px]">
+                              Verified on Polygon Amoy (80002) · {depositAsset === 'fUSD' || depositAsset === 'USDC' ? '6 decimals' : '18 decimals'}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const cfg = getTokenConfig(CHAIN_ID, depositAsset);
+                                if (cfg && cfg.canAddToWallet) {
+                                  handleAddTokenToWallet(cfg);
+                                } else {
+                                  setTxNotification({
+                                    type: 'warning',
+                                    message: `${depositAsset} cannot be imported (either native gas asset or unverified address).`,
+                                  });
+                                }
+                              }}
+                              className="text-[11px] font-semibold text-[var(--accent-1)] hover:underline cursor-pointer flex items-center gap-1"
+                              title={`Import ${depositAsset} to MetaMask`}
+                            >
+                              <span>+ Add {depositAsset} to Wallet</span>
+                            </button>
                           </div>
                         </div>
 
                         {/* Deposit Amount Input */}
                         <div className="mb-4">
                           <div className="flex justify-between items-center mb-1.5">
-                            <label className="portal-label">Deposit Capital</label>
+                            <label className="portal-label">Deposit Capital ({depositAsset})</label>
                             <div className="flex items-center gap-2">
                               <span className="text-xs text-[var(--text-dim)] font-mono">
-                                Balance: {userFdxBalance !== null ? Number(userFdxBalance).toFixed(2) : '--'} {supplyAsset}
+                                Balance: {userFdxBalance !== null ? Number(userFdxBalance).toFixed(2) : '--'} {depositAsset}
                               </span>
                               <button
                                 type="button"
                                 onClick={handleMintTokens}
                                 disabled={isMinting}
                                 className="px-2 py-0.5 text-[10px] font-bold rounded bg-[var(--accent-1)]/20 text-[var(--accent-1)] hover:bg-[var(--accent-1)]/30 border border-[var(--accent-1)]/40 transition disabled:opacity-50 cursor-pointer"
-                                title="Mint 10,000 FDX tokens directly to your wallet"
+                                title="Mint test tokens directly to your wallet"
                               >
-                                {isMinting ? 'Minting...' : '+ Mint 10k FDX'}
+                                {isMinting ? 'Minting...' : '+ Mint Test Tokens'}
                               </button>
                             </div>
                           </div>
                           <div className="relative">
                             <input
                               type="number"
+                              min="0"
+                              step="any"
                               value={supplyAmount}
-                              onChange={(e) => setSupplyAmount(e.target.value)}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                if (val === '' || (!val.includes('-') && Number(val) >= 0)) {
+                                  setSupplyAmount(val);
+                                }
+                              }}
                               className="w-full h-11 px-4 pr-16 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] font-mono text-white text-base outline-none focus:border-[var(--accent-1)] transition"
                               placeholder="0.00"
                             />
                             <button
+                              type="button"
                               onClick={() => setSupplyAmount(Math.floor(userFdxBalance || 100).toString())}
                               className="absolute right-3.5 top-2.5 text-xs font-bold text-[var(--accent-1)] uppercase cursor-pointer hover:brightness-125 transition"
                             >
@@ -1926,20 +2111,28 @@ export default function FundryxAppPortal({
                         {/* Withdraw Input */}
                         <div className="mb-4">
                           <div className="flex justify-between items-center mb-1.5">
-                            <label className="portal-label">Withdraw Capital</label>
+                            <label className="portal-label">Withdraw Capital ({depositAsset})</label>
                             <span className="text-xs text-[var(--text-dim)] font-mono">
-                              Available: {userLenderBalance.toFixed(2)} FDX
+                              Available: {userLenderBalance.toFixed(2)} {depositAsset}
                             </span>
                           </div>
                           <div className="relative">
                             <input
                               type="number"
+                              min="0"
+                              step="any"
                               value={withdrawAmount}
-                              onChange={(e) => setWithdrawAmount(e.target.value)}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                if (val === '' || (!val.includes('-') && Number(val) >= 0)) {
+                                  setWithdrawAmount(val);
+                                }
+                              }}
                               className="w-full h-11 px-4 pr-16 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] font-mono text-white text-base outline-none focus:border-[var(--accent-1)] transition"
                               placeholder="0.00"
                             />
                             <button
+                              type="button"
                               onClick={() => setWithdrawAmount(userLenderBalance.toString())}
                               className="absolute right-3.5 top-2.5 text-xs font-bold text-[var(--accent-1)] uppercase cursor-pointer hover:brightness-125 transition"
                             >
@@ -2090,10 +2283,13 @@ export default function FundryxAppPortal({
                           <td className="text-right">
                             {loan.status === 'Active' || loan.status === 'Overdue' ? (
                               <button
-                                onClick={() => handleExecuteRepay(loan.loanId || loan.id)}
+                                onClick={() => {
+                                  setSelectedRepayLoan(loan);
+                                  setPartialRepayAmount(String(loan.principalOutstanding || loan.amount));
+                                }}
                                 disabled={repayTxStatus[loan.loanId || loan.id] === 'awaiting-wallet' || repayTxStatus[loan.loanId || loan.id] === 'pending'}
-                                className="portal-btn-primary h-8 px-3 text-xs font-bold disabled:opacity-60 whitespace-nowrap"
-                                title={`Repay Loan #${loan.loanId || loan.id} in full`}
+                                className="portal-btn-primary h-8 px-3 text-xs font-bold disabled:opacity-60 whitespace-nowrap cursor-pointer"
+                                title={`Repay Loan #${loan.loanId || loan.id} partially or in full`}
                               >
                                 {repayTxStatus[loan.loanId || loan.id] === 'awaiting-wallet' && 'Confirm...'}
                                 {repayTxStatus[loan.loanId || loan.id] === 'pending' && 'Settling...'}
@@ -2885,47 +3081,365 @@ export default function FundryxAppPortal({
                 </div>
               )}
 
-              {swapSubTab === 'cross-chain' && (
-                <div className="portal-card p-6 flex flex-col gap-6">
-                  <div className="flex items-center gap-2">
-                    <span className="portal-badge portal-badge-accent font-bold">Bridge Staging Environment</span>
-                    <span className="text-xs text-[var(--text-dim)] font-mono">Multi-Chain Relayer Layer</span>
-                  </div>
+              {swapSubTab === 'cross-chain' && (() => {
+                const quote = getCrossChainQuote(
+                  CHAIN_ID,
+                  crossDestChain,
+                  crossSourceToken,
+                  crossDestToken,
+                  crossAmount
+                );
+                const destNetwork = SUPPORTED_NETWORKS[crossDestChain] || { name: `Chain ${crossDestChain}` };
+                const destTokens = getTokenRegistry(crossDestChain);
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="p-4 rounded-xl bg-[var(--surface-2)] border border-[var(--border)]">
-                      <span className="portal-label block mb-1">Source Network</span>
-                      <span className="font-bold text-white text-base">Polygon (80002)</span>
-                      <span className="text-xs text-[var(--text-muted)] block mt-1">Token: FDX / WPOL</span>
+                return (
+                  <div className="portal-card p-6 flex flex-col gap-6">
+                    {/* Header Badge & Title */}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-4 border-b border-[var(--border)]">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="portal-badge portal-badge-accent font-bold">Multi-Chain Bridge Router</span>
+                          <span className="text-xs text-[var(--text-dim)] font-mono">CCIP &amp; Relayer Architecture</span>
+                        </div>
+                        <p className="text-xs text-[var(--text-muted)] mt-1">
+                          Bridge and swap assets across Polygon, Monad, Avalanche, and Base with zero-trust audit verification.
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {quote && quote.auditVerification && (
+                          <span
+                            className={`text-xs px-2.5 py-1 rounded-full font-mono font-semibold flex items-center gap-1.5 ${
+                              quote.auditVerification.isAudited
+                                ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
+                                : 'bg-amber-500/10 text-amber-300 border border-amber-500/30'
+                            }`}
+                          >
+                            <span className={`w-1.5 h-1.5 rounded-full ${quote.auditVerification.isAudited ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
+                            {quote.auditVerification.isAudited ? 'Audit Verified' : 'Audit Safeguard Active'}
+                          </span>
+                        )}
+                      </div>
                     </div>
 
+                    {/* Network & Token Pair Configuration */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Source Network Card */}
+                      <div className="p-4 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] flex flex-col gap-3">
+                        <div className="flex justify-between items-center">
+                          <span className="portal-label">Source Network</span>
+                          <span className="text-xs font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                            Polygon Amoy (80002)
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 rounded-lg bg-purple-500/20 border border-purple-500/40 flex items-center justify-center font-bold text-xs text-purple-300">
+                            POL
+                          </div>
+                          <div>
+                            <span className="font-bold text-white text-sm block">Polygon Amoy Testnet</span>
+                            <span className="text-xs text-[var(--text-dim)]">Primary Deployed Protocol Chain</span>
+                          </div>
+                        </div>
+                        <div>
+                          <label className="text-[11px] text-[var(--text-dim)] uppercase font-semibold block mb-1">Source Asset</label>
+                          <div className="grid grid-cols-3 gap-2">
+                            {['FDX', 'fUSD', 'WPOL'].map((sym) => (
+                              <button
+                                key={sym}
+                                type="button"
+                                onClick={() => setCrossSourceToken(sym)}
+                                className={`px-3 py-2 rounded-lg text-xs font-bold border transition cursor-pointer flex flex-col items-center gap-0.5 ${
+                                  crossSourceToken === sym
+                                    ? 'bg-[var(--accent-1)]/20 border-[var(--accent-1)] text-[var(--accent-1)]'
+                                    : 'bg-[var(--surface-1)] border-[var(--border)] text-[var(--text-muted)] hover:text-white'
+                                }`}
+                              >
+                                <span>{sym}</span>
+                                <span className="text-[10px] font-normal opacity-70">
+                                  {sym === 'fUSD' ? '6 dec' : '18 dec'}
+                                </span>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Destination Network Card */}
+                      <div className="p-4 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] flex flex-col gap-3">
+                        <div className="flex justify-between items-center">
+                          <span className="portal-label">Destination Network</span>
+                          <span className="text-xs font-mono text-[var(--accent-1)] bg-[var(--accent-1)]/10 px-2 py-0.5 rounded border border-[var(--accent-1)]/20">
+                            Target Chain ID: {crossDestChain}
+                          </span>
+                        </div>
+                        <div>
+                          <select
+                            value={crossDestChain}
+                            onChange={(e) => {
+                              const newChain = Number(e.target.value);
+                              setCrossDestChain(newChain);
+                              const avail = getTokenRegistry(newChain);
+                              if (avail && avail.length > 0) {
+                                setCrossDestToken(avail[0].symbol);
+                              }
+                            }}
+                            className="w-full h-10 px-3 rounded-lg bg-[var(--surface-1)] border border-[var(--border)] font-bold text-white text-sm outline-none focus:border-[var(--accent-1)] transition cursor-pointer"
+                          >
+                            <option value={10143} className="bg-[#0c1218] text-white">Monad Testnet (10143) · Parallel EVM</option>
+                            <option value={43113} className="bg-[#0c1218] text-white">Avalanche Fuji Testnet (43113) · Subnet Protocol</option>
+                            <option value={43114} className="bg-[#0c1218] text-white">Avalanche C-Chain (43114) · Primary Network</option>
+                            <option value={8453} className="bg-[#0c1218] text-white">Base Mainnet (8453) · Optimistic L2</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="text-[11px] text-[var(--text-dim)] uppercase font-semibold block mb-1">Destination Asset</label>
+                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                            {destTokens.map((tok) => (
+                              <button
+                                key={tok.symbol}
+                                type="button"
+                                onClick={() => setCrossDestToken(tok.symbol)}
+                                className={`px-3 py-2 rounded-lg text-xs font-bold border transition cursor-pointer flex flex-col items-center gap-0.5 ${
+                                  crossDestToken === tok.symbol
+                                    ? 'bg-[var(--accent-1)]/20 border-[var(--accent-1)] text-[var(--accent-1)]'
+                                    : 'bg-[var(--surface-1)] border-[var(--border)] text-[var(--text-muted)] hover:text-white'
+                                }`}
+                              >
+                                <span>{tok.symbol}</span>
+                                <span className="text-[10px] font-normal opacity-70">
+                                  {tok.decimals} dec
+                                </span>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Transfer Amount Input */}
                     <div className="p-4 rounded-xl bg-[var(--surface-2)] border border-[var(--border)]">
-                      <span className="portal-label block mb-1">Destination Network</span>
-                      <select
-                        value={crossDestChain}
-                        onChange={(e) => setCrossDestChain(Number(e.target.value))}
-                        className="bg-transparent font-bold text-white text-base outline-none cursor-pointer w-full"
+                      <div className="flex justify-between items-center mb-1.5">
+                        <label className="portal-label">Transfer Amount ({crossSourceToken})</label>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-[var(--text-dim)] font-mono">
+                            Available: {userFdxBalance !== null ? Number(userFdxBalance).toFixed(2) : '--'} {crossSourceToken}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setCrossAmount(Math.floor(userFdxBalance || 50).toString())}
+                            className="text-xs font-bold text-[var(--accent-1)] hover:brightness-125 cursor-pointer uppercase"
+                          >
+                            Max
+                          </button>
+                        </div>
+                      </div>
+                      <div className="relative">
+                        <input
+                          type="number"
+                          min="0"
+                          step="any"
+                          value={crossAmount}
+                          onChange={(e) => {
+                            const v = e.target.value;
+                            if (v === '' || (!v.includes('-') && Number(v) >= 0)) {
+                              setCrossAmount(v);
+                            }
+                          }}
+                          placeholder="0.00"
+                          className="w-full h-12 px-4 rounded-xl bg-[var(--surface-1)] border border-[var(--border)] font-mono text-white text-lg outline-none focus:border-[var(--accent-1)] transition"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Live Quote & Route Discovery Card */}
+                    {quote && (
+                      <div className="p-4 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] flex flex-col gap-3">
+                        <div className="flex justify-between items-center">
+                          <span className="text-xs uppercase font-bold text-[var(--text-dim)] tracking-wider">Bridge Quote &amp; Execution Route</span>
+                          <span className="font-mono text-xs text-[var(--text-muted)]">Relayer: {quote.relayer}</span>
+                        </div>
+
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 py-2 border-y border-[var(--border)]">
+                          <div>
+                            <span className="text-[11px] text-[var(--text-dim)] block">Estimated Output</span>
+                            <span className="font-mono text-base font-bold text-emerald-400">
+                              {quote.destEstimatedOutput} {quote.destToken}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-[11px] text-[var(--text-dim)] block">Min Received (0.50% slip)</span>
+                            <span className="font-mono text-xs font-semibold text-white">
+                              {quote.minReceived} {quote.destToken}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-[11px] text-[var(--text-dim)] block">Relayer Fee</span>
+                            <span className="font-mono text-xs font-semibold text-white">
+                              {quote.bridgeFee} {quote.sourceToken} ({quote.feeBps / 100}%)
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-[11px] text-[var(--text-dim)] block">Est. Settlement</span>
+                            <span className="font-mono text-xs font-semibold text-[var(--accent-1)]">
+                              {quote.estimatedTimeSeconds}s (~30 blocks)
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Audit Verification Safeguard Banner */}
+                        <div
+                          className={`p-3.5 rounded-lg border text-xs leading-relaxed ${
+                            quote.auditVerification.isAudited
+                              ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-200'
+                              : 'bg-amber-500/10 border-amber-500/30 text-amber-200'
+                          }`}
+                        >
+                          <div className="flex items-start gap-2">
+                            <span className="font-bold shrink-0">
+                              {quote.auditVerification.isAudited ? '✓ Audit Verified:' : '⚠ Audit Safeguard Active:'}
+                            </span>
+                            <span>{quote.auditVerification.reason}</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Transaction Lifecycle Status Panel */}
+                    {crossLifecycle.status !== 'IDLE' && (
+                      <div className="p-4 rounded-xl bg-[var(--surface-1)] border border-[var(--accent-1)]/40 flex flex-col gap-3">
+                        <div className="flex justify-between items-center">
+                          <span className="text-xs uppercase font-bold text-[var(--accent-1)]">
+                            Cross-Chain Lifecycle Progress (Step {crossLifecycle.step} / {crossLifecycle.totalSteps})
+                          </span>
+                          <span className="text-xs font-mono font-bold text-white bg-[var(--surface-2)] px-2 py-0.5 rounded border border-[var(--border)]">
+                            {crossLifecycle.status}
+                          </span>
+                        </div>
+
+                        <div className="w-full bg-[var(--surface-2)] h-2 rounded-full overflow-hidden">
+                          <div
+                            className={`h-full transition-all duration-500 ${
+                              crossLifecycle.status === 'FAILED' ? 'bg-rose-500' : 'bg-gradient-to-r from-[var(--primary)] to-[var(--accent-1)]'
+                            }`}
+                            style={{
+                              width: `${(crossLifecycle.step / crossLifecycle.totalSteps) * 100}%`,
+                            }}
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-mono">
+                          <div>
+                            <span className="text-[var(--text-dim)] block">Source Chain TX (Polygon Amoy):</span>
+                            {crossLifecycle.sourceTxHash ? (
+                              <a
+                                href={`https://amoy.polygonscan.com/tx/${crossLifecycle.sourceTxHash}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-[var(--accent-1)] hover:underline inline-flex items-center gap-1"
+                              >
+                                <span>{crossLifecycle.sourceTxHash.slice(0, 10)}...{crossLifecycle.sourceTxHash.slice(-8)}</span>
+                                <ExternalLink size={11} />
+                              </a>
+                            ) : (
+                              <span className="text-[var(--text-muted)]">Pending wallet broadcast...</span>
+                            )}
+                          </div>
+                          <div>
+                            <span className="text-[var(--text-dim)] block">Destination Execution TX ({destNetwork.name}):</span>
+                            {crossLifecycle.destTxHash ? (
+                              <span className="text-emerald-400">
+                                {crossLifecycle.destTxHash.slice(0, 10)}...{crossLifecycle.destTxHash.slice(-8)}
+                              </span>
+                            ) : (
+                              <span className="text-[var(--text-muted)]">
+                                {crossLifecycle.status === 'COMPLETED' ? 'Settled on destination' : 'Awaiting bridge relayer attestation...'}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {crossLifecycle.error && (
+                          <div className="p-2.5 rounded bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs">
+                            <strong>Error:</strong> {crossLifecycle.error}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Action Button */}
+                    <button
+                      onClick={handleExecuteCrossChainSwap}
+                      disabled={
+                        !quote ||
+                        !quote.canExecute ||
+                        crossLifecycle.status === 'AWAITING_APPROVAL' ||
+                        crossLifecycle.status === 'SOURCE_PENDING' ||
+                        crossLifecycle.status === 'BRIDGE_ATTESTING' ||
+                        crossLifecycle.status === 'DEST_EXECUTING'
+                      }
+                      className={`h-12 w-full font-bold text-xs uppercase tracking-wider rounded-xl transition cursor-pointer ${
+                        quote && quote.canExecute
+                          ? 'portal-btn-primary hover:brightness-110 shadow-lg shadow-[var(--accent-1)]/20'
+                          : 'portal-btn-secondary opacity-60 cursor-not-allowed border border-amber-500/40 text-amber-200'
+                      }`}
+                    >
+                      {crossLifecycle.status === 'AWAITING_APPROVAL' && 'Awaiting Wallet Approval...'}
+                      {crossLifecycle.status === 'SOURCE_PENDING' && 'Broadcasting Source TX...'}
+                      {crossLifecycle.status === 'BRIDGE_ATTESTING' && 'Bridge Relayer Attesting...'}
+                      {crossLifecycle.status === 'DEST_EXECUTING' && 'Executing on Destination Chain...'}
+                      {crossLifecycle.status === 'COMPLETED' && 'Transfer Completed · Bridge Next'}
+                      {crossLifecycle.status === 'IDLE' && (
+                        quote && quote.canExecute
+                          ? `Bridge ${crossAmount} ${crossSourceToken} to ${destNetwork.name}`
+                          : 'Route Gated by Audit Safeguard (Zero-Trust)'
+                      )}
+                    </button>
+
+                    {/* Collapsible "How Cross-Chain Bridging Works" */}
+                    <div className="border border-[var(--border)] rounded-xl overflow-hidden bg-[var(--surface-2)]">
+                      <button
+                        type="button"
+                        onClick={() => setIsHowBridgeWorksOpen(!isHowBridgeWorksOpen)}
+                        className="w-full px-4 py-3 flex items-center justify-between text-xs font-semibold text-white hover:bg-[var(--surface-1)] transition cursor-pointer"
                       >
-                        <option value={10143} className="bg-[#0c1218] text-white">Monad (10143) · Native MON</option>
-                        <option value={43114} className="bg-[#0c1218] text-white">Avalanche (43114) · Native AVAX</option>
-                        <option value={8453} className="bg-[#0c1218] text-white">Base (8453) · Native ETH</option>
-                      </select>
-                      <span className="text-xs text-[var(--text-muted)] block mt-1">Cross-Chain Route in Staging</span>
+                        <span className="flex items-center gap-2">
+                          <span className="text-[var(--accent-1)]">ℹ</span>
+                          <span>How Cross-Chain Bridging Works (Protocol Security &amp; Audit Verification)</span>
+                        </span>
+                        <ChevronDown
+                          size={14}
+                          className={`transform transition-transform text-[var(--text-dim)] ${isHowBridgeWorksOpen ? 'rotate-180' : ''}`}
+                        />
+                      </button>
+
+                      {isHowBridgeWorksOpen && (
+                        <div className="p-4 pt-2 border-t border-[var(--border)] text-xs text-[var(--text-muted)] space-y-3 leading-relaxed">
+                          <div>
+                            <strong className="text-white block mb-0.5">1. Route Discovery &amp; Quote Calculation</strong>
+                            The router identifies liquidity pathways between Polygon Amoy (Chain 80002) and destination networks ({destNetwork.name}). Dynamic exchange rates, relayer fees (0.10%), and slippage caps (0.50%) are calculated before any user transaction is signed.
+                          </div>
+                          <div>
+                            <strong className="text-white block mb-0.5">2. Wallet Signature &amp; Source Lock</strong>
+                            The user executes an on-chain lock or burn of the source asset on Polygon Amoy. A unique cross-chain message ID is emitted in the source transaction receipt.
+                          </div>
+                          <div>
+                            <strong className="text-white block mb-0.5">3. Decentralized Relayer Attestation</strong>
+                            Decentralized oracles and relayers observe the confirmed source block, sign cryptographic quorum attestations, and forward the message envelope to the destination chain.
+                          </div>
+                          <div>
+                            <strong className="text-white block mb-0.5">4. Audit Safeguards &amp; Zero-Trust Gating</strong>
+                            Fundrex strictly enforces audit verification before enabling capital movement to any network. If destination verifiers or relayers have not completed formal security review or multi-sig signoff, transfers are locked to protect user funds against bridge drain vulnerabilities.
+                          </div>
+                          <div>
+                            <strong className="text-white block mb-0.5">5. Destination Settlement &amp; Refund Recovery</strong>
+                            Upon destination verifier confirmation, destination tokens are minted or released to the user's wallet. If destination execution fails, the protocol provides an on-chain refund recovery mechanism back to the originating address.
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
-
-                  <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-200 leading-relaxed">
-                    <strong>Notice:</strong> Cross-chain bridge relayers and messaging contracts for Monad, Avalanche, and Base are currently undergoing multi-sig audit verification. To safeguard user funds, cross-chain execution is disabled on this staging interface until bridge verifiers are activated on mainnet.
-                  </div>
-
-                  <button
-                    disabled
-                    className="portal-btn-secondary h-12 w-full opacity-50 cursor-not-allowed font-semibold text-xs"
-                  >
-                    Cross-Chain Route Staging (Execution Disabled)
-                  </button>
-                </div>
-              )}
+                );
+              })()}
 
               {swapSubTab === 'pool' && (
                 <div className="portal-card p-6 flex flex-col gap-6">
@@ -3580,6 +4094,185 @@ export default function FundryxAppPortal({
               </div>
             </div>
           )}
+
+          {/* Partial Repayment Modal Dialog */}
+          {selectedRepayLoan && (() => {
+            const rawId = selectedRepayLoan.loanId !== undefined ? selectedRepayLoan.loanId : selectedRepayLoan.id;
+            const numId = typeof rawId === 'string' && rawId.startsWith('LOAN-')
+              ? Number(rawId.replace('LOAN-', ''))
+              : Number(rawId);
+            const principalInitial = Number(selectedRepayLoan.principalInitial || selectedRepayLoan.amount || 0);
+            const principalOutstanding = Number(
+              selectedRepayLoan.principalOutstanding !== undefined
+                ? selectedRepayLoan.principalOutstanding
+                : principalInitial
+            );
+            const feeAmount = Number(selectedRepayLoan.feeAmount || 0);
+            const totalDebt = principalOutstanding + feeAmount;
+            const numericRepay = Number(partialRepayAmount) || 0;
+            const remainingDebt = Math.max(0, totalDebt - numericRepay);
+            const isFull = numericRepay >= totalDebt - 0.0001;
+
+            return (
+              <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+                <div className="portal-card max-w-lg w-full p-6 border border-[var(--border)] shadow-2xl relative animate-fade-in">
+                  {/* Close Button */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedRepayLoan(null);
+                      setPartialRepayAmount('');
+                    }}
+                    className="absolute top-4 right-4 text-[var(--text-dim)] hover:text-white transition cursor-pointer text-base"
+                  >
+                    ✕
+                  </button>
+
+                  {/* Modal Header */}
+                  <div className="mb-5 pb-3 border-b border-[var(--border)]">
+                    <div className="flex items-center gap-2">
+                      <span className="portal-badge portal-badge-primary">Loan Settlement</span>
+                      <span className="text-xs font-mono text-[var(--text-dim)]">Polygon Amoy (80002)</span>
+                    </div>
+                    <h2 className="text-lg font-bold text-white mt-1">Repay Loan #{numId}</h2>
+                    <p className="text-xs text-[var(--text-muted)] mt-0.5">
+                      Settle outstanding debt partially or in full. Contract arithmetic updates principal and interest atomically.
+                    </p>
+                  </div>
+
+                  {/* Loan Financial Details Grid */}
+                  <div className="grid grid-cols-2 gap-3 mb-4">
+                    <div className="p-3 rounded-lg bg-[var(--surface-2)] border border-[var(--border)]">
+                      <span className="text-[11px] text-[var(--text-dim)] block">Original Principal</span>
+                      <span className="font-mono text-sm font-bold text-white">{principalInitial.toFixed(2)} FDX</span>
+                    </div>
+                    <div className="p-3 rounded-lg bg-[var(--surface-2)] border border-[var(--border)]">
+                      <span className="text-[11px] text-[var(--text-dim)] block">Outstanding Principal</span>
+                      <span className="font-mono text-sm font-bold text-amber-300">{principalOutstanding.toFixed(2)} FDX</span>
+                    </div>
+                    <div className="p-3 rounded-lg bg-[var(--surface-2)] border border-[var(--border)]">
+                      <span className="text-[11px] text-[var(--text-dim)] block">Accrued Fee</span>
+                      <span className="font-mono text-sm font-bold text-purple-300">{feeAmount.toFixed(2)} FDX</span>
+                    </div>
+                    <div className="p-3 rounded-lg bg-[var(--surface-2)] border border-[var(--border)]">
+                      <span className="text-[11px] text-[var(--text-dim)] block">Total Current Debt</span>
+                      <span className="font-mono text-sm font-bold text-white">{totalDebt.toFixed(2)} FDX</span>
+                    </div>
+                  </div>
+
+                  {/* Wallet Balance Info */}
+                  <div className="flex justify-between items-center text-xs px-1 mb-2">
+                    <span className="text-[var(--text-dim)]">Wallet Balance:</span>
+                    <span className="font-mono font-bold text-white">
+                      {userFdxBalance !== null ? Number(userFdxBalance).toFixed(2) : '--'} FDX
+                    </span>
+                  </div>
+
+                  {/* Amount Input */}
+                  <div className="mb-3">
+                    <div className="relative">
+                      <input
+                        type="number"
+                        min="0.01"
+                        max={totalDebt}
+                        step="any"
+                        value={partialRepayAmount}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (val === '' || (!val.includes('-') && Number(val) >= 0)) {
+                            setPartialRepayAmount(val);
+                          }
+                        }}
+                        placeholder="0.00"
+                        className="w-full h-11 px-4 pr-16 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] font-mono text-white text-base outline-none focus:border-[var(--accent-1)] transition"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setPartialRepayAmount(totalDebt.toFixed(2))}
+                        className="absolute right-3.5 top-2.5 text-xs font-bold text-[var(--accent-1)] uppercase cursor-pointer hover:brightness-125 transition"
+                      >
+                        Max
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Percentage & Test Shortcuts */}
+                  <div className="flex flex-wrap gap-1.5 mb-4">
+                    {[
+                      { label: '25%', value: (totalDebt * 0.25).toFixed(2) },
+                      { label: '50%', value: (totalDebt * 0.50).toFixed(2) },
+                      { label: '75%', value: (totalDebt * 0.75).toFixed(2) },
+                      { label: '100% (Full)', value: totalDebt.toFixed(2) },
+                      { label: '10 FDX', value: '10' },
+                      { label: '20 FDX', value: '20' },
+                      { label: '33 FDX', value: '33' },
+                    ].map((sc) => (
+                      <button
+                        key={sc.label}
+                        type="button"
+                        onClick={() => setPartialRepayAmount(sc.value)}
+                        className="px-2.5 py-1 text-xs rounded bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text-muted)] hover:text-white hover:border-[var(--accent-1)] transition cursor-pointer font-mono"
+                      >
+                        {sc.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Live Proposed Settlement Preview */}
+                  <div className="p-3 rounded-lg bg-[var(--surface-2)]/60 border border-[var(--border)] mb-5 text-xs space-y-1.5">
+                    <div className="flex justify-between items-center">
+                      <span className="text-[var(--text-dim)]">Proposed Repayment:</span>
+                      <span className="font-mono font-bold text-white">{numericRepay.toFixed(2)} FDX</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-[var(--text-dim)]">Remaining Debt After Payment:</span>
+                      <span className={`font-mono font-bold ${remainingDebt <= 0 ? 'text-emerald-400' : 'text-amber-300'}`}>
+                        {remainingDebt.toFixed(2)} FDX
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-[var(--text-dim)]">Loan Status After Payment:</span>
+                      <span className="font-mono font-bold text-white">
+                        {isFull ? 'Fully Settled (Complete)' : 'Partially Settled (Active)'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Modal Actions */}
+                  <div className="flex gap-3">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedRepayLoan(null);
+                        setPartialRepayAmount('');
+                      }}
+                      className="portal-btn-secondary flex-1 h-11 text-xs font-semibold cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleExecuteRepay(numId, partialRepayAmount)}
+                      disabled={
+                        !numericRepay ||
+                        numericRepay <= 0 ||
+                        numericRepay > totalDebt ||
+                        repayTxStatus[numId] === 'awaiting-wallet' ||
+                        repayTxStatus[numId] === 'pending'
+                      }
+                      className="portal-btn-primary flex-1 h-11 text-xs font-bold cursor-pointer disabled:opacity-50"
+                    >
+                      {repayTxStatus[numId] === 'awaiting-wallet' && 'Confirming in Wallet...'}
+                      {repayTxStatus[numId] === 'pending' && 'Settling on-chain...'}
+                      {repayTxStatus[numId] !== 'awaiting-wallet' && repayTxStatus[numId] !== 'pending' && (
+                        isFull ? `Repay Full Debt (${totalDebt.toFixed(2)} FDX)` : `Repay Partial (${numericRepay.toFixed(2)} FDX)`
+                      )}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
 
         </main>
 

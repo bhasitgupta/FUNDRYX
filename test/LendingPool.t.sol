@@ -116,6 +116,104 @@ contract LendingPoolTest is Test {
         assertEq(historyRegistry.getBorrowerStats(borrower).verifiedRepaymentCount, 0);
     }
 
+    /// @notice Test 60 FDX loan where borrower owes 60.6 FDX (with 1% fee) and makes partial repayments
+    function test_partial_repay_60_fdx_sequence_and_final_settlement() public {
+        vm.prank(borrower);
+        lendingPool.borrow(60e18, 1);
+
+        ILendingPool.Loan memory loan = lendingPool.getLoan(1);
+        uint256 fee = loan.feeAmount; // 0.6e18
+        uint256 totalDebt = loan.principalOutstanding; // 60.6e18
+        assertEq(loan.principalInitial, 60e18);
+        assertEq(fee, 0.6e18);
+        assertEq(totalDebt, 60.6e18);
+
+        // Step 1: Repay 10 FDX
+        vm.prank(borrower);
+        lendingPool.repay(1, 10e18);
+        loan = lendingPool.getLoan(1);
+        assertEq(loan.principalOutstanding, 50.6e18);
+        assertEq(loan.status == ILendingPool.LoanStatus.Active, true);
+        assertEq(historyRegistry.getBorrowerStats(borrower).verifiedRepaymentCount, 0);
+
+        // Step 2: Repay 20 FDX
+        vm.prank(borrower);
+        lendingPool.repay(1, 20e18);
+        loan = lendingPool.getLoan(1);
+        assertEq(loan.principalOutstanding, 30.6e18);
+        assertEq(loan.status == ILendingPool.LoanStatus.Active, true);
+        assertEq(historyRegistry.getBorrowerStats(borrower).verifiedRepaymentCount, 0);
+
+        // Step 3: Attempting to repay 33 FDX when only 30.6 FDX is owed must revert
+        vm.prank(borrower);
+        vm.expectRevert();
+        lendingPool.repay(1, 33e18);
+
+        // Step 4: Repay remaining exact debt (30.6 FDX) to settle loan fully
+        vm.prank(borrower);
+        lendingPool.repay(1, 30.6e18);
+        loan = lendingPool.getLoan(1);
+        assertEq(loan.principalOutstanding, 0);
+        assertEq(loan.status == ILendingPool.LoanStatus.Repaid, true);
+        assertEq(historyRegistry.getBorrowerStats(borrower).verifiedRepaymentCount, 1);
+    }
+
+    /// @notice Test 60 FDX loan where borrower with 33 FDX repays 33 FDX partial amount first
+    function test_partial_repay_60_fdx_single_partial_33_fdx() public {
+        vm.prank(borrower);
+        lendingPool.borrow(60e18, 1);
+
+        ILendingPool.Loan memory loan = lendingPool.getLoan(1);
+        assertEq(loan.principalOutstanding, 60.6e18);
+
+        // Borrower has 33 FDX available and makes partial repayment of 33 FDX
+        vm.prank(borrower);
+        lendingPool.repay(1, 33e18);
+
+        loan = lendingPool.getLoan(1);
+        assertEq(loan.principalOutstanding, 27.6e18);
+        assertEq(loan.status == ILendingPool.LoanStatus.Active, true);
+
+        // Then borrower repays remaining 27.6 FDX
+        vm.prank(borrower);
+        lendingPool.repay(1, 27.6e18);
+
+        loan = lendingPool.getLoan(1);
+        assertEq(loan.principalOutstanding, 0);
+        assertEq(loan.status == ILendingPool.LoanStatus.Repaid, true);
+        assertEq(historyRegistry.getBorrowerStats(borrower).verifiedRepaymentCount, 1);
+    }
+
+    /// @notice Test 100 FDX loan with sequential partial payments: 10 FDX, 20 FDX, 33 FDX, and remainder
+    function test_partial_repay_sequence_10_20_33_and_remainder() public {
+        vm.prank(borrower);
+        lendingPool.borrow(100e18, 1); // 100 FDX principal + 1 FDX fee = 101 FDX total debt
+
+        // Repay 10 FDX
+        vm.prank(borrower);
+        lendingPool.repay(1, 10e18);
+        assertEq(lendingPool.getLoan(1).principalOutstanding, 91e18);
+
+        // Repay 20 FDX
+        vm.prank(borrower);
+        lendingPool.repay(1, 20e18);
+        assertEq(lendingPool.getLoan(1).principalOutstanding, 71e18);
+
+        // Repay 33 FDX
+        vm.prank(borrower);
+        lendingPool.repay(1, 33e18);
+        assertEq(lendingPool.getLoan(1).principalOutstanding, 38e18);
+
+        // Repay remaining 38 FDX
+        vm.prank(borrower);
+        lendingPool.repay(1, 38e18);
+
+        ILendingPool.Loan memory finalLoan = lendingPool.getLoan(1);
+        assertEq(finalLoan.principalOutstanding, 0);
+        assertEq(finalLoan.status == ILendingPool.LoanStatus.Repaid, true);
+        assertEq(historyRegistry.getBorrowerStats(borrower).verifiedRepaymentCount, 1);
+    }
+
     function test_credit_increases_after_repayment() public {
         // First loan
         vm.prank(borrower);

@@ -5,6 +5,7 @@ import {Script, console} from "forge-std/Script.sol";
 import {AccessManager} from "../contracts/core/AccessManager.sol";
 import {PauseController} from "../contracts/core/PauseController.sol";
 import {FundryxToken} from "../contracts/core/FundryxToken.sol";
+import {FundrexUSD} from "../contracts/core/FundrexUSD.sol";
 import {CreditHistoryRegistry} from "../contracts/lending/CreditHistoryRegistry.sol";
 import {CreditPolicy} from "../contracts/lending/CreditPolicy.sol";
 import {LendingPool} from "../contracts/lending/LendingPool.sol";
@@ -37,9 +38,13 @@ contract DeployFundryx is Script {
         PauseController pauseController = new PauseController(address(accessManager));
         console.log("PauseController:", address(pauseController));
 
-        // 3. FundryxToken (test ERC-20)
+        // 3. FundryxToken (test ERC-20 utility asset)
         FundryxToken token = new FundryxToken(deployer);
-        console.log("FundryxToken:", address(token));
+        console.log("FundryxToken (FDX):", address(token));
+
+        // 3b. FundrexUSD (test ERC-20 6-decimal stable asset)
+        FundrexUSD fusd = new FundrexUSD(deployer);
+        console.log("FundrexUSD (fUSD):", address(fusd));
 
         // 4. CreditHistoryRegistry
         CreditHistoryRegistry historyRegistry = new CreditHistoryRegistry(address(accessManager));

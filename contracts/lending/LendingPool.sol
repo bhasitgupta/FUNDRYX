@@ -193,14 +193,19 @@ contract LendingPool is ILendingPool, ReentrancyGuard {
         }
 
         // Update protocol accounting
-        // Reduce totalBorrowed by principal portion only (not fee portion)
-        uint256 principalPortion = amount;
-        if (loan.feeAmount > 0 && loan.principalOutstanding == 0) {
-            // Full repayment: reduce totalBorrowed by initial principal
-            principalPortion = loan.principalInitial;
-            totalBorrowed -= loan.principalInitial;
-        } else if (amount <= loan.principalInitial) {
-            totalBorrowed -= amount;
+        // Fees paid first; reduce totalBorrowed by the exact principal portion paid
+        uint256 principalBefore = (loan.principalOutstanding + amount) > loan.principalInitial
+            ? loan.principalInitial
+            : (loan.principalOutstanding + amount);
+        uint256 principalAfter = loan.principalOutstanding > loan.principalInitial
+            ? loan.principalInitial
+            : loan.principalOutstanding;
+        uint256 principalReduction = principalBefore - principalAfter;
+
+        if (principalReduction > totalBorrowed) {
+            totalBorrowed = 0;
+        } else {
+            totalBorrowed -= principalReduction;
         }
 
         // Update exposure
