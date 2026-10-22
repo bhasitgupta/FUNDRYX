@@ -4,7 +4,7 @@ import FundryxLanding from './components/FundryxLanding';
 import FundryxAppPortal from './components/FundryxAppPortal';
 import WalletModal from './components/WalletModal';
 import ChooseCryptoWalletLoginPage from './app/choose-crypto-wallet-login/page';
-import { connectWallet, reconnectWallet, CONTRACT_ADDRESSES, LENDING_POOL_ABI } from './utils/contracts';
+import { connectWallet, reconnectWallet, switchNetwork, CONTRACT_ADDRESSES, LENDING_POOL_ABI } from './utils/contracts';
 import { ethers } from 'ethers';
 
 class PortalErrorBoundary extends React.Component {
@@ -59,6 +59,8 @@ class PortalErrorBoundary extends React.Component {
   }
 }
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
+
 export default function App() {
   const [currentView, setCurrentView] = useState('landing'); // 'landing' | 'app' | 'wallet-login'
   const [activeAppTab, setActiveAppTab] = useState('overview');
@@ -81,7 +83,7 @@ export default function App() {
 
   // Fetch live pool stats from backend and blockchain
   useEffect(() => {
-    fetch('http://127.0.0.1:8000/api/pool')
+    fetch(`${API_BASE_URL}/api/pool`)
       .then((res) => res.json())
       .then((data) => {
         if (data && data.totalDeposits !== undefined) {
@@ -165,6 +167,20 @@ export default function App() {
     window.location.hash = '';
   };
 
+  // Switch Network handler
+  const handleSwitchNetwork = async (targetChainId) => {
+    try {
+      const updated = await switchNetwork(targetChainId, wallet.walletType || 'metamask');
+      walletRef.current = updated;
+      setWallet(updated);
+      fetchLivePoolData(updated.provider);
+      return updated;
+    } catch (err) {
+      console.warn('Network switch failed in App:', err.message);
+      throw err;
+    }
+  };
+
   // Fetch live pool data if provider is available
   const fetchLivePoolData = async (provider) => {
     try {
@@ -204,6 +220,44 @@ export default function App() {
         }
       })
       .catch((e) => console.log('Auto-reconnect silent bypass:', e.message));
+
+    // EIP-1193: Listen to wallet chainChanged and accountsChanged
+    const injected = window.ethereum || window.phantom?.ethereum;
+    if (injected && injected.on) {
+      const handleChainChanged = (hexChainId) => {
+        const chainId = parseInt(hexChainId, 16);
+        console.log('[EVM] Chain changed event:', chainId);
+        reconnectWallet().then((conn) => {
+          if (conn) {
+            walletRef.current = conn;
+            setWallet(conn);
+            fetchLivePoolData(conn.provider);
+          }
+        });
+      };
+
+      const handleAccountsChanged = (accounts) => {
+        if (!accounts || accounts.length === 0) {
+          handleDisconnect();
+        } else {
+          reconnectWallet().then((conn) => {
+            if (conn) {
+              walletRef.current = conn;
+              setWallet(conn);
+              fetchLivePoolData(conn.provider);
+            }
+          });
+        }
+      };
+
+      injected.on('chainChanged', handleChainChanged);
+      injected.on('accountsChanged', handleAccountsChanged);
+
+      return () => {
+        injected.removeListener?.('chainChanged', handleChainChanged);
+        injected.removeListener?.('accountsChanged', handleAccountsChanged);
+      };
+    }
   }, []);
 
   // Deep-linking and URL Hash synchronization
@@ -283,6 +337,7 @@ export default function App() {
             poolStats={poolStats}
             initialTab={activeAppTab}
             onConnect={() => setIsWalletModalOpen(true)}
+            onSwitchNetwork={handleSwitchNetwork}
             onNavigateWalletLogin={() => {
               setCurrentView('wallet-login');
               window.location.hash = '#wallet-login';

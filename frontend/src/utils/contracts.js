@@ -6,39 +6,123 @@ import {
 } from './supabase';
 
 // ─────────────────────────────────────────────────────────────
-// NETWORK CONFIG — Polygon Amoy
+// CENTRALIZED MULTI-CHAIN CONFIGURATION REGISTRY
 // ─────────────────────────────────────────────────────────────
+export const SUPPORTED_NETWORKS = {
+  80002: {
+    chainId: 80002,
+    hexChainId: '0x13882',
+    name: 'Polygon',
+    shortName: 'Polygon',
+    nativeCurrency: { name: 'POL', symbol: 'POL', decimals: 18 },
+    rpcUrl: 'https://polygon-amoy-bor-rpc.publicnode.com',
+    explorerUrl: 'https://amoy.polygonscan.com',
+    status: 'ACTIVE',
+    contractsDeployed: true,
+    statusLabel: 'Active Protocol Stack',
+    iconColor: '#8247E5',
+    contracts: {
+      AccessManager:           '0x230829f5EC30A1936fDECE13F1179381daaf69e8',
+      PauseController:         '0xF4d0F035900c313e44246ED473b3011E42192F77',
+      FundryxToken:            '0xdA2631Aadb95AB5Ea6926e431F66fe2a66EF930E',
+      CreditHistoryRegistry:   '0x27B46c075bf2Cd67D174BD59629cc66b8C9Ea36d',
+      CreditPolicy:            '0x68fC6E11cD8a855849D7788e035BA92E320Db0d2',
+      LendingPool:             '0xF35DaC9A5Db13c2b621Aa00288A4996D5d91c07C',
+      RiskAttestationRegistry: '0xCa8C5f7AA0717BCc3435cAEbFB96Ff602232dEcC',
+      MockSwapRouter:          '0x460850Fb8495867E526e23B4149D04810d5b4e39',
+    },
+    tokens: {
+      FDX:    '0xdA2631Aadb95AB5Ea6926e431F66fe2a66EF930E',
+      WPOL:   '0x360ad4f9a9A8EFe9A8DCB5f461c4Cc1047E1Dcf9',
+      WMATIC: '0x360ad4f9a9A8EFe9A8DCB5f461c4Cc1047E1Dcf9',
+      USDC:   '0x41E94Eb019C0762fFF8923a1aF1b3F931818B006',
+    },
+  },
+  10143: {
+    chainId: 10143,
+    hexChainId: '0x279f',
+    name: 'Monad',
+    shortName: 'Monad',
+    nativeCurrency: { name: 'MON', symbol: 'MON', decimals: 18 },
+    rpcUrl: 'https://testnet-rpc.monad.xyz/',
+    explorerUrl: 'https://testnet.monadexplorer.com',
+    status: 'PENDING_DEPLOYMENT',
+    contractsDeployed: false,
+    statusLabel: 'Contracts Staging',
+    iconColor: '#836EF9',
+    contracts: {},
+    tokens: {},
+  },
+  8453: {
+    chainId: 8453,
+    hexChainId: '0x2105',
+    name: 'Base',
+    shortName: 'Base',
+    nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
+    rpcUrl: 'https://mainnet.base.org',
+    explorerUrl: 'https://basescan.org',
+    status: 'PENDING_DEPLOYMENT',
+    contractsDeployed: false,
+    statusLabel: 'Contracts Staging',
+    iconColor: '#0052FF',
+    contracts: {},
+    tokens: {},
+  },
+  43114: {
+    chainId: 43114,
+    hexChainId: '0xa86a',
+    name: 'Avalanche',
+    shortName: 'Avalanche',
+    nativeCurrency: { name: 'Avalanche', symbol: 'AVAX', decimals: 18 },
+    rpcUrl: 'https://api.avax.network/ext/bc/C/rpc',
+    explorerUrl: 'https://snowtrace.io',
+    status: 'PENDING_DEPLOYMENT',
+    contractsDeployed: false,
+    statusLabel: 'Contracts Staging',
+    iconColor: '#E84142',
+    contracts: {},
+    tokens: {},
+  },
+  42161: {
+    chainId: 42161,
+    hexChainId: '0xa4b1',
+    name: 'Arbitrum',
+    shortName: 'Arbitrum',
+    nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
+    rpcUrl: 'https://arb1.arbitrum.io/rpc',
+    explorerUrl: 'https://arbiscan.io',
+    status: 'PENDING_DEPLOYMENT',
+    contractsDeployed: false,
+    statusLabel: 'Contracts Staging',
+    iconColor: '#28A0F0',
+    contracts: {},
+    tokens: {},
+  },
+};
+
+// Aliases for dev/staging testnets
+SUPPORTED_NETWORKS[84532] = { ...SUPPORTED_NETWORKS[8453], chainId: 84532, hexChainId: '0x14a34', rpcUrl: 'https://sepolia.base.org', explorerUrl: 'https://sepolia.basescan.org' };
+SUPPORTED_NETWORKS[43113] = { ...SUPPORTED_NETWORKS[43114], chainId: 43113, hexChainId: '0xa869', rpcUrl: 'https://api.avax-test.network/ext/bc/C/rpc', explorerUrl: 'https://testnet.snowtrace.io' };
+SUPPORTED_NETWORKS[421614] = { ...SUPPORTED_NETWORKS[42161], chainId: 421614, hexChainId: '0x66eee', rpcUrl: 'https://sepolia-rollup.arbitrum.io/rpc', explorerUrl: 'https://sepolia.arbiscan.io' };
+
 export const POLYGON_AMOY_CONFIG = {
-  chainId: '0x13882', // 80002
-  chainName: 'Polygon Amoy',
+  chainId: '0x13882',
+  chainName: 'Polygon',
   nativeCurrency: { name: 'POL', symbol: 'POL', decimals: 18 },
   rpcUrls: ['https://polygon-amoy-bor-rpc.publicnode.com'],
   blockExplorerUrls: ['https://amoy.polygonscan.com/'],
 };
 
+export function getNetworkConfig(chainId) {
+  if (!chainId) return SUPPORTED_NETWORKS[80002];
+  const numId = typeof chainId === 'string' ? (chainId.startsWith('0x') ? parseInt(chainId, 16) : Number(chainId)) : chainId;
+  return SUPPORTED_NETWORKS[numId] || null;
+}
+
 export const CHAIN_ID = 80002;
 
-// ─────────────────────────────────────────────────────────────
-// DEPLOYED CONTRACT ADDRESSES — Polygon Amoy
-// ─────────────────────────────────────────────────────────────
-export const CONTRACT_ADDRESSES = {
-  AccessManager:           '0x230829f5EC30A1936fDECE13F1179381daaf69e8',
-  PauseController:         '0xF4d0F035900c313e44246ED473b3011E42192F77',
-  FundryxToken:            '0xdA2631Aadb95AB5Ea6926e431F66fe2a66EF930E',
-  CreditHistoryRegistry:   '0x27B46c075bf2Cd67D174BD59629cc66b8C9Ea36d',
-  CreditPolicy:            '0x68fC6E11cD8a855849D7788e035BA92E320Db0d2',
-  LendingPool:             '0xF35DaC9A5Db13c2b621Aa00288A4996D5d91c07C',
-  RiskAttestationRegistry: '0xCa8C5f7AA0717BCc3435cAEbFB96Ff602232dEcC',
-  MockSwapRouter:          '0x460850Fb8495867E526e23B4149D04810d5b4e39',
-};
-
-export const SUPPORTED_TOKENS = {
-  FDX: '0xdA2631Aadb95AB5Ea6926e431F66fe2a66EF930E',
-  WPOL: '0x360ad4f9a9A8EFe9A8DCB5f461c4Cc1047E1Dcf9',
-  WMATIC: '0x360ad4f9a9A8EFe9A8DCB5f461c4Cc1047E1Dcf9',
-  USDC: '0x41E94Eb019C0762fFF8923a1aF1b3F931818B006',
-};
-
+export const CONTRACT_ADDRESSES = SUPPORTED_NETWORKS[80002].contracts;
+export const SUPPORTED_TOKENS = SUPPORTED_NETWORKS[80002].tokens;
 
 // ─────────────────────────────────────────────────────────────
 // ABIs — exactly match the deployed contracts
@@ -141,8 +225,10 @@ export const LOAN_STATUS = {
 // ─────────────────────────────────────────────────────────────
 // READ-ONLY PROVIDER — public RPC, no wallet needed
 // ─────────────────────────────────────────────────────────────
-export function getReadProvider() {
-  return new ethers.JsonRpcProvider('https://polygon-amoy-bor-rpc.publicnode.com');
+export function getReadProvider(chainId = CHAIN_ID) {
+  const net = SUPPORTED_NETWORKS[chainId];
+  const rpc = net?.rpcUrl || 'https://polygon-amoy-bor-rpc.publicnode.com';
+  return new ethers.JsonRpcProvider(rpc);
 }
 
 // Polygon Amoy validator rule: minimum tip cap must be >= 25 gwei
@@ -389,6 +475,82 @@ export async function reconnectWallet() {
   } catch {
     return null;
   }
+}
+
+/**
+ * Switch active wallet network with automatic fallback to wallet_addEthereumChain
+ */
+export async function switchNetwork(targetChainId, walletType = 'metamask') {
+  const targetConfig = SUPPORTED_NETWORKS[targetChainId];
+  if (!targetConfig) {
+    throw new Error(`Unsupported network chain ID: ${targetChainId}`);
+  }
+
+  const injected = getInjectedProvider(walletType) || window.ethereum || window.phantom?.ethereum;
+  if (!injected) {
+    throw new Error('No EVM wallet detected to switch network.');
+  }
+
+  try {
+    await injected.request({
+      method: 'wallet_switchEthereumChain',
+      params: [{ chainId: targetConfig.hexChainId }],
+    });
+  } catch (switchError) {
+    // 4902 code means network is not in wallet and needs to be added
+    if (switchError.code === 4902 || switchError?.data?.originalError?.code === 4902) {
+      await injected.request({
+        method: 'wallet_addEthereumChain',
+        params: [
+          {
+            chainId: targetConfig.hexChainId,
+            chainName: targetConfig.name,
+            nativeCurrency: targetConfig.nativeCurrency,
+            rpcUrls: [targetConfig.rpcUrl],
+            blockExplorerUrls: [targetConfig.explorerUrl],
+          },
+        ],
+      });
+    } else {
+      throw switchError;
+    }
+  }
+
+  const updatedProvider = new ethers.BrowserProvider(injected);
+  const updatedSigner = await updatedProvider.getSigner();
+  const updatedNetwork = await updatedProvider.getNetwork();
+  const accounts = await updatedProvider.listAccounts();
+  const address = accounts[0] ? accounts[0].address : await updatedSigner.getAddress();
+  const balance = await updatedProvider.getBalance(address);
+
+  return {
+    address,
+    signer: updatedSigner,
+    provider: updatedProvider,
+    balance: ethers.formatEther(balance),
+    chainId: Number(updatedNetwork.chainId),
+    walletType,
+  };
+}
+
+/**
+ * EIP-747: Prompt MetaMask to track and discover FDX token
+ */
+export async function addTokenToMetaMask(tokenAddress, symbol = 'FDX', decimals = 18, image = '') {
+  const injected = window.ethereum || window.phantom?.ethereum;
+  if (!injected) throw new Error('MetaMask or EVM wallet not detected.');
+  return await injected.request({
+    method: 'wallet_watchAsset',
+    params: {
+      type: 'ERC20',
+      options: {
+        address: tokenAddress || CONTRACT_ADDRESSES.FundryxToken,
+        symbol,
+        decimals,
+        image: image || 'https://fundryx.vercel.app/fdx-token.svg',
+      },
+    },
+  });
 }
 
 // ─────────────────────────────────────────────────────────────

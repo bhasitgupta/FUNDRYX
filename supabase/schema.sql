@@ -22,6 +22,10 @@ CREATE TABLE IF NOT EXISTS public.audit_events (
     gas_used TEXT,
     effective_gas_price TEXT,
     explorer_url TEXT,
+    source TEXT NOT NULL DEFAULT 'ONCHAIN',
+    correlation_id TEXT,
+    ai_telemetry JSONB DEFAULT NULL,
+    error_code TEXT DEFAULT NULL,
     metadata JSONB DEFAULT '{}'::jsonb,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
@@ -97,3 +101,37 @@ INSERT INTO public.audit_events (
     '{"type": "Borrow", "loanId": "1", "verified": true}'::jsonb
 )
 ON CONFLICT (tx_hash) DO NOTHING;
+
+-- 6. AI TELEMETRY REPORTS TABLE
+CREATE TABLE IF NOT EXISTS public.ai_telemetry_reports (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    chain_id INTEGER NOT NULL DEFAULT 80002,
+    report_id TEXT NOT NULL UNIQUE,
+    report_hash TEXT NOT NULL,
+    model_version TEXT NOT NULL,
+    ruleset_version INTEGER NOT NULL DEFAULT 1,
+    risk_level INTEGER NOT NULL DEFAULT 0,
+    solvency_health NUMERIC NOT NULL DEFAULT 100.0,
+    verdict TEXT NOT NULL DEFAULT 'SOLVENT_NORMAL_OPERATION',
+    signer TEXT NOT NULL,
+    signature TEXT,
+    features JSONB DEFAULT '{}'::jsonb,
+    rules JSONB DEFAULT '{}'::jsonb,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_ai_telemetry_chain_id ON public.ai_telemetry_reports (chain_id);
+CREATE INDEX IF NOT EXISTS idx_ai_telemetry_created_at ON public.ai_telemetry_reports (created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_ai_telemetry_risk_level ON public.ai_telemetry_reports (risk_level);
+
+ALTER TABLE public.ai_telemetry_reports ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Allow public read on ai_telemetry_reports"
+    ON public.ai_telemetry_reports
+    FOR SELECT
+    USING (true);
+
+CREATE POLICY "Allow insert on ai_telemetry_reports"
+    ON public.ai_telemetry_reports
+    FOR INSERT
+    WITH CHECK (true);
