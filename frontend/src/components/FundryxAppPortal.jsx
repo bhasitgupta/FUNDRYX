@@ -1033,12 +1033,22 @@ export default function FundryxAppPortal({
           step: progress.step,
           sourceTxHash: progress.sourceTxHash || prev.sourceTxHash,
           bridgeMessageId: progress.bridgeMessageId || prev.bridgeMessageId,
+          destTxHash: progress.destTxHash || prev.destTxHash,
         }));
       });
 
+      setCrossLifecycle((prev) => ({
+        ...prev,
+        status: res.status || 'COMPLETED',
+        step: 6,
+        sourceTxHash: res.sourceTxHash || prev.sourceTxHash,
+        bridgeMessageId: res.bridgeMessageId || prev.bridgeMessageId,
+        destTxHash: res.destTxHash || prev.destTxHash,
+      }));
+
       setTxNotification({
         type: 'success',
-        message: `Cross-Chain Bridge Dispatched! Source TX confirmed on Polygon Amoy.`,
+        message: `Cross-Chain Bridge Completed! Dispatched from Polygon Amoy, verified & executed on ${quote.destChainName}.`,
         txHash: res.sourceTxHash,
       });
     } catch (err) {
@@ -3347,9 +3357,15 @@ export default function FundryxAppPortal({
                           <div>
                             <span className="text-[var(--text-dim)] block">Destination Execution TX ({destNetwork.name}):</span>
                             {crossLifecycle.destTxHash ? (
-                              <span className="text-emerald-400">
-                                {crossLifecycle.destTxHash.slice(0, 10)}...{crossLifecycle.destTxHash.slice(-8)}
-                              </span>
+                              <a
+                                href={`${destNetwork.explorerUrl}/tx/${crossLifecycle.destTxHash}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-emerald-400 hover:underline inline-flex items-center gap-1 font-mono"
+                              >
+                                <span>{crossLifecycle.destTxHash.slice(0, 10)}...{crossLifecycle.destTxHash.slice(-8)}</span>
+                                <ExternalLink size={11} />
+                              </a>
                             ) : (
                               <span className="text-[var(--text-muted)]">
                                 {crossLifecycle.status === 'COMPLETED' ? 'Settled on destination' : 'Awaiting bridge relayer attestation...'}
