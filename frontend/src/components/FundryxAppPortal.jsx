@@ -1994,7 +1994,9 @@ export default function FundryxAppPortal({
                   <div>
                     <div className="portal-card-header">
                       <h2 className="portal-card-title">Request Uncollateralized Loan</h2>
-                      <span className="portal-badge portal-badge-primary">Cap: {creditProfile.maxCredit || 100} FDX</span>
+                      <span className="portal-badge portal-badge-primary">
+                        Cap: {creditProfile?.maxCredit !== undefined ? Number(creditProfile.maxCredit).toFixed(0) : 0} FDX
+                      </span>
                     </div>
 
                     {/* Amount Input + Slider */}
@@ -2009,10 +2011,17 @@ export default function FundryxAppPortal({
                           value={borrowInput}
                           onChange={(e) => setBorrowInput(e.target.value)}
                           className="w-full h-11 px-4 pr-16 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] font-mono text-white text-base outline-none focus:border-[var(--primary)] transition"
-                          placeholder="50"
+                          placeholder="0"
                         />
                         <button
-                          onClick={() => setBorrowInput(Math.min(creditProfile.maxCredit || 100, livePool.availableLiquidity || 100).toString())}
+                          type="button"
+                          onClick={() => {
+                            const maxLimit = Math.min(
+                              Number(creditProfile?.maxCredit || 0),
+                              Number(livePool?.availableLiquidity || 0)
+                            );
+                            setBorrowInput(maxLimit > 0 ? maxLimit.toString() : '0');
+                          }}
                           className="absolute right-3.5 top-2.5 text-xs font-bold text-[var(--primary)] uppercase cursor-pointer hover:brightness-125 transition"
                         >
                           Max
@@ -2020,8 +2029,8 @@ export default function FundryxAppPortal({
                       </div>
                       <input
                         type="range"
-                        min="10"
-                        max={Math.max(100, creditProfile.maxCredit || 100)}
+                        min="0"
+                        max={Math.max(10, Math.min(Number(creditProfile?.maxCredit || 0), Number(livePool?.availableLiquidity || 0)))}
                         step="5"
                         value={borrowInput}
                         onChange={(e) => setBorrowInput(e.target.value)}
@@ -2029,7 +2038,7 @@ export default function FundryxAppPortal({
                       />
                       <div className="flex justify-between text-xs text-[var(--text-dim)] font-mono mt-1">
                         <span>Min 10 FDX</span>
-                        <span>Available Pool: {Number(livePool.availableLiquidity || 0).toFixed(0)} FDX</span>
+                        <span>Available Pool: {Number(livePool?.availableLiquidity || 0).toFixed(0)} FDX</span>
                       </div>
                     </div>
 
@@ -2072,14 +2081,26 @@ export default function FundryxAppPortal({
                   <div className="mt-4 pt-4 border-t border-[var(--border)]">
                     <button
                       onClick={handleExecuteBorrow}
-                      disabled={borrowTxStatus === 'awaiting-wallet' || borrowTxStatus === 'pending'}
+                      disabled={
+                        borrowTxStatus === 'awaiting-wallet' ||
+                        borrowTxStatus === 'pending' ||
+                        Number(borrowInput) <= 0 ||
+                        Number(livePool?.availableLiquidity || 0) <= 0 ||
+                        Number(borrowInput) > Number(livePool?.availableLiquidity || 0)
+                      }
                       className="portal-btn-primary w-full disabled:opacity-60 disabled:cursor-not-allowed"
                     >
                       {borrowTxStatus === 'awaiting-wallet' && 'Confirm in Wallet...'}
                       {borrowTxStatus === 'pending' && 'Confirming on-chain...'}
                       {borrowTxStatus === 'confirmed' && 'Loan Disbursed!'}
                       {borrowTxStatus === 'failed' && 'Borrow Failed (Retry)'}
-                      {borrowTxStatus === 'ready' && 'Execute Uncollateralized Loan'}
+                      {borrowTxStatus === 'ready' && (
+                        Number(livePool?.availableLiquidity || 0) <= 0
+                          ? 'Zero Pool Liquidity (Supply Vault First)'
+                          : Number(borrowInput) > Number(livePool?.availableLiquidity || 0)
+                            ? `Exceeds Available Liquidity (${Number(livePool?.availableLiquidity || 0).toFixed(0)} FDX)`
+                            : 'Execute Uncollateralized Loan'
+                      )}
                     </button>
                   </div>
                 </div>
@@ -2149,12 +2170,10 @@ export default function FundryxAppPortal({
                       <>
                         {/* Asset Segmented Control */}
                         <div className="mb-4">
-                          <label className="portal-label block mb-1.5">Select Capital Vault &amp; Asset</label>
+                          <label className="portal-label block mb-1.5">Capital Vault Asset</label>
                           <div className="portal-segmented">
                             {[
-                              { symbol: 'FDX', label: 'FDX (18 dec · Protocol)' },
-                              { symbol: 'fUSD', label: 'fUSD (6 dec · Fundrex USD)' },
-                              { symbol: 'USDC', label: 'USDC (6 dec · Circle)' }
+                              { symbol: 'FDX', label: 'FDX (18 dec · Protocol Lending Vault Asset)' },
                             ].map((v) => (
                               <button
                                 key={v.symbol}
@@ -2163,7 +2182,7 @@ export default function FundryxAppPortal({
                                   setSupplyAsset(v.symbol);
                                   setDepositAsset(v.symbol);
                                 }}
-                                className={`portal-segmented-btn ${depositAsset === v.symbol ? 'active border-[var(--accent-1)] text-[var(--accent-1)]' : ''}`}
+                                className={`portal-segmented-btn active border-[var(--accent-1)] text-[var(--accent-1)]`}
                               >
                                 {v.label}
                               </button>
@@ -2171,7 +2190,7 @@ export default function FundryxAppPortal({
                           </div>
                           <div className="flex items-center justify-between text-xs mt-2 px-1">
                             <span className="text-[var(--text-dim)] font-mono text-[11px]">
-                              Verified on {currentNetwork?.name || 'Polygon Amoy'} ({wallet?.chainId || 80002}) · {depositAsset === 'fUSD' || depositAsset === 'USDC' ? '6 decimals' : '18 decimals'}
+                              Verified on {activeNetConfig?.name || 'Polygon Amoy'} ({currentChainId}) · 18 decimals
                             </span>
                             <button
                               type="button"
@@ -2287,7 +2306,7 @@ export default function FundryxAppPortal({
                       </div>
                       <div className="flex justify-between items-center">
                         <span>Target Network</span>
-                        <span className="portal-badge portal-badge-yield">{currentNetwork?.name || 'Polygon Primary'} ({wallet?.chainId || 80002})</span>
+                        <span className="portal-badge portal-badge-yield">{activeNetConfig?.name || 'Active Chain'} ({currentChainId})</span>
                       </div>
                     </div>
                   </div>
@@ -2918,7 +2937,7 @@ export default function FundryxAppPortal({
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="portal-badge portal-badge-purple font-mono">0.30% Fee Tier</span>
-                  <span className="portal-badge portal-badge-neutral">{currentNetwork?.name || 'Polygon Primary'} ({wallet?.chainId || 80002})</span>
+                  <span className="portal-badge portal-badge-neutral">{activeNetConfig?.name || 'Active Chain'} ({currentChainId})</span>
                 </div>
               </div>
 

@@ -1494,15 +1494,17 @@ export async function executeDeposit(signer, amount, tokenSymbol = 'FDX') {
     throw new Error(`Unsupported network (chain ${currentChainId}). Connect to a network with deployed protocol contracts.`);
   }
 
+  if (tokenSymbol !== 'FDX') {
+    throw new Error(`LendingPool currently only accepts protocol reserve asset (FDX). Asset '${tokenSymbol}' is not accepted by this vault.`);
+  }
+
   const chainContracts = getContractAddresses(currentChainId);
   const pool = getLendingPool(signer, currentChainId);
-  const tokenAddr = tokenSymbol === 'fUSD' && chainContracts.FundrexUSD
-    ? chainContracts.FundrexUSD
-    : chainContracts.FundryxToken;
+  const tokenAddr = chainContracts.FundryxToken;
   const token = new ethers.Contract(tokenAddr, ERC20_ABI, signer);
 
-  // Dynamic decimals: 6 for fUSD / USDC, 18 for FDX / POL / MON
-  const decimals = (tokenSymbol === 'fUSD' || tokenSymbol === 'USDC') ? 6 : 18;
+  // LendingPool is strictly 18 decimals for FDX
+  const decimals = 18;
   const amountWei = ethers.parseUnits(amount.toString(), decimals);
 
   const address = await signer.getAddress();
@@ -1580,6 +1582,15 @@ export async function executeMintTokens(signer, toAddress, amount = 10000) {
   const target = toAddress || (await signer.getAddress());
   const amountWei = ethers.parseEther(amount.toString());
   const overrides = await getNetworkFeeOverrides(provider, currentChainId);
+
+  // Check if caller is owner
+  const owner = await token.owner().catch(() => null);
+  const callerAddress = await signer.getAddress();
+  if (owner && callerAddress.toLowerCase() !== owner.toLowerCase()) {
+    throw new Error(
+      `Permission denied: Only contract deployer (${owner.slice(0, 6)}...${owner.slice(-4)}) has authority to mint testnet FDX tokens on ${SUPPORTED_NETWORKS[currentChainId]?.name || 'this network'}. Please request testnet allocation from deployer.`
+    );
+  }
 
   const tx = await token.mint(target, amountWei, overrides).catch((err) => {
     throw new Error(parseRevertReason(err));
@@ -2994,65 +3005,8 @@ export async function executeSwap(signer, tokenInAddress, tokenOutAddress, amoun
     };
   }
 
-  // Fallback for testnets without deployed router: execute direct on-chain token operations
-  const fdxAddr = getContractAddresses(currentChainId).FundryxToken;
-  const wrappedAddr = netConfig?.wrappedNative?.address;
-
-  const tokenIn = new ethers.Contract(tokenInAddress, ERC20_ABI, signer);
-  const balance = await tokenIn.balanceOf(address).catch(() => 0n);
-  if (balance < amountInWei) {
-    throw new Error(`Insufficient token balance. You have ${Number(ethers.formatEther(balance)).toFixed(4)}, but requested ${amountIn}.`);
-  }
-
-  const isInputFdx = tokenInAddress.toLowerCase() === fdxAddr.toLowerCase();
-  const estOutFloat = isInputFdx ? (Number(amountIn) / 4) : (Number(amountIn) * 4);
-  const estOutWei = ethers.parseEther(estOutFloat.toFixed(6));
-
-  let tx;
-  if (wrappedAddr && tokenOutAddress.toLowerCase() === wrappedAddr.toLowerCase()) {
-    const wrapped = new ethers.Contract(wrappedAddr, ['function deposit() payable'], signer);
-    tx = await wrapped.deposit({ value: estOutWei, ...overrides }).catch(async () => {
-      return await signer.sendTransaction({ to: address, value: 0n, ...overrides });
-    });
-  } else if (tokenOutAddress.toLowerCase() === fdxAddr.toLowerCase()) {
-    const fdx = new ethers.Contract(fdxAddr, ['function mint(address,uint256) returns (bool)'], signer);
-    tx = await fdx.mint(address, estOutWei, overrides).catch(async () => {
-      return await signer.sendTransaction({ to: address, value: 0n, ...overrides });
-    });
-  } else {
-    tx = await signer.sendTransaction({ to: address, value: 0n, ...overrides });
-  }
-
-  const receipt = await tx.wait();
-
-  recordAuditEventToSupabase({
-    chainId: currentChainId,
-    txHash: receipt.hash,
-    blockNumber: receipt.blockNumber,
-    type: 'AMM Swap',
-    contractAddress: routerAddress || address,
-    borrower: address,
-    fullBorrower: address,
-    amount: `${amountIn} In -> ${estOutFloat.toFixed(4)} Out`,
-    rawAmount: amountIn,
-    status: 'CONFIRMED',
-    gasUsed: receipt.gasUsed?.toString(),
-    effectiveGasPrice: receipt.gasPrice ? ethers.formatUnits(receipt.gasPrice, 'gwei') : null,
-    metadata: {
-      tokenIn: tokenInAddress,
-      tokenOut: tokenOutAddress,
-      priceImpact: 0.003,
-    },
-  }).catch(() => {});
-
-  return {
-    tx,
-    receipt,
-    amountIn,
-    amountOut: estOutFloat.toFixed(4),
-    priceImpact: 0.003,
-    newOutBalance: estOutFloat.toFixed(4),
-    explorerUrl: explorerTxLink(receipt.hash, currentChainId),
-    chainId: currentChainId,
-  };
+  // If router is not deployed or has no bytecode on this chain, fail truthfully
+  throw new Error(
+    `MockSwapRouter contract is not deployed on ${netConfig.name} (Chain ID ${currentChainId}). Same-chain AMM swaps require deployed MockSwapRouter bytecode.`
+  );
 }
