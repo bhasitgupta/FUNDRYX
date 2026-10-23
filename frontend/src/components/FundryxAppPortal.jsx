@@ -88,6 +88,9 @@ import {
   ADMIN_WALLETS,
   checkIsAdminWallet,
   verifyTxHashOnChain,
+  getRouterAddress,
+  checkRouterDeployment,
+  deployMockSwapRouter,
 } from '../utils/contracts';
 import NetworkSelector from './NetworkSelector';
 
@@ -142,10 +145,10 @@ export default function FundryxAppPortal({
   const currentChainId = wallet?.chainId ? Number(wallet.chainId) : 80002;
   const activeNetConfig = SUPPORTED_NETWORKS[currentChainId] || SUPPORTED_NETWORKS[80002];
   const activeWrappedSymbol = activeNetConfig?.wrappedNative?.symbol || (currentChainId === 10143 ? 'WMON' : 'WPOL');
-  const activeWrappedAddress = activeNetConfig?.wrappedNative?.address || (currentChainId === 10143 ? '0x760AfE86e5de5fa0Ee542fc7B7B713e1c5425701' : '0x360ad4f9a9A8EFe9A8DCB5f461c4Cc1047E1Dcf9');
+  const activeWrappedAddress = activeNetConfig?.wrappedNative?.address || (currentChainId === 10143 ? '0xFb8bf4c1CC7a94c73D209a149eA2AbEa852BC541' : '0x360ad4f9a9A8EFe9A8DCB5f461c4Cc1047E1Dcf9');
   const activeNativeSymbol = activeNetConfig?.nativeToken || activeNetConfig?.nativeCurrency?.symbol || (currentChainId === 10143 ? 'MON' : 'POL');
   const isChainSupported = Boolean(SUPPORTED_NETWORKS[currentChainId]);
-  const activeRouterAddress = activeNetConfig?.contracts?.MockSwapRouter || MOCK_SWAP_ROUTER_ADDRESS;
+  const activeRouterAddress = getRouterAddress(currentChainId);
 
   // Swap state & transaction lifecycle
   const [swapFrom, setSwapFrom] = useState('FDX');
@@ -155,6 +158,8 @@ export default function FundryxAppPortal({
   const [swapTxStatus, setSwapTxStatus] = useState('ready'); // ready | awaiting-wallet | pending | confirmed | failed
   const [pairReserves, setPairReserves] = useState({ fdx: 1000, wrapped: 250, wpol: 250 });
   const [isSeeding, setIsSeeding] = useState(false);
+  const [isRouterDeployed, setIsRouterDeployed] = useState(true);
+  const [isDeployingRouter, setIsDeployingRouter] = useState(false);
   const [slippageBps, setSlippageBps] = useState(50); // 50 bps = 0.50%
   const [swapSubTab, setSwapSubTab] = useState('same-chain'); // 'same-chain' | 'cross-chain' | 'pool'
   const [networkMode, setNetworkMode] = useState('testnet'); // 'testnet' | 'mainnet'
@@ -260,6 +265,7 @@ export default function FundryxAppPortal({
   // User balances from chain
   const [userFdxBalance, setUserFdxBalance] = useState(null);
   const [userPolBalance, setUserPolBalance] = useState(null);
+  const [userWrappedBalance, setUserWrappedBalance] = useState(null);
   const [isMinting, setIsMinting] = useState(false);
 
   // Stress test simulator state
@@ -509,6 +515,7 @@ export default function FundryxAppPortal({
         .then((walletData) => {
           setUserFdxBalance(walletData.fdxBalance);
           setUserPolBalance(walletData.polBalance);
+          setUserWrappedBalance(walletData.wrappedBalance);
           if (walletData.lenderBalance !== undefined) {
             setUserLenderBalance(Number(walletData.lenderBalance));
           }
@@ -1266,7 +1273,7 @@ export default function FundryxAppPortal({
       const cId = targetChainId || (wallet?.chainId ? Number(wallet.chainId) : 80002);
       const addrs = getContractAddresses(cId);
       const net = SUPPORTED_NETWORKS[cId] || SUPPORTED_NETWORKS[80002];
-      const wrapAddr = net?.wrappedNative?.address || (cId === 10143 ? '0x760AfE86e5de5fa0Ee542fc7B7B713e1c5425701' : '0x360ad4f9a9A8EFe9A8DCB5f461c4Cc1047E1Dcf9');
+      const wrapAddr = net?.wrappedNative?.address || (cId === 10143 ? '0xFb8bf4c1CC7a94c73D209a149eA2AbEa852BC541' : '0x360ad4f9a9A8EFe9A8DCB5f461c4Cc1047E1Dcf9');
       const res = await getPairReserves(addrs.FundryxToken, wrapAddr, cId);
       setPairReserves({ fdx: res.reserveA, wrapped: res.reserveB, wpol: res.reserveB });
     } catch { }
@@ -1276,11 +1283,68 @@ export default function FundryxAppPortal({
     loadPairReserves();
   }, [activeTab]);
 
+  useEffect(() => {
+    let active = true;
+    const verifyRouter = async () => {
+      if (!wallet?.provider) return;
+      const res = await checkRouterDeployment(wallet.provider, currentChainId);
+      if (active) setIsRouterDeployed(res.deployed);
+    };
+    verifyRouter();
+    return () => { active = false; };
+  }, [currentChainId, wallet?.provider, activeRouterAddress]);
+
+  const handleDeployRouter = async () => {
+    if (!wallet.signer || !wallet.address) {
+      setTxNotification({
+        type: 'danger',
+        message: 'Connect your Web3 wallet to deploy MockSwapRouter.',
+      });
+      return;
+    }
+    setIsDeployingRouter(true);
+    setTxNotification({
+      type: 'info',
+      message: `Deploying MockSwapRouter to ${activeNetConfig?.name || 'current chain'}... Confirm in wallet.`,
+    });
+    try {
+      const res = await deployMockSwapRouter(wallet.signer);
+      setTxNotification({
+        type: 'success',
+        message: `MockSwapRouter successfully deployed on-chain at ${res.address.slice(0, 6)}...${res.address.slice(-4)}!`,
+        txHash: res.tx?.hash,
+      });
+      setIsRouterDeployed(true);
+      await loadPairReserves(currentChainId);
+      if (wallet.address) {
+        const wData = await fetchWalletData(wallet.address, wallet.provider, wallet.chainId);
+        setUserFdxBalance(wData.fdxBalance);
+        setUserPolBalance(wData.polBalance);
+        setUserWrappedBalance(wData.wrappedBalance);
+      }
+    } catch (err) {
+      console.error('MockSwapRouter deployment failed:', err);
+      setTxNotification({
+        type: 'danger',
+        message: `Router deployment failed: ${parseRevertReason(err)}`,
+      });
+    } finally {
+      setIsDeployingRouter(false);
+    }
+  };
+
   const handleSeedLiquidity = async () => {
     if (!wallet.signer || !wallet.address) {
       setTxNotification({
         type: 'danger',
         message: 'Connect your wallet to seed liquidity.',
+      });
+      return;
+    }
+    if (!isRouterDeployed) {
+      setTxNotification({
+        type: 'danger',
+        message: `MockSwapRouter is not deployed on ${activeNetConfig.name}. Please deploy the router first.`,
       });
       return;
     }
@@ -1301,6 +1365,7 @@ export default function FundryxAppPortal({
         const wData = await fetchWalletData(wallet.address, wallet.provider, wallet.chainId);
         setUserFdxBalance(wData.fdxBalance);
         setUserPolBalance(wData.polBalance);
+        setUserWrappedBalance(wData.wrappedBalance);
       }
     } catch (err) {
       console.error('Seed liquidity failed:', err);
@@ -1333,6 +1398,15 @@ export default function FundryxAppPortal({
       return;
     }
 
+    if (!isRouterDeployed) {
+      setSwapTxStatus('failed');
+      setTxNotification({
+        type: 'danger',
+        message: `MockSwapRouter is not deployed on ${activeNetConfig.name}. Click "Deploy MockSwapRouter" to deploy on this network.`,
+      });
+      return;
+    }
+
     try {
       setSwapTxStatus('awaiting-wallet');
       setTxNotification({
@@ -1344,7 +1418,7 @@ export default function FundryxAppPortal({
       const tokenMap = getNetworkTokens(cId);
       const addrs = getContractAddresses(cId);
       const net = SUPPORTED_NETWORKS[cId] || SUPPORTED_NETWORKS[80002];
-      const wrapAddr = net?.wrappedNative?.address || (cId === 10143 ? '0x760AfE86e5de5fa0Ee542fc7B7B713e1c5425701' : '0x360ad4f9a9A8EFe9A8DCB5f461c4Cc1047E1Dcf9');
+      const wrapAddr = net?.wrappedNative?.address || (cId === 10143 ? '0xFb8bf4c1CC7a94c73D209a149eA2AbEa852BC541' : '0x360ad4f9a9A8EFe9A8DCB5f461c4Cc1047E1Dcf9');
 
       const tokenInAddr = tokenMap[swapFrom] || (swapFrom === 'FDX' ? addrs.FundryxToken : wrapAddr);
       const tokenOutAddr = tokenMap[swapTo] || (swapTo === 'FDX' ? addrs.FundryxToken : wrapAddr);
@@ -1364,6 +1438,7 @@ export default function FundryxAppPortal({
         const wData = await fetchWalletData(wallet.address, wallet.provider, wallet.chainId);
         setUserFdxBalance(wData.fdxBalance);
         setUserPolBalance(wData.polBalance);
+        setUserWrappedBalance(wData.wrappedBalance);
       }
 
       setTimeout(() => {
@@ -3022,7 +3097,12 @@ export default function FundryxAppPortal({
                           <span className="text-xs font-mono text-[var(--text-dim)]">
                             Balance: {swapFrom === 'FDX'
                               ? (userFdxBalance !== null ? Number(userFdxBalance).toFixed(2) : '--')
-                              : (userPolBalance !== null ? Number(userPolBalance).toFixed(4) : (wallet.balance || '0.00'))} {swapFrom}
+                              : (userWrappedBalance !== null ? Number(userWrappedBalance).toFixed(4) : '0.0000')} {swapFrom}
+                            {swapFrom !== 'FDX' && userPolBalance !== null && (
+                              <span className="text-[10px] text-purple-300 ml-1">
+                                ({Number(userPolBalance).toFixed(2)} {activeNativeSymbol} native)
+                              </span>
+                            )}
                           </span>
                           {swapFrom === 'FDX' && (
                             <button
@@ -3061,7 +3141,9 @@ export default function FundryxAppPortal({
                             key={pct}
                             type="button"
                             onClick={() => {
-                              const bal = swapFrom === 'FDX' ? (userFdxBalance || 100) : (userPolBalance || 5);
+                              const bal = swapFrom === 'FDX'
+                                ? (userFdxBalance || 100)
+                                : (Number(userWrappedBalance) > 0 ? userWrappedBalance : (userPolBalance || 5));
                               setSwapAmount((Number(bal) * (pct / 100)).toFixed(pct === 100 ? 2 : 2));
                             }}
                             className="px-2 py-0.5 rounded text-[10px] font-mono text-[var(--text-muted)] hover:text-white bg-[var(--surface)] border border-[var(--border)] hover:border-purple-500/40 transition cursor-pointer"
@@ -3095,7 +3177,12 @@ export default function FundryxAppPortal({
                         <span className="text-xs font-mono text-[var(--text-dim)]">
                           Balance: {swapTo === 'FDX'
                             ? (userFdxBalance !== null ? Number(userFdxBalance).toFixed(2) : '--')
-                            : (userPolBalance !== null ? Number(userPolBalance).toFixed(4) : (wallet.balance || '0.00'))} {swapTo}
+                            : (userWrappedBalance !== null ? Number(userWrappedBalance).toFixed(4) : '0.0000')} {swapTo}
+                          {swapTo !== 'FDX' && userPolBalance !== null && (
+                            <span className="text-[10px] text-purple-300 ml-1">
+                              ({Number(userPolBalance).toFixed(2)} {activeNativeSymbol} native)
+                            </span>
+                          )}
                         </span>
                       </div>
 
@@ -3157,10 +3244,28 @@ export default function FundryxAppPortal({
                       <div className="flex justify-between items-center">
                         <span>Execution Route</span>
                         <span className="font-mono text-[var(--text-dim)] truncate max-w-[200px]" title={activeRouterAddress}>
-                          MockSwapRouter ({activeRouterAddress ? `${activeRouterAddress.slice(0, 6)}...${activeRouterAddress.slice(-4)}` : 'Native AMM'})
+                          MockSwapRouter ({activeRouterAddress ? `${activeRouterAddress.slice(0, 6)}...${activeRouterAddress.slice(-4)}` : 'Not Deployed'})
                         </span>
                       </div>
                     </div>
+
+                    {/* Router Deployment Notice If Missing */}
+                    {!isRouterDeployed && (
+                      <div className="p-3.5 mb-4 rounded-xl bg-purple-500/10 border border-purple-500/30 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+                        <div>
+                          <span className="font-bold text-white block">MockSwapRouter Not Deployed on {activeNetConfig?.name}</span>
+                          <span className="text-[var(--text-muted)]">Deploy the constant-product AMM contract with 1 click to activate same-chain trading.</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={handleDeployRouter}
+                          disabled={isDeployingRouter || !wallet.signer}
+                          className="px-3.5 py-1.5 rounded-lg bg-purple-500 hover:bg-purple-400 text-black font-bold text-xs shrink-0 cursor-pointer transition disabled:opacity-50"
+                        >
+                          {isDeployingRouter ? 'Deploying...' : `Deploy Router (1-Click)`}
+                        </button>
+                      </div>
+                    )}
 
                     {/* Swap Action Button */}
                     {!wallet.address ? (
@@ -3176,6 +3281,14 @@ export default function FundryxAppPortal({
                         className="portal-btn-amber w-full h-12 text-sm font-bold"
                       >
                         Switch to Supported Network to Swap
+                      </button>
+                    ) : !isRouterDeployed ? (
+                      <button
+                        onClick={handleDeployRouter}
+                        disabled={isDeployingRouter}
+                        className="portal-btn-purple w-full h-12 text-sm font-bold cursor-pointer"
+                      >
+                        {isDeployingRouter ? 'Deploying MockSwapRouter...' : `Deploy MockSwapRouter to ${activeNetConfig?.shortName || 'Chain'} (1-Click)`}
                       </button>
                     ) : (
                       <button
@@ -3784,14 +3897,25 @@ export default function FundryxAppPortal({
                       <span className="font-bold text-white text-sm block">Add Pool Liquidity</span>
                       <span className="text-xs text-[var(--text-dim)]">Supply 10 FDX + 10 {activeNativeSymbol} to bootstrap AMM depth</span>
                     </div>
-                    <button
-                      type="button"
-                      onClick={handleSeedLiquidity}
-                      disabled={isSeeding || !wallet.signer}
-                      className="px-4 py-2 rounded-xl bg-purple-500 hover:bg-purple-400 text-black font-bold text-xs transition cursor-pointer disabled:opacity-50"
-                    >
-                      {isSeeding ? 'Supplying Liquidity...' : `Add Liquidity (10 ${activeNativeSymbol} + 10 FDX)`}
-                    </button>
+                    {!isRouterDeployed ? (
+                      <button
+                        type="button"
+                        onClick={handleDeployRouter}
+                        disabled={isDeployingRouter || !wallet.signer}
+                        className="px-4 py-2 rounded-xl bg-purple-500 hover:bg-purple-400 text-black font-bold text-xs transition cursor-pointer disabled:opacity-50"
+                      >
+                        {isDeployingRouter ? 'Deploying Router...' : `Deploy Router First`}
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={handleSeedLiquidity}
+                        disabled={isSeeding || !wallet.signer}
+                        className="px-4 py-2 rounded-xl bg-purple-500 hover:bg-purple-400 text-black font-bold text-xs transition cursor-pointer disabled:opacity-50"
+                      >
+                        {isSeeding ? 'Supplying Liquidity...' : `Add Liquidity (10 ${activeNativeSymbol} + 10 FDX)`}
+                      </button>
+                    )}
                   </div>
                 </div>
               )}

@@ -73,7 +73,7 @@ export const SUPPORTED_NETWORKS = {
     family: 'monad',
     nativeToken: 'MON',
     nativeCurrency: { name: 'MON', symbol: 'MON', decimals: 18 },
-    wrappedNative: { symbol: 'WMON', address: '0x760AfE86e5de5fa0Ee542fc7B7B713e1c5425701' },
+    wrappedNative: { symbol: 'WMON', address: '0xFb8bf4c1CC7a94c73D209a149eA2AbEa852BC541' },
     supportedAssets: ['MON', 'WMON', 'FDX', 'fUSD'],
     supportedOperations: ['lending', 'borrowing', 'swap', 'telemetry', 'risk_analysis'],
     rpcUrl: getEnvVar('VITE_MONAD_TESTNET_RPC', 'https://testnet-rpc.monad.xyz/'),
@@ -93,12 +93,12 @@ export const SUPPORTED_NETWORKS = {
       CreditPolicy:            getEnvVar('VITE_MONAD_CREDIT_POLICY', '0x27B46c075bf2Cd67D174BD59629cc66b8C9Ea36d'),
       LendingPool:             getEnvVar('VITE_MONAD_LENDING_POOL', '0x68fC6E11cD8a855849D7788e035BA92E320Db0d2'),
       RiskAttestationRegistry: getEnvVar('VITE_MONAD_RISK_REGISTRY', '0xF35DaC9A5Db13c2b621Aa00288A4996D5d91c07C'),
-      MockSwapRouter:          getEnvVar('VITE_MONAD_MOCK_SWAP_ROUTER', '0x460850Fb8495867E526e23B4149D04810d5b4e39'),
+      MockSwapRouter:          getEnvVar('VITE_MONAD_MOCK_SWAP_ROUTER', null),
     },
     tokens: {
       FDX:  getEnvVar('VITE_MONAD_FUNDRYX_TOKEN', '0x86E7023f10c5bd119521EB95a8CddF19159f95Cd'),
       fUSD: getEnvVar('VITE_MONAD_FUSD', '0xdA2631Aadb95AB5Ea6926e431F66fe2a66EF930E'),
-      WMON: '0x760AfE86e5de5fa0Ee542fc7B7B713e1c5425701',
+      WMON: '0xFb8bf4c1CC7a94c73D209a149eA2AbEa852BC541',
       MON:  '0x0000000000000000000000000000000000000000',
     },
   },
@@ -281,7 +281,12 @@ export const SUPPORTED_TOKENS = SUPPORTED_NETWORKS[80002].tokens;
 
 export function getContractAddresses(chainId = 80002) {
   const numId = typeof chainId === 'string' ? (chainId.startsWith('0x') ? parseInt(chainId, 16) : Number(chainId)) : chainId;
-  return SUPPORTED_NETWORKS[numId]?.contracts || SUPPORTED_NETWORKS[80002].contracts;
+  const base = SUPPORTED_NETWORKS[numId]?.contracts || SUPPORTED_NETWORKS[80002].contracts;
+  const router = getRouterAddress(numId);
+  return {
+    ...base,
+    ...(router ? { MockSwapRouter: router } : {}),
+  };
 }
 
 export function getNetworkTokens(chainId = 80002) {
@@ -403,14 +408,14 @@ export const TOKEN_REGISTRY = {
     },
     {
       chainId: 10143,
-      address: '0x760AfE86e5de5fa0Ee542fc7B7B713e1c5425701',
+      address: '0xFb8bf4c1CC7a94c73D209a149eA2AbEa852BC541',
       name: 'Wrapped MON',
       symbol: 'WMON',
       decimals: 18,
       tokenType: 'wrapped-native',
       verifiedDeploymentStatus: 'VERIFIED_ON_CHAIN',
       supportedOperations: ['cross_chain_staging'],
-      explorerUrl: 'https://testnet.monadexplorer.com/token/0x760AfE86e5de5fa0Ee542fc7B7B713e1c5425701',
+      explorerUrl: 'https://testnet.monadexplorer.com/token/0xFb8bf4c1CC7a94c73D209a149eA2AbEa852BC541',
       canAddToWallet: true,
       logo: 'MON',
     },
@@ -1265,14 +1270,18 @@ export async function fetchWalletData(address, provider = null, chainId = null) 
   const policy = getCreditPolicy(rpc, targetChain);
   const history = getCreditHistory(rpc, targetChain);
   const token = getFundryxToken(rpc, targetChain);
+  const netConfig = SUPPORTED_NETWORKS[targetChain];
+  const wrappedAddr = netConfig?.wrappedNative?.address;
+  const wrappedToken = wrappedAddr ? new ethers.Contract(wrappedAddr, ERC20_ABI, rpc) : null;
 
-  const [lenderBalance, loanIds, eligibility, stats, fdxBalance, polBalance] = await Promise.all([
+  const [lenderBalance, loanIds, eligibility, stats, fdxBalance, polBalance, wrappedBalance] = await Promise.all([
     pool.lenderBalances(address).catch(() => 0n),
     pool.getBorrowerLoans(address).catch(() => []),
     policy.previewEligibility(address).catch(() => ({ maxCredit: 0n, version: 1, repaymentCount: 0n, outstandingExposure: 0n })),
     history.getBorrowerStats(address).catch(() => null),
     token.balanceOf(address).catch(() => 0n),
     rpc.getBalance(address).catch(() => 0n),
+    wrappedToken ? wrappedToken.balanceOf(address).catch(() => 0n) : 0n,
   ]);
 
   return {
@@ -1291,6 +1300,7 @@ export async function fetchWalletData(address, provider = null, chainId = null) 
     } : null,
     fdxBalance: Number(ethers.formatEther(fdxBalance)),
     polBalance: Number(ethers.formatEther(polBalance)),
+    wrappedBalance: Number(ethers.formatEther(wrappedBalance)),
     chainId: targetChain,
   };
 }
@@ -2821,6 +2831,8 @@ export const MOCK_SWAP_ROUTER_ADDRESS =
   getEnvVar('VITE_MOCK_SWAP_ROUTER') ||
   '0x460850Fb8495867E526e23B4149D04810d5b4e39';
 
+export const MOCK_SWAP_ROUTER_BYTECODE =
+  '0x608060405234801561000f575f80fd5b5060017f9b779b17422d0df92223018b32b4d1fa46e071723d6817e2486d003becc55f0055610956806100415f395ff3fe608060405234801561000f575f80fd5b5060043610610060575f3560e01c80634aa06652146100645780638ee2f35b14610091578063cf6c62ea146100d2578063d52bb6f4146100e7578063d5bcb9b514610130578063ea4afc5414610151575b5f80fd5b610077610072366004610742565b610178565b604080519283526020830191909152015b60405180910390f35b6100c560405180604001604052806015815260200174544553544e45545f4d4f434b5f414d4d5f414d4f5960581b81525081565b604051610088919061077b565b6100e56100e03660046107c7565b610250565b005b6100776100f5366004610806565b6001600160a01b039182165f818152602081815260408083209490951682529283528381205481845284822092825291909252919020549091565b61014361013e366004610837565b6103bf565b604051908152602001610088565b61014361015f366004610806565b5f60208181529281526040808220909352908152205481565b5f80825f0361018b57505f905080610248565b6001600160a01b038086165f8181526020818152604080832094891683529381528382205482825284832093835292905291909120548115806101cc575080155b156101de575f80935093505050610248565b5f6101eb866103e561089e565b90505f6101f8838361089e565b90505f82610208866103e861089e565b61021291906108bb565b905061021e81836108ce565b965061022a88866108bb565b6102368961271061089e565b61024091906108ce565b955050505050505b935093915050565b61025861059c565b826001600160a01b0316846001600160a01b03160361028a57604051635c6d7b7360e01b815260040160405180910390fd5b811580610295575080155b156102b357604051631f2a200560e01b815260040160405180910390fd5b6102c86001600160a01b0385163330856105b7565b6102dd6001600160a01b0384163330846105b7565b6001600160a01b038085165f90815260208181526040808320938716835292905290812080548492906103119084906108bb565b90915550506001600160a01b038084165f908152602081815260408083209388168352929052908120805483929061034a9084906108bb565b9091555050604080516001600160a01b038087168252851660208201529081018390526060810182905233907fb5bf3f2c68363aa6e695c29010485bcfecb5439239c6b1306fdec5b26cb7c62e9060800160405180910390a26103b960015f8051602061090183398151915255565b50505050565b5f6103c861059c565b846001600160a01b0316866001600160a01b0316036103fa57604051635c6d7b7360e01b815260040160405180910390fd5b835f0361041a57604051631f2a200560e01b815260040160405180910390fd5b6001600160a01b03821661042c573391505b5f610438878787610178565b90925090505f82900361045e5760405163bb55fd2760e01b815260040160405180910390fd5b8382101561048e5760405163d28d3eb560e01b815260048101839052602481018590526044015b60405180910390fd5b6104a36001600160a01b0388163330886105b7565b6001600160a01b038088165f90815260208181526040808320938a16835292905290812080548792906104d79084906108bb565b90915550506001600160a01b038087165f90815260208181526040808320938b16835292905290812080548492906105109084906108ed565b9091555061052a90506001600160a01b03871684846105ed565b60408051868152602081018490526001600160a01b03858116828401529151888316928a169133917f54787c404bb33c88e86f4baf88183a3b0141d0a848e6a9f7a13b66ae3a9b73d19181900360600190a45061059360015f8051602061090183398151915255565b95945050505050565b6105a4610627565b60025f8051602061090183398151915255565b6105c5848484846001610658565b6103b957604051635274afe760e01b81526001600160a01b0385166004820152602401610485565b6105fa83838360016106c5565b61062257604051635274afe760e01b81526001600160a01b0384166004820152602401610485565b505050565b5f805160206109018339815191525460020361065657604051633ee5aeb560e01b815260040160405180910390fd5b565b6040516323b872dd60e01b5f8181526001600160a01b038781166004528616602452604485905291602083606481808c5af1925060015f511483166106b45783831516156106a8573d5f823e3d81fd5b5f883b113d1516831692505b604052505f60605295945050505050565b60405163a9059cbb60e01b5f8181526001600160a01b038616600452602485905291602083604481808b5af1925060015f5114831661071b57838315161561070f573d5f823e3d81fd5b5f873b113d1516831692505b60405250949350505050565b80356001600160a01b038116811461073d575f80fd5b919050565b5f805f60608486031215610754575f80fd5b61075d84610727565b925061076b60208501610727565b9150604084013590509250925092565b5f602080835283518060208501525f5b818110156107a75785810183015185820160400152820161078b565b505f604082860101526040601f19601f8301168501019250505092915050565b5f805f80608085870312156107da575f80fd5b6107e385610727565b93506107f160208601610727565b93969395505050506040820135916060013590565b5f8060408385031215610817575f80fd5b61082083610727565b915061082e60208401610727565b90509250929050565b5f805f805f60a0868803121561084b575f80fd5b61085486610727565b945061086260208701610727565b9350604086013592506060860135915061087e60808701610727565b90509295509295909350565b634e487b7160e01b5f52601160045260245ffd5b80820281158282048414176108b5576108b561088a565b92915050565b808201808211156108b5576108b561088a565b5f826108e857634e487b7160e01b5f52601260045260245ffd5b500490565b818103818111156108b5576108b561088a56fe9b779b17422d0df92223018b32b4d1fa46e071723d6817e2486d003becc55f00a2646970667358221220a57a5fb4be31b787f4ec3efae097450947ecdaceb1cd9af8f3996d8f01eeca1364736f6c63430008180033';
 
 export const MOCK_SWAP_ROUTER_ABI = [
   'function swap(address tokenIn, address tokenOut, uint256 amountIn, uint256 minAmountOut, address to) external returns (uint256 amountOut)',
@@ -2830,9 +2842,51 @@ export const MOCK_SWAP_ROUTER_ABI = [
   'event Swap(address indexed sender, address tokenIn, address tokenOut, uint256 amountIn, uint256 amountOut, address to)',
 ];
 
+export function getRouterAddress(chainId = 80002) {
+  const numId = typeof chainId === 'string' ? (chainId.startsWith('0x') ? parseInt(chainId, 16) : Number(chainId)) : chainId;
+  if (typeof window !== 'undefined') {
+    const cached = localStorage.getItem(`fundryx_mock_router_${numId}`);
+    if (cached && ethers.isAddress(cached)) return cached;
+  }
+  return SUPPORTED_NETWORKS[numId]?.contracts?.MockSwapRouter || (numId === 80002 ? MOCK_SWAP_ROUTER_ADDRESS : null);
+}
+
+export function setRouterAddress(chainId, address) {
+  const numId = typeof chainId === 'string' ? (chainId.startsWith('0x') ? parseInt(chainId, 16) : Number(chainId)) : chainId;
+  if (typeof window !== 'undefined' && ethers.isAddress(address)) {
+    localStorage.setItem(`fundryx_mock_router_${numId}`, address);
+  }
+  if (SUPPORTED_NETWORKS[numId]) {
+    if (!SUPPORTED_NETWORKS[numId].contracts) SUPPORTED_NETWORKS[numId].contracts = {};
+    SUPPORTED_NETWORKS[numId].contracts.MockSwapRouter = address;
+  }
+}
+
+export async function checkRouterDeployment(provider, chainId = 80002) {
+  const numId = typeof chainId === 'string' ? (chainId.startsWith('0x') ? parseInt(chainId, 16) : Number(chainId)) : chainId;
+  const routerAddress = getRouterAddress(numId);
+  if (!routerAddress) return { deployed: false, address: null };
+  const code = await provider.getCode(routerAddress).catch(() => '0x');
+  const isDeployed = Boolean(code && code !== '0x' && code !== '0x0');
+  return { deployed: isDeployed, address: routerAddress };
+}
+
+export async function deployMockSwapRouter(signer) {
+  const provider = signer.provider;
+  const network = await provider.getNetwork();
+  const currentChainId = Number(network.chainId);
+  const overrides = await getNetworkFeeOverrides(provider, currentChainId);
+  const factory = new ethers.ContractFactory(MOCK_SWAP_ROUTER_ABI, MOCK_SWAP_ROUTER_BYTECODE, signer);
+  const router = await factory.deploy(overrides);
+  await router.waitForDeployment();
+  const address = await router.getAddress();
+  setRouterAddress(currentChainId, address);
+  return { address, tx: router.deploymentTransaction() };
+}
+
 export function getMockSwapRouter(signerOrProvider, chainId = 80002) {
   const numId = typeof chainId === 'string' ? (chainId.startsWith('0x') ? parseInt(chainId, 16) : Number(chainId)) : chainId;
-  const routerAddress = SUPPORTED_NETWORKS[numId]?.contracts?.MockSwapRouter || MOCK_SWAP_ROUTER_ADDRESS;
+  const routerAddress = getRouterAddress(numId);
   if (!routerAddress) return null;
   return new ethers.Contract(routerAddress, MOCK_SWAP_ROUTER_ABI, signerOrProvider);
 }
@@ -2843,7 +2897,7 @@ export async function getPairReserves(tokenA, tokenB, chainId = 80002) {
   const router = getMockSwapRouter(provider, numId);
   if (router && provider) {
     try {
-      const routerAddress = SUPPORTED_NETWORKS[numId]?.contracts?.MockSwapRouter || MOCK_SWAP_ROUTER_ADDRESS;
+      const routerAddress = getRouterAddress(numId);
       const code = await provider.getCode(routerAddress).catch(() => '0x');
       if (code && code !== '0x' && code !== '0x0') {
         const [resA, resB] = await router.getReserves(tokenA, tokenB);
@@ -2887,7 +2941,9 @@ export async function executeSeedLiquidity(signer, amountFdx = 10, amountNative 
   const wrappedBal = await wrapped.balanceOf(address).catch(() => 0n);
   if (wrappedBal < nativeWei) {
     const wrapNeeded = nativeWei - wrappedBal;
-    const wrapTx = await wrapped.deposit({ value: wrapNeeded, ...overrides }).catch(() => null);
+    const wrapTx = await wrapped.deposit({ value: wrapNeeded, ...overrides }).catch((err) => {
+      throw new Error(`Auto-wrap native gas failed: ${parseRevertReason(err)}`);
+    });
     if (wrapTx) await wrapTx.wait();
   }
 
@@ -2900,10 +2956,14 @@ export async function executeSeedLiquidity(signer, amountFdx = 10, amountNative 
   }
 
   // 3. Router checks
-  const routerAddress = netConfig?.contracts?.MockSwapRouter || MOCK_SWAP_ROUTER_ADDRESS;
-  const code = await provider.getCode(routerAddress).catch(() => '0x');
+  const routerAddress = getRouterAddress(currentChainId);
+  let hasRouterBytecode = false;
+  if (routerAddress) {
+    const code = await provider.getCode(routerAddress).catch(() => '0x');
+    hasRouterBytecode = Boolean(code && code !== '0x' && code !== '0x0');
+  }
 
-  if (routerAddress && code && code !== '0x' && code !== '0x0') {
+  if (hasRouterBytecode) {
     const router = new ethers.Contract(routerAddress, MOCK_SWAP_ROUTER_ABI, signer);
     const fdxAllowance = await fdx.allowance(address, routerAddress).catch(() => 0n);
     if (fdxAllowance < fdxWei) {
@@ -2920,10 +2980,39 @@ export async function executeSeedLiquidity(signer, amountFdx = 10, amountNative 
     return { tx: addTx, receipt };
   }
 
-  return {
-    tx: { hash: `0x${Date.now().toString(16)}${Math.random().toString(16).slice(2, 10)}` },
-    receipt: { status: 1, blockNumber: await provider.getBlockNumber().catch(() => 100) },
-  };
+  throw new Error(
+    `MockSwapRouter contract is not deployed on ${netConfig.name} (Chain ID ${currentChainId}). Please deploy the router contract first.`
+  );
+}
+
+export async function executeWrap(signer, amount) {
+  const provider = signer.provider;
+  const network = await provider.getNetwork();
+  const currentChainId = Number(network.chainId);
+  const netConfig = SUPPORTED_NETWORKS[currentChainId] || SUPPORTED_NETWORKS[80002];
+  const wrappedAddr = netConfig?.wrappedNative?.address;
+  if (!wrappedAddr) throw new Error(`Wrapped native token address not configured for chain ${currentChainId}`);
+  const wrapped = new ethers.Contract(wrappedAddr, ['function deposit() payable'], signer);
+  const amountWei = ethers.parseEther(amount.toString());
+  const overrides = await getNetworkFeeOverrides(provider, currentChainId);
+  const tx = await wrapped.deposit({ value: amountWei, ...overrides });
+  const receipt = await tx.wait();
+  return { tx, receipt };
+}
+
+export async function executeUnwrap(signer, amount) {
+  const provider = signer.provider;
+  const network = await provider.getNetwork();
+  const currentChainId = Number(network.chainId);
+  const netConfig = SUPPORTED_NETWORKS[currentChainId] || SUPPORTED_NETWORKS[80002];
+  const wrappedAddr = netConfig?.wrappedNative?.address;
+  if (!wrappedAddr) throw new Error(`Wrapped native token address not configured for chain ${currentChainId}`);
+  const wrapped = new ethers.Contract(wrappedAddr, ['function withdraw(uint256)'], signer);
+  const amountWei = ethers.parseEther(amount.toString());
+  const overrides = await getNetworkFeeOverrides(provider, currentChainId);
+  const tx = await wrapped.withdraw(amountWei, overrides);
+  const receipt = await tx.wait();
+  return { tx, receipt };
 }
 
 export async function executeSwap(signer, tokenInAddress, tokenOutAddress, amountIn, slippageBps = 50) {
@@ -2931,7 +3020,7 @@ export async function executeSwap(signer, tokenInAddress, tokenOutAddress, amoun
   const network = await provider.getNetwork();
   const currentChainId = Number(network.chainId);
   const netConfig = SUPPORTED_NETWORKS[currentChainId] || SUPPORTED_NETWORKS[80002];
-  const routerAddress = netConfig?.contracts?.MockSwapRouter || (currentChainId === 80002 ? MOCK_SWAP_ROUTER_ADDRESS : null);
+  const routerAddress = getRouterAddress(currentChainId);
 
   const address = await signer.getAddress();
   const amountInWei = ethers.parseEther(amountIn.toString());
@@ -2948,8 +3037,30 @@ export async function executeSwap(signer, tokenInAddress, tokenOutAddress, amoun
     const router = new ethers.Contract(routerAddress, MOCK_SWAP_ROUTER_ABI, signer);
     const tokenIn = new ethers.Contract(tokenInAddress, ERC20_ABI, signer);
 
-    const balance = await tokenIn.balanceOf(address).catch(() => 0n);
-    if (balance < amountInWei) {
+    const wrappedAddr = netConfig?.wrappedNative?.address;
+    const isWrappedIn = wrappedAddr && tokenInAddress.toLowerCase() === wrappedAddr.toLowerCase();
+
+    // Check balance and auto-wrap native gas if needed
+    let balance = await tokenIn.balanceOf(address).catch(() => 0n);
+    if (balance < amountInWei && isWrappedIn) {
+      const wrapNeeded = amountInWei - balance;
+      const nativeBalance = await provider.getBalance(address).catch(() => 0n);
+      const feeBuffer = 5000000000000000n; // 0.005 ETH/MON/POL gas buffer
+      if (nativeBalance >= wrapNeeded + feeBuffer) {
+        const wrappedContract = new ethers.Contract(wrappedAddr, ['function deposit() payable'], signer);
+        const wrapTx = await wrappedContract.deposit({ value: wrapNeeded, ...overrides }).catch((err) => {
+          throw new Error(`Auto-wrap native gas failed: ${parseRevertReason(err)}`);
+        });
+        await wrapTx.wait();
+        balance = await tokenIn.balanceOf(address).catch(() => amountInWei);
+      } else {
+        const wrapSymbol = netConfig?.wrappedNative?.symbol || 'Wrapped';
+        const natSymbol = netConfig?.nativeToken || 'Native';
+        throw new Error(
+          `Insufficient balance. You have ${Number(ethers.formatEther(balance)).toFixed(4)} ${wrapSymbol} (and ${Number(ethers.formatEther(nativeBalance)).toFixed(4)} ${natSymbol} native), but requested ${amountIn} ${wrapSymbol}.`
+        );
+      }
+    } else if (balance < amountInWei) {
       throw new Error(`Insufficient token balance. You have ${Number(ethers.formatEther(balance)).toFixed(4)}, but requested ${amountIn}.`);
     }
 
@@ -3007,6 +3118,6 @@ export async function executeSwap(signer, tokenInAddress, tokenOutAddress, amoun
 
   // If router is not deployed or has no bytecode on this chain, fail truthfully
   throw new Error(
-    `MockSwapRouter contract is not deployed on ${netConfig.name} (Chain ID ${currentChainId}). Same-chain AMM swaps require deployed MockSwapRouter bytecode.`
+    `MockSwapRouter contract is not deployed on ${netConfig.name} (Chain ID ${currentChainId}). Click "Deploy Router" in the Swap interface to deploy the AMM on this network.`
   );
 }
