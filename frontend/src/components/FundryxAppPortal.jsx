@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { ethers } from 'ethers';
 import { HugeiconsIcon } from '@hugeicons/react';
 import BranchedMenu from './BranchedMenu';
