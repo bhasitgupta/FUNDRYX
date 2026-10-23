@@ -447,7 +447,7 @@ export default function FundryxAppPortal({
         }
       })
       .catch(() => {
-        fetchCreditPreFlight(wallet.address || '0x0000000000000000000000000000000000000000')
+        fetchCreditPreFlight(wallet.address || '0x0000000000000000000000000000000000000000', wallet.provider, wallet.chainId)
           .then((flight) => {
             if (flight && flight.availableLiquidity !== undefined) {
               setLivePool((prev) => ({
@@ -463,7 +463,7 @@ export default function FundryxAppPortal({
     // 2. Fetch Borrower Credit Score, Active Loans & Wallet Balance directly from chain
     const targetAddr = wallet.address;
     if (targetAddr) {
-      fetchWalletData(targetAddr)
+      fetchWalletData(targetAddr, wallet.provider, wallet.chainId)
         .then((walletData) => {
           setUserFdxBalance(walletData.fdxBalance);
           setUserPolBalance(walletData.polBalance);
@@ -483,7 +483,7 @@ export default function FundryxAppPortal({
         })
         .catch(() => { });
 
-      fetchBorrowerLoans(targetAddr)
+      fetchBorrowerLoans(targetAddr, wallet.provider, wallet.chainId)
         .then((onchainLoans) => {
           if (onchainLoans && onchainLoans.length > 0) setActiveLoans(onchainLoans);
         })
@@ -585,7 +585,7 @@ export default function FundryxAppPortal({
       });
 
       // Credit pre-flight check
-      const preFlight = await fetchCreditPreFlight(wallet.address).catch(() => null);
+      const preFlight = await fetchCreditPreFlight(wallet.address, wallet.provider, wallet.chainId).catch(() => null);
       if (preFlight) {
         if (Number(borrowInput) > preFlight.maxCredit) {
           throw new Error(
@@ -619,8 +619,8 @@ export default function FundryxAppPortal({
 
       // Refresh onchain loans and wallet data
       const [updatedLoans, updatedWallet] = await Promise.all([
-        fetchBorrowerLoans(wallet.address).catch(() => []),
-        fetchWalletData(wallet.address).catch(() => null),
+        fetchBorrowerLoans(wallet.address, wallet.provider, wallet.chainId).catch(() => []),
+        fetchWalletData(wallet.address, wallet.provider, wallet.chainId).catch(() => null),
       ]);
 
       if (updatedLoans && updatedLoans.length > 0) {
@@ -983,8 +983,8 @@ export default function FundryxAppPortal({
 
       // Refresh onchain loans and wallet balance
       const [updatedLoans, updatedWallet] = await Promise.all([
-        fetchBorrowerLoans(wallet.address).catch(() => []),
-        fetchWalletData(wallet.address).catch(() => null),
+        fetchBorrowerLoans(wallet.address, wallet.provider, wallet.chainId).catch(() => []),
+        fetchWalletData(wallet.address, wallet.provider, wallet.chainId).catch(() => null),
       ]);
 
       if (updatedLoans && updatedLoans.length > 0) {
@@ -1252,7 +1252,7 @@ export default function FundryxAppPortal({
       });
       await loadPairReserves();
       if (wallet.address) {
-        const wData = await fetchWalletData(wallet.address);
+        const wData = await fetchWalletData(wallet.address, wallet.provider, wallet.chainId);
         setUserFdxBalance(wData.fdxBalance);
         setUserPolBalance(wData.polBalance);
       }
@@ -1319,7 +1319,7 @@ export default function FundryxAppPortal({
 
       await loadPairReserves();
       if (wallet.address) {
-        const wData = await fetchWalletData(wallet.address);
+        const wData = await fetchWalletData(wallet.address, wallet.provider, wallet.chainId);
         setUserFdxBalance(wData.fdxBalance);
         setUserPolBalance(wData.polBalance);
       }
@@ -2129,12 +2129,12 @@ export default function FundryxAppPortal({
                           </div>
                           <div className="flex items-center justify-between text-xs mt-2 px-1">
                             <span className="text-[var(--text-dim)] font-mono text-[11px]">
-                              Verified on Polygon Amoy (80002) · {depositAsset === 'fUSD' || depositAsset === 'USDC' ? '6 decimals' : '18 decimals'}
+                              Verified on {currentNetwork?.name || 'Polygon Amoy'} ({wallet?.chainId || 80002}) · {depositAsset === 'fUSD' || depositAsset === 'USDC' ? '6 decimals' : '18 decimals'}
                             </span>
                             <button
                               type="button"
                               onClick={() => {
-                                const cfg = getTokenConfig(CHAIN_ID, depositAsset);
+                                const cfg = getTokenConfig(wallet?.chainId || CHAIN_ID, depositAsset);
                                 if (cfg && cfg.canAddToWallet) {
                                   handleAddTokenToWallet(cfg);
                                 } else {
@@ -2245,7 +2245,7 @@ export default function FundryxAppPortal({
                       </div>
                       <div className="flex justify-between items-center">
                         <span>Target Network</span>
-                        <span className="portal-badge portal-badge-yield">Polygon Primary (80002)</span>
+                        <span className="portal-badge portal-badge-yield">{currentNetwork?.name || 'Polygon Primary'} ({wallet?.chainId || 80002})</span>
                       </div>
                     </div>
                   </div>
@@ -2285,7 +2285,7 @@ export default function FundryxAppPortal({
                     <span className="text-[11px] text-[var(--text-dim)]">Uncollateralized credit facilities disbursed from shared pool</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="portal-badge portal-badge-neutral">Origin: Polygon (80002)</span>
+                    <span className="portal-badge portal-badge-neutral">Origin: {currentNetwork?.name || 'Polygon'} ({wallet?.chainId || 80002})</span>
                     <span className="portal-badge portal-badge-primary">{activeLoans.length} Facilities</span>
                   </div>
                 </div>
@@ -2876,7 +2876,7 @@ export default function FundryxAppPortal({
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="portal-badge portal-badge-purple font-mono">0.30% Fee Tier</span>
-                  <span className="portal-badge portal-badge-neutral">Polygon Primary (80002)</span>
+                  <span className="portal-badge portal-badge-neutral">{currentNetwork?.name || 'Polygon Primary'} ({wallet?.chainId || 80002})</span>
                 </div>
               </div>
 
@@ -3749,7 +3749,7 @@ export default function FundryxAppPortal({
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="portal-badge portal-badge-primary">Live AMM: FDX / WPOL</span>
-                  <span className="portal-badge portal-badge-neutral">Polygon Primary (80002)</span>
+                  <span className="portal-badge portal-badge-neutral">{currentNetwork?.name || 'Polygon Primary'} ({wallet?.chainId || 80002})</span>
                 </div>
               </div>
 

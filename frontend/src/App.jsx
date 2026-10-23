@@ -4,7 +4,7 @@ import FundryxLanding from './components/FundryxLanding';
 import FundryxAppPortal from './components/FundryxAppPortal';
 import WalletModal from './components/WalletModal';
 import ChooseCryptoWalletLoginPage from './app/choose-crypto-wallet-login/page';
-import { connectWallet, reconnectWallet, switchNetwork, CONTRACT_ADDRESSES, LENDING_POOL_ABI } from './utils/contracts';
+import { connectWallet, reconnectWallet, switchNetwork, getContractAddresses, CONTRACT_ADDRESSES, LENDING_POOL_ABI } from './utils/contracts';
 import { ethers } from 'ethers';
 
 class PortalErrorBoundary extends React.Component {
@@ -186,9 +186,20 @@ export default function App() {
   };
 
   // Fetch live pool data if provider is available
-  const fetchLivePoolData = async (provider) => {
+  const fetchLivePoolData = async (provider, chainId = null) => {
     try {
-      const pool = new ethers.Contract(CONTRACT_ADDRESSES.LendingPool, LENDING_POOL_ABI, provider);
+      let targetChain = chainId;
+      if (!targetChain && provider?.getNetwork) {
+        try {
+          const net = await provider.getNetwork();
+          targetChain = Number(net.chainId);
+        } catch {
+          targetChain = 80002;
+        }
+      }
+      targetChain = targetChain || 80002;
+      const chainContracts = getContractAddresses(targetChain);
+      const pool = new ethers.Contract(chainContracts.LendingPool, LENDING_POOL_ABI, provider);
       const [deposits, borrowed] = await Promise.all([
         pool.totalDeposits().catch(() => 0n),
         pool.totalBorrowed().catch(() => 0n),

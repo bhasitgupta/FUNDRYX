@@ -830,6 +830,31 @@ export async function getPolygonFeeOverrides(provider) {
   }
 }
 
+// Multi-chain fee overrides: Polygon requires >= 30 gwei minTip; Monad and other chains use native fee data
+export async function getNetworkFeeOverrides(provider, chainId = null) {
+  let targetChain = chainId;
+  if (!targetChain && provider?.getNetwork) {
+    try {
+      const net = await provider.getNetwork();
+      targetChain = Number(net.chainId);
+    } catch {
+      targetChain = 80002;
+    }
+  }
+  if (targetChain === 80002 || targetChain === 137) {
+    return getPolygonFeeOverrides(provider);
+  }
+  try {
+    const feeData = await provider.getFeeData();
+    const overrides = {};
+    if (feeData.maxPriorityFeePerGas) overrides.maxPriorityFeePerGas = feeData.maxPriorityFeePerGas;
+    if (feeData.maxFeePerGas) overrides.maxFeePerGas = feeData.maxFeePerGas;
+    return overrides;
+  } catch {
+    return {};
+  }
+}
+
 export function getInjectedProvider(walletType = 'metamask') {
   if (typeof window === 'undefined') return null;
 
@@ -985,9 +1010,11 @@ export async function connectWallet(walletType = 'metamask') {
 
   const signer = await provider.getSigner();
   const network = await provider.getNetwork();
+  const currentChainId = Number(network.chainId);
+  const isCurrentlySupported = Boolean(SUPPORTED_NETWORKS[currentChainId]?.contractsDeployed);
 
-  // Switch to Polygon Amoy if needed
-  if (network.chainId !== BigInt(CHAIN_ID)) {
+  // Switch to Polygon Amoy only if current network does not have deployed protocol contracts
+  if (!isCurrentlySupported && network.chainId !== BigInt(CHAIN_ID)) {
     try {
       await injected.request({
         method: 'wallet_switchEthereumChain',
@@ -1146,6 +1173,12 @@ export function getFundryxToken(signerOrProvider, chainId = null) {
   return new ethers.Contract(addr, ERC20_ABI, signerOrProvider);
 }
 
+export function getFundrexUSD(signerOrProvider, chainId = null) {
+  const targetChain = chainId || (signerOrProvider?._network?.chainId ? Number(signerOrProvider._network.chainId) : 80002);
+  const addr = SUPPORTED_NETWORKS[targetChain]?.contracts?.FundrexUSD || CONTRACT_ADDRESSES.FundrexUSD;
+  return new ethers.Contract(addr, ERC20_ABI, signerOrProvider);
+}
+
 export function getPauseController(signerOrProvider, chainId = null) {
   const targetChain = chainId || (signerOrProvider?._network?.chainId ? Number(signerOrProvider._network.chainId) : 80002);
   const addr = SUPPORTED_NETWORKS[targetChain]?.contracts?.PauseController || CONTRACT_ADDRESSES.PauseController;
@@ -1203,12 +1236,27 @@ export async function fetchProtocolStats(chainId = CHAIN_ID) {
 // ─────────────────────────────────────────────────────────────
 // READ WALLET SPECIFIC DATA
 // ─────────────────────────────────────────────────────────────
-export async function fetchWalletData(address, provider) {
-  const rpc = provider || getReadProvider();
-  const pool = getLendingPool(rpc);
-  const policy = getCreditPolicy(rpc);
-  const history = getCreditHistory(rpc);
-  const token = getFundryxToken(rpc);
+export async function fetchWalletData(address, provider = null, chainId = null) {
+  let targetChain = chainId;
+  if (!targetChain && provider?.getNetwork) {
+    try {
+      const net = await provider.getNetwork();
+      targetChain = Number(net.chainId);
+    } catch {
+      targetChain = null;
+    }
+  }
+  if (!targetChain && typeof window !== 'undefined' && window.ethereum?.chainId) {
+    const hex = window.ethereum.chainId;
+    targetChain = hex.startsWith('0x') ? parseInt(hex, 16) : Number(hex);
+  }
+  targetChain = targetChain || 80002;
+
+  const rpc = provider || getReadProvider(targetChain);
+  const pool = getLendingPool(rpc, targetChain);
+  const policy = getCreditPolicy(rpc, targetChain);
+  const history = getCreditHistory(rpc, targetChain);
+  const token = getFundryxToken(rpc, targetChain);
 
   const [lenderBalance, loanIds, eligibility, stats, fdxBalance, polBalance] = await Promise.all([
     pool.lenderBalances(address).catch(() => 0n),
@@ -1235,20 +1283,38 @@ export async function fetchWalletData(address, provider) {
     } : null,
     fdxBalance: Number(ethers.formatEther(fdxBalance)),
     polBalance: Number(ethers.formatEther(polBalance)),
+    chainId: targetChain,
   };
 }
 
 // ─────────────────────────────────────────────────────────────
 // FETCH ACTIVE LOANS FOR ADDRESS
 // ─────────────────────────────────────────────────────────────
-export async function fetchBorrowerLoans(address, provider) {
-  const rpc = provider || getReadProvider();
-  const pool = getLendingPool(rpc);
+export async function fetchBorrowerLoans(address, provider = null, chainId = null) {
+  let targetChain = chainId;
+  if (!targetChain && provider?.getNetwork) {
+    try {
+      const net = await provider.getNetwork();
+      targetChain = Number(net.chainId);
+    } catch {
+      targetChain = null;
+    }
+  }
+  if (!targetChain && typeof window !== 'undefined' && window.ethereum?.chainId) {
+    const hex = window.ethereum.chainId;
+    targetChain = hex.startsWith('0x') ? parseInt(hex, 16) : Number(hex);
+  }
+  targetChain = targetChain || 80002;
+
+  const rpc = provider || getReadProvider(targetChain);
+  const pool = getLendingPool(rpc, targetChain);
 
   const loanIds = await pool.getBorrowerLoans(address).catch(() => []);
   const loans = await Promise.all(
     loanIds.map(id => pool.getLoan(id).catch(() => null))
   );
+
+  const chainName = SUPPORTED_NETWORKS[targetChain]?.name || `Chain ${targetChain}`;
 
   return loans.filter(Boolean).map(l => {
     const init = Number(ethers.formatEther(l.principalInitial));
@@ -1274,7 +1340,8 @@ export async function fetchBorrowerLoans(address, provider) {
       id: `LOAN-${l.loanId}`,
       loanId: Number(l.loanId),
       borrower: l.borrower,
-      originChain: 'Polygon (80002)',
+      originChain: chainName,
+      chainId: targetChain,
       asset: 'FDX',
       amount: init,
       principalInitial: init,
@@ -1303,26 +1370,31 @@ export async function fetchBorrowerLoans(address, provider) {
 // ─────────────────────────────────────────────────────────────
 export async function executeBorrow(signer, amount, policyVersion) {
   const provider = signer.provider;
-  const pool = getLendingPool(signer);
-  const token = getFundryxToken(signer);
-  const amountWei = ethers.parseEther(amount.toString());
-
-  // Chain guard
+  const address = await signer.getAddress();
   const network = await provider.getNetwork();
-  if (Number(network.chainId) !== CHAIN_ID) {
-    throw new Error(`Wrong network. Switch to Primary Network (chain ${CHAIN_ID}). Current: ${network.chainId}.`);
+  const currentChainId = Number(network.chainId);
+  const netConfig = SUPPORTED_NETWORKS[currentChainId];
+
+  // Multi-chain protocol check: Allow borrowing on any network with deployed protocol contracts
+  if (!netConfig || !netConfig.contractsDeployed || !netConfig.contracts?.LendingPool) {
+    throw new Error(`Unsupported network (chain ${currentChainId}). Connect to a network with deployed protocol contracts (Polygon Amoy 80002 or Monad Testnet 10143).`);
   }
 
-  const address = await signer.getAddress();
+  const chainContracts = getContractAddresses(currentChainId);
+  const pool = getLendingPool(signer, currentChainId);
+  const token = getFundryxToken(signer, currentChainId);
+  const policy = getCreditPolicy(provider, currentChainId);
+  const amountWei = ethers.parseEther(amount.toString());
 
-  // FDX balance check — borrowing transfers FDX OUT of pool, but borrower needs POL for gas
-  const polBalance = await provider.getBalance(address);
-  if (polBalance < ethers.parseEther('0.001')) {
-    throw new Error('Insufficient POL for gas. Ensure your wallet has POL balance.');
+  // Native gas balance check — borrowing transfers FDX OUT of pool, but borrower needs native gas
+  const nativeSymbol = netConfig.nativeCurrency?.symbol || netConfig.nativeToken || 'gas';
+  const nativeBalance = await provider.getBalance(address);
+  const minGas = currentChainId === 10143 ? 0n : ethers.parseEther('0.001');
+  if (minGas > 0n && nativeBalance < minGas) {
+    throw new Error(`Insufficient ${nativeSymbol} for gas. Ensure your wallet has ${nativeSymbol} balance.`);
   }
 
   // Read actual policyVersion from chain if not provided
-  const policy = getCreditPolicy(provider);
   const chainPolicyVersion = Number(await policy.policyVersion().catch(() => 1n));
   const usedVersion = (policyVersion !== undefined && policyVersion !== null)
     ? Number(policyVersion)
@@ -1330,7 +1402,7 @@ export async function executeBorrow(signer, amount, policyVersion) {
 
   // Credit eligibility pre-flight
   const [eligible] = await policy.eligibleCredit(address, ethers.ZeroHash).catch(() => [0n]);
-  if (amountWei > eligible) {
+  if (eligible > 0n && amountWei > eligible) {
     const eligibleFmt = ethers.formatEther(eligible);
     throw new Error(`Borrow amount (${amount} FDX) exceeds credit limit (${Number(eligibleFmt).toFixed(2)} FDX). Build credit history by repaying previous loans.`);
   }
@@ -1339,25 +1411,33 @@ export async function executeBorrow(signer, amount, policyVersion) {
   const available = await pool.availableLiquidity().catch(() => 0n);
   if (amountWei > available) {
     const availFmt = ethers.formatEther(available);
-    throw new Error(`Insufficient pool liquidity. Available: ${Number(availFmt).toFixed(2)} FDX. Borrowing is paused or pool is empty.`);
+    throw new Error(`Insufficient pool liquidity on ${netConfig.name}. Available: ${Number(availFmt).toFixed(2)} FDX. Please supply or deposit capital to the vault first.`);
   }
 
-  const overrides = await getPolygonFeeOverrides(provider);
+  const overrides = await getNetworkFeeOverrides(provider, currentChainId);
 
   // Role check: Ensure LendingPool has LENDING_POOL_ROLE in AccessManager
-  const accessManager = new ethers.Contract(CONTRACT_ADDRESSES.AccessManager, ACCESS_MANAGER_ABI, signer);
-  const lpRole = await accessManager.LENDING_POOL_ROLE();
-  const poolHasRole = await accessManager.hasRole(lpRole, CONTRACT_ADDRESSES.LendingPool).catch(() => false);
-  if (!poolHasRole) {
-    const adminRole = await accessManager.ADMIN_ROLE();
-    const isUserAdmin = await accessManager.hasRole(adminRole, address).catch(() => false);
-    if (isUserAdmin) {
-      const grantTx = await accessManager.grantRole(lpRole, CONTRACT_ADDRESSES.LendingPool, overrides).catch((err) => {
-        throw new Error(`Role grant rejected: ${parseRevertReason(err)}`);
-      });
-      await grantTx.wait();
-    } else {
-      throw new Error('LendingPool lacks LENDING_POOL_ROLE. Ask the protocol admin to grant it.');
+  if (chainContracts.AccessManager) {
+    try {
+      const accessManager = getAccessManager(signer, currentChainId);
+      const lpRole = await accessManager.LENDING_POOL_ROLE().catch(() => null);
+      if (lpRole) {
+        const poolHasRole = await accessManager.hasRole(lpRole, chainContracts.LendingPool).catch(() => false);
+        if (!poolHasRole) {
+          const adminRole = await accessManager.ADMIN_ROLE().catch(() => null);
+          const isUserAdmin = adminRole ? await accessManager.hasRole(adminRole, address).catch(() => false) : false;
+          if (isUserAdmin) {
+            const grantTx = await accessManager.grantRole(lpRole, chainContracts.LendingPool, overrides).catch((err) => {
+              console.warn('Auto grant role rejected:', parseRevertReason(err));
+            });
+            if (grantTx?.wait) await grantTx.wait();
+          } else {
+            console.warn('LendingPool lacks LENDING_POOL_ROLE on this network.');
+          }
+        }
+      }
+    } catch (roleErr) {
+      console.warn('AccessManager role check skipped:', roleErr.message);
     }
   }
 
@@ -1372,11 +1452,11 @@ export async function executeBorrow(signer, amount, policyVersion) {
 
   // Proactively record to Supabase audit trail
   recordAuditEventToSupabase({
-    chainId: CHAIN_ID,
+    chainId: currentChainId,
     txHash: receipt.hash,
     blockNumber: receipt.blockNumber,
     type: 'Loan Disbursement',
-    contractAddress: CONTRACT_ADDRESSES.LendingPool,
+    contractAddress: chainContracts.LendingPool,
     borrower: address,
     fullBorrower: address,
     amount: `${amount} FDX`,
@@ -1387,7 +1467,7 @@ export async function executeBorrow(signer, amount, policyVersion) {
     metadata: { loanVersion: usedVersion },
   }).catch(() => {});
 
-  return { tx, receipt, newFdxBalance: ethers.formatEther(newFdxBalance) };
+  return { tx, receipt, newFdxBalance: ethers.formatEther(newFdxBalance), chainId: currentChainId };
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -1399,18 +1479,23 @@ export async function executeDeposit(signer, amount, tokenSymbol = 'FDX') {
   }
 
   const provider = signer.provider;
-  const pool = getLendingPool(signer);
-  const token = getFundryxToken(signer);
+  const network = await provider.getNetwork();
+  const currentChainId = Number(network.chainId);
+  const netConfig = SUPPORTED_NETWORKS[currentChainId];
+  if (!netConfig || !netConfig.contractsDeployed || !netConfig.contracts?.LendingPool) {
+    throw new Error(`Unsupported network (chain ${currentChainId}). Connect to a network with deployed protocol contracts.`);
+  }
 
-  // Dynamic decimals: 6 for fUSD / USDC, 18 for FDX / POL
+  const chainContracts = getContractAddresses(currentChainId);
+  const pool = getLendingPool(signer, currentChainId);
+  const tokenAddr = tokenSymbol === 'fUSD' && chainContracts.FundrexUSD
+    ? chainContracts.FundrexUSD
+    : chainContracts.FundryxToken;
+  const token = new ethers.Contract(tokenAddr, ERC20_ABI, signer);
+
+  // Dynamic decimals: 6 for fUSD / USDC, 18 for FDX / POL / MON
   const decimals = (tokenSymbol === 'fUSD' || tokenSymbol === 'USDC') ? 6 : 18;
   const amountWei = ethers.parseUnits(amount.toString(), decimals);
-
-  // Chain guard
-  const network = await provider.getNetwork();
-  if (Number(network.chainId) !== CHAIN_ID) {
-    throw new Error(`Wrong network. Switch to Primary Network (chain ${CHAIN_ID}). Current: ${network.chainId}.`);
-  }
 
   const address = await signer.getAddress();
 
@@ -1421,12 +1506,12 @@ export async function executeDeposit(signer, amount, tokenSymbol = 'FDX') {
     throw new Error(`Insufficient ${tokenSymbol} balance. You have ${Number(fmt).toFixed(4)} ${tokenSymbol}. Mint or acquire tokens first.`);
   }
 
-  const overrides = await getPolygonFeeOverrides(provider);
+  const overrides = await getNetworkFeeOverrides(provider, currentChainId);
 
   // Approval — Step 1: Approve exact amount (avoids phishing/wallet drainer flags)
-  const allowance = await token.allowance(address, CONTRACT_ADDRESSES.LendingPool);
+  const allowance = await token.allowance(address, chainContracts.LendingPool);
   if (allowance < amountWei) {
-    const approveTx = await token.approve(CONTRACT_ADDRESSES.LendingPool, amountWei, overrides).catch((err) => {
+    const approveTx = await token.approve(chainContracts.LendingPool, amountWei, overrides).catch((err) => {
       throw new Error(`Approval rejected: ${parseRevertReason(err)}`);
     });
     await approveTx.wait();
@@ -1448,11 +1533,11 @@ export async function executeDeposit(signer, amount, tokenSymbol = 'FDX') {
 
   // Proactively record to Supabase audit trail
   recordAuditEventToSupabase({
-    chainId: CHAIN_ID,
+    chainId: currentChainId,
     txHash: receipt.hash,
     blockNumber: receipt.blockNumber,
     type: 'Capital Supply',
-    contractAddress: CONTRACT_ADDRESSES.LendingPool,
+    contractAddress: chainContracts.LendingPool,
     borrower: address,
     fullBorrower: address,
     amount: `${amount} ${tokenSymbol}`,
@@ -1472,6 +1557,7 @@ export async function executeDeposit(signer, amount, tokenSymbol = 'FDX') {
     newFdxBalance: ethers.formatUnits(newFdxBal, decimals),
     newLenderBalance: ethers.formatUnits(newLenderBal, decimals),
     newTotalDeposits: ethers.formatUnits(newPoolDeposits, decimals),
+    chainId: currentChainId,
   };
 }
 
@@ -1479,10 +1565,13 @@ export async function executeDeposit(signer, amount, tokenSymbol = 'FDX') {
 // EXECUTE MINT TOKENS — Institutional Token Issuance
 // ─────────────────────────────────────────────────────────────
 export async function executeMintTokens(signer, toAddress, amount = 10000) {
-  const token = getFundryxToken(signer);
+  const provider = signer.provider;
+  const network = await provider.getNetwork();
+  const currentChainId = Number(network.chainId);
+  const token = getFundryxToken(signer, currentChainId);
   const target = toAddress || (await signer.getAddress());
   const amountWei = ethers.parseEther(amount.toString());
-  const overrides = await getPolygonFeeOverrides(signer.provider);
+  const overrides = await getNetworkFeeOverrides(provider, currentChainId);
 
   const tx = await token.mint(target, amountWei, overrides).catch((err) => {
     throw new Error(parseRevertReason(err));
@@ -1495,6 +1584,7 @@ export async function executeMintTokens(signer, toAddress, amount = 10000) {
     tx,
     receipt,
     newBalance: ethers.formatEther(newBal),
+    chainId: currentChainId,
   };
 }
 
@@ -1507,16 +1597,17 @@ export async function executeRepay(signer, loanId, amount) {
   }
 
   const provider = signer.provider;
-  const pool = getLendingPool(signer);
-  const token = getFundryxToken(signer);
-  const amountWei = ethers.parseEther(amount.toString());
-
-  // Chain guard
   const network = await provider.getNetwork();
-  if (Number(network.chainId) !== CHAIN_ID) {
-    throw new Error(`Wrong network. Switch to Primary Network (chain ${CHAIN_ID}).`);
+  const currentChainId = Number(network.chainId);
+  const netConfig = SUPPORTED_NETWORKS[currentChainId];
+  if (!netConfig || !netConfig.contractsDeployed || !netConfig.contracts?.LendingPool) {
+    throw new Error(`Unsupported network (chain ${currentChainId}). Connect to a network with deployed protocol contracts.`);
   }
 
+  const chainContracts = getContractAddresses(currentChainId);
+  const pool = getLendingPool(signer, currentChainId);
+  const token = getFundryxToken(signer, currentChainId);
+  const amountWei = ethers.parseEther(amount.toString());
   const address = await signer.getAddress();
 
   // Verify loan debt and headroom
@@ -1536,12 +1627,12 @@ export async function executeRepay(signer, loanId, amount) {
     throw new Error(`Insufficient FDX to repay. You have ${Number(fmt).toFixed(4)} FDX, need ${amount} FDX.`);
   }
 
-  const overrides = await getPolygonFeeOverrides(provider);
+  const overrides = await getNetworkFeeOverrides(provider, currentChainId);
 
   // Approval — exact amount
-  const allowance = await token.allowance(address, CONTRACT_ADDRESSES.LendingPool);
+  const allowance = await token.allowance(address, chainContracts.LendingPool);
   if (allowance < amountWei) {
-    const approveTx = await token.approve(CONTRACT_ADDRESSES.LendingPool, amountWei, overrides).catch((err) => {
+    const approveTx = await token.approve(chainContracts.LendingPool, amountWei, overrides).catch((err) => {
       throw new Error(`Approval rejected: ${parseRevertReason(err)}`);
     });
     await approveTx.wait();
@@ -1564,11 +1655,11 @@ export async function executeRepay(signer, loanId, amount) {
 
   // Proactively record to Supabase audit trail
   recordAuditEventToSupabase({
-    chainId: CHAIN_ID,
+    chainId: currentChainId,
     txHash: receipt.hash,
     blockNumber: receipt.blockNumber,
     type: isFullRepay ? 'Full Loan Settlement' : 'Partial Loan Repayment',
-    contractAddress: CONTRACT_ADDRESSES.LendingPool,
+    contractAddress: chainContracts.LendingPool,
     borrower: address,
     fullBorrower: address,
     amount: `${amount} FDX`,
@@ -1590,6 +1681,7 @@ export async function executeRepay(signer, loanId, amount) {
     loanStatus: loan ? LOAN_STATUS[Number(loan.status)] : 'Unknown',
     remainingOutstanding: remainingDebt,
     newFdxBalance: ethers.formatEther(newFdxBal),
+    chainId: currentChainId,
   };
 }
 
@@ -1602,7 +1694,15 @@ export async function executeWithdraw(signer, amount, tokenSymbol = 'FDX') {
   }
 
   const provider = signer.provider;
-  const pool = getLendingPool(signer);
+  const network = await provider.getNetwork();
+  const currentChainId = Number(network.chainId);
+  const netConfig = SUPPORTED_NETWORKS[currentChainId];
+  if (!netConfig || !netConfig.contractsDeployed || !netConfig.contracts?.LendingPool) {
+    throw new Error(`Unsupported network (chain ${currentChainId}). Connect to a network with deployed protocol contracts.`);
+  }
+
+  const chainContracts = getContractAddresses(currentChainId);
+  const pool = getLendingPool(signer, currentChainId);
   const address = await signer.getAddress();
 
   const decimals = (tokenSymbol === 'fUSD' || tokenSymbol === 'USDC') ? 6 : 18;
@@ -1621,7 +1721,7 @@ export async function executeWithdraw(signer, amount, tokenSymbol = 'FDX') {
     throw new Error(`Insufficient pool idle liquidity for immediate withdrawal. Available: ${Number(poolFmt).toFixed(4)} ${tokenSymbol}. Outstanding loans must be repaid first.`);
   }
 
-  const overrides = await getPolygonFeeOverrides(provider);
+  const overrides = await getNetworkFeeOverrides(provider, currentChainId);
   const tx = await pool.withdraw(amountWei, overrides).catch((err) => {
     throw new Error(parseRevertReason(err));
   });
@@ -1635,11 +1735,11 @@ export async function executeWithdraw(signer, amount, tokenSymbol = 'FDX') {
 
   // Proactively record to Supabase audit trail
   recordAuditEventToSupabase({
-    chainId: CHAIN_ID,
+    chainId: currentChainId,
     txHash: receipt.hash,
     blockNumber: receipt.blockNumber,
     type: 'Capital Withdrawal',
-    contractAddress: CONTRACT_ADDRESSES.LendingPool,
+    contractAddress: chainContracts.LendingPool,
     borrower: address,
     fullBorrower: address,
     amount: `${amount} ${tokenSymbol}`,
@@ -1658,6 +1758,7 @@ export async function executeWithdraw(signer, amount, tokenSymbol = 'FDX') {
     receipt,
     newLenderBalance: ethers.formatUnits(newLenderBal, decimals),
     newTotalDeposits: ethers.formatUnits(newPoolDeposits, decimals),
+    chainId: currentChainId,
   };
 }
 
@@ -2551,18 +2652,21 @@ export async function fetchRecentEvents(blockRange = 3000) {
 }
 
 // ─────────────────────────────────────────────────────────────
-// POLYGONSCAN EXPLORER LINK
+// MULTI-CHAIN EXPLORER LINKS
 // ─────────────────────────────────────────────────────────────
-export function explorerTxLink(txHash) {
-  return `https://amoy.polygonscan.com/tx/${txHash}`;
+export function explorerTxLink(txHash, chainId = 80002) {
+  const base = SUPPORTED_NETWORKS[chainId]?.explorerUrl || 'https://amoy.polygonscan.com';
+  return `${base}/tx/${txHash}`;
 }
 
-export function explorerAddressLink(address) {
-  return `https://amoy.polygonscan.com/address/${address}`;
+export function explorerAddressLink(address, chainId = 80002) {
+  const base = SUPPORTED_NETWORKS[chainId]?.explorerUrl || 'https://amoy.polygonscan.com';
+  return `${base}/address/${address}`;
 }
 
-export function explorerBlockLink(blockNumber) {
-  return `https://amoy.polygonscan.com/block/${blockNumber}`;
+export function explorerBlockLink(blockNumber, chainId = 80002) {
+  const base = SUPPORTED_NETWORKS[chainId]?.explorerUrl || 'https://amoy.polygonscan.com';
+  return `${base}/block/${blockNumber}`;
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -2629,11 +2733,39 @@ export function parseRevertReason(err) {
 // ─────────────────────────────────────────────────────────────
 // CREDIT PRE-FLIGHT — read on-chain credit before borrow UI
 // ─────────────────────────────────────────────────────────────
-export async function fetchCreditPreFlight(address) {
-  const provider = getReadProvider();
-  const policy = getCreditPolicy(provider);
-  const pool = getLendingPool(provider);
-  const token = getFundryxToken(provider);
+export async function fetchCreditPreFlight(address, providerOrChainId = null, maybeChainId = null) {
+  let targetChain = 80002;
+  let provider = null;
+
+  if (typeof providerOrChainId === 'number') {
+    targetChain = providerOrChainId;
+    provider = getReadProvider(targetChain);
+  } else if (typeof providerOrChainId === 'string' && !isNaN(Number(providerOrChainId))) {
+    targetChain = Number(providerOrChainId);
+    provider = getReadProvider(targetChain);
+  } else if (providerOrChainId && typeof providerOrChainId === 'object') {
+    provider = providerOrChainId;
+    if (maybeChainId) {
+      targetChain = Number(maybeChainId);
+    } else if (provider._network?.chainId) {
+      targetChain = Number(provider._network.chainId);
+    }
+  }
+
+  if (!provider) {
+    if (typeof window !== 'undefined' && window.ethereum?.chainId) {
+      const hex = window.ethereum.chainId;
+      const winChain = hex.startsWith('0x') ? parseInt(hex, 16) : Number(hex);
+      if (SUPPORTED_NETWORKS[winChain]?.contractsDeployed) {
+        targetChain = winChain;
+      }
+    }
+    provider = getReadProvider(targetChain);
+  }
+
+  const policy = getCreditPolicy(provider, targetChain);
+  const pool = getLendingPool(provider, targetChain);
+  const token = getFundryxToken(provider, targetChain);
 
   const [eligibility, available, fdxBalance, lenderBalance, policyVer] = await Promise.all([
     policy.previewEligibility(address).catch(() => ({ maxCredit: 0n, version: 1, repaymentCount: 0n, outstandingExposure: 0n })),
@@ -2656,6 +2788,7 @@ export async function fetchCreditPreFlight(address) {
     lenderBalance: Number(ethers.formatEther(lenderBalance)),
     policyVersion: Number(typeof eligibility.version === 'bigint' ? eligibility.version : (eligibility[1] ?? policyVer)),
     repaymentCount: Number(typeof eligibility.repaymentCount === 'bigint' ? eligibility.repaymentCount : (eligibility[2] ?? 0n)),
+    chainId: targetChain,
   };
 }
 
@@ -2760,18 +2893,18 @@ export async function executeSeedLiquidity(signer, amountFdx = 10, amountPol = 1
 }
 
 export async function executeSwap(signer, tokenInAddress, tokenOutAddress, amountIn, slippageBps = 50) {
-  if (!MOCK_SWAP_ROUTER_ADDRESS) {
-    throw new Error('Swap router contract is not configured.');
-  }
-
   const provider = signer.provider;
   const network = await provider.getNetwork();
-  if (Number(network.chainId) !== CHAIN_ID) {
-    throw new Error(`Wrong network. Switch to Primary Network (chain ${CHAIN_ID}).`);
+  const currentChainId = Number(network.chainId);
+  const netConfig = SUPPORTED_NETWORKS[currentChainId];
+  const routerAddress = netConfig?.contracts?.MockSwapRouter || (currentChainId === 80002 ? MOCK_SWAP_ROUTER_ADDRESS : null);
+
+  if (!routerAddress) {
+    throw new Error(`Instant AMM Swap router is not deployed on ${netConfig?.name || `Chain ${currentChainId}`}. Use Cross-Chain Bridge or switch to Polygon Amoy (80002).`);
   }
 
   const address = await signer.getAddress();
-  const router = getMockSwapRouter(signer);
+  const router = new ethers.Contract(routerAddress, MOCK_SWAP_ROUTER_ABI, signer);
   const tokenIn = new ethers.Contract(tokenInAddress, ERC20_ABI, signer);
   const amountInWei = ethers.parseEther(amountIn.toString());
 
@@ -2794,12 +2927,12 @@ export async function executeSwap(signer, tokenInAddress, tokenOutAddress, amoun
   }
 
   const minOut = expectedOut * BigInt(10000 - slippageBps) / 10000n;
-  const overrides = await getPolygonFeeOverrides(provider);
+  const overrides = await getNetworkFeeOverrides(provider, currentChainId);
 
   // Approve router — exact amount
-  const allowance = await tokenIn.allowance(address, MOCK_SWAP_ROUTER_ADDRESS);
+  const allowance = await tokenIn.allowance(address, routerAddress);
   if (allowance < amountInWei) {
-    const approveTx = await tokenIn.approve(MOCK_SWAP_ROUTER_ADDRESS, amountInWei, overrides).catch((err) => {
+    const approveTx = await tokenIn.approve(routerAddress, amountInWei, overrides).catch((err) => {
       throw new Error(`Approval failed: ${parseRevertReason(err)}`);
     });
     await approveTx.wait();
@@ -2818,11 +2951,11 @@ export async function executeSwap(signer, tokenInAddress, tokenOutAddress, amoun
 
   // Proactively record to Supabase audit trail
   recordAuditEventToSupabase({
-    chainId: CHAIN_ID,
+    chainId: currentChainId,
     txHash: receipt.hash,
     blockNumber: receipt.blockNumber,
     type: 'AMM Swap',
-    contractAddress: MOCK_SWAP_ROUTER_ADDRESS,
+    contractAddress: routerAddress,
     borrower: address,
     fullBorrower: address,
     amount: `${amountIn} In -> ${Number(ethers.formatEther(expectedOut)).toFixed(4)} Out`,
@@ -2843,6 +2976,7 @@ export async function executeSwap(signer, tokenInAddress, tokenOutAddress, amoun
     amountOut: ethers.formatEther(expectedOut),
     priceImpact: Number(priceImpact) / 100,
     newOutBalance: ethers.formatEther(newOutBalance),
-    explorerUrl: explorerTxLink(tx.hash),
+    explorerUrl: explorerTxLink(tx.hash, currentChainId),
+    chainId: currentChainId,
   };
 }
