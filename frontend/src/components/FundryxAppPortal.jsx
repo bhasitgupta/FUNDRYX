@@ -85,6 +85,7 @@ import {
   executeCrossChainSwap,
   CROSS_CHAIN_STATUS,
   explorerTxLink,
+  explorerBlockLink,
   ADMIN_WALLETS,
   checkIsAdminWallet,
   verifyTxHashOnChain,
@@ -664,6 +665,7 @@ export default function FundryxAppPortal({
         type: 'success',
         message: `Loan Confirmed on-chain! Block ${receipt.blockNumber}`,
         txHash: tx.hash,
+        chainId: currentChainId,
       });
 
       // Refresh onchain loans and wallet data
@@ -761,6 +763,7 @@ export default function FundryxAppPortal({
         type: 'success',
         message: `Minted 10,000 FDX! New Balance: ${Number(newBalance).toLocaleString()} FDX (Block ${receipt.blockNumber})`,
         txHash: tx.hash,
+        chainId: currentChainId,
       });
       setTimeout(() => setIsMinting(false), 3000);
     } catch (err) {
@@ -831,6 +834,7 @@ export default function FundryxAppPortal({
         type: 'success',
         message: `Deposit Confirmed on-chain! Block ${receipt.blockNumber}`,
         txHash: tx.hash,
+        chainId: currentChainId,
       });
 
       setActivityFeed((prev) => [
@@ -1313,6 +1317,7 @@ export default function FundryxAppPortal({
         type: 'success',
         message: `MockSwapRouter successfully deployed on-chain at ${res.address.slice(0, 6)}...${res.address.slice(-4)}!`,
         txHash: res.tx?.hash,
+        chainId: currentChainId,
       });
       setIsRouterDeployed(true);
       await loadPairReserves(currentChainId);
@@ -1359,6 +1364,7 @@ export default function FundryxAppPortal({
         type: 'success',
         message: `Liquidity initialized on-chain! 10 FDX + 10 ${activeWrappedSymbol} supplied.`,
         txHash: res.tx.hash,
+        chainId: currentChainId,
       });
       await loadPairReserves(currentChainId);
       if (wallet.address) {
@@ -1420,8 +1426,10 @@ export default function FundryxAppPortal({
       const net = SUPPORTED_NETWORKS[cId] || SUPPORTED_NETWORKS[80002];
       const wrapAddr = net?.wrappedNative?.address || (cId === 10143 ? '0xFb8bf4c1CC7a94c73D209a149eA2AbEa852BC541' : '0x360ad4f9a9A8EFe9A8DCB5f461c4Cc1047E1Dcf9');
 
-      const tokenInAddr = tokenMap[swapFrom] || (swapFrom === 'FDX' ? addrs.FundryxToken : wrapAddr);
-      const tokenOutAddr = tokenMap[swapTo] || (swapTo === 'FDX' ? addrs.FundryxToken : wrapAddr);
+      let tokenInAddr = tokenMap[swapFrom] || (swapFrom === 'FDX' ? addrs.FundryxToken : wrapAddr);
+      let tokenOutAddr = tokenMap[swapTo] || (swapTo === 'FDX' ? addrs.FundryxToken : wrapAddr);
+      if (!tokenInAddr || tokenInAddr === ethers.ZeroAddress || tokenInAddr === '0x0000000000000000000000000000000000000000') tokenInAddr = wrapAddr;
+      if (!tokenOutAddr || tokenOutAddr === ethers.ZeroAddress || tokenOutAddr === '0x0000000000000000000000000000000000000000') tokenOutAddr = wrapAddr;
 
       const res = await executeSwap(wallet.signer, tokenInAddr, tokenOutAddr, swapAmount, slippageBps);
 
@@ -1431,6 +1439,7 @@ export default function FundryxAppPortal({
         type: 'success',
         message: `Swap Confirmed on-chain! Received ${Number(res.amountOut).toFixed(4)} ${swapTo}`,
         txHash: res.tx.hash,
+        chainId: cId,
       });
 
       await loadPairReserves(cId);
@@ -1733,7 +1742,7 @@ export default function FundryxAppPortal({
             </div>
             {txNotification.txHash && (
               <a
-                href={explorerTxLink(txNotification.txHash)}
+                href={explorerTxLink(txNotification.txHash, txNotification.chainId || currentChainId)}
                 target="_blank"
                 rel="noreferrer"
                 className="text-emerald-400 underline font-semibold flex items-center gap-1 hover:text-emerald-300 shrink-0 ml-4"
@@ -3267,6 +3276,24 @@ export default function FundryxAppPortal({
                       </div>
                     )}
 
+                    {/* Zero Pool Liquidity Alert */}
+                    {isRouterDeployed && (pairReserves.fdx === 0 || (!pairReserves.wrapped && !pairReserves.wpol)) && (
+                      <div className="p-3.5 mb-4 rounded-xl bg-amber-500/10 border border-amber-500/30 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+                        <div>
+                          <span className="font-bold text-amber-300 block">AMM Pool Has Zero Liquidity</span>
+                          <span className="text-[var(--text-muted)]">Initial liquidity (10 FDX + 10 {activeWrappedSymbol}) required before swaps can execute.</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={handleSeedLiquidity}
+                          disabled={isSeeding || !wallet.signer}
+                          className="px-3.5 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs shrink-0 cursor-pointer transition disabled:opacity-50"
+                        >
+                          {isSeeding ? 'Seeding...' : `Seed Pool (1-Click)`}
+                        </button>
+                      </div>
+                    )}
+
                     {/* Swap Action Button */}
                     {!wallet.address ? (
                       <button
@@ -3289,6 +3316,14 @@ export default function FundryxAppPortal({
                         className="portal-btn-purple w-full h-12 text-sm font-bold cursor-pointer"
                       >
                         {isDeployingRouter ? 'Deploying MockSwapRouter...' : `Deploy MockSwapRouter to ${activeNetConfig?.shortName || 'Chain'} (1-Click)`}
+                      </button>
+                    ) : isRouterDeployed && (pairReserves.fdx === 0 || (!pairReserves.wrapped && !pairReserves.wpol)) ? (
+                      <button
+                        onClick={handleSeedLiquidity}
+                        disabled={isSeeding}
+                        className="portal-btn-amber w-full h-12 text-sm font-bold cursor-pointer"
+                      >
+                        {isSeeding ? 'Seeding AMM Pool...' : `Initialize AMM Pool Liquidity (Seed 10 FDX + 10 ${activeWrappedSymbol})`}
                       </button>
                     ) : (
                       <button
@@ -4117,7 +4152,7 @@ export default function FundryxAppPortal({
                           <td className="font-mono text-xs text-[var(--accent-3)] truncate max-w-[130px]">
                             {t.txHash ? (
                               <a
-                                href={explorerTxLink(t.txHash)}
+                                href={explorerTxLink(t.txHash, t.chainId || currentChainId)}
                                 target="_blank"
                                 rel="noreferrer"
                                 className="text-purple-400 hover:underline flex items-center gap-1"
@@ -4481,7 +4516,7 @@ export default function FundryxAppPortal({
                               <div className="flex items-center gap-1.5">
                                 <span className="text-white">{ev.hash}</span>
                                 <a
-                                  href={explorerTxLink(ev.txHash)}
+                                  href={explorerTxLink(ev.txHash, ev.chainId || currentChainId)}
                                   target="_blank"
                                   rel="noreferrer"
                                   className="text-emerald-400 hover:text-emerald-300"
@@ -4493,7 +4528,7 @@ export default function FundryxAppPortal({
                             </td>
                             <td className="font-mono text-xs text-[var(--text-muted)]">
                               <a
-                                href={`https://amoy.polygonscan.com/block/${ev.blockNumber}`}
+                                href={explorerBlockLink(ev.blockNumber, ev.chainId || currentChainId)}
                                 target="_blank"
                                 rel="noreferrer"
                                 className="hover:text-white underline"

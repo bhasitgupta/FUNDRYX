@@ -56,9 +56,12 @@ export async function recordAuditEventToSupabase(event) {
       amount_formatted: event.amount || '',
       status: event.status || 'CONFIRMED',
       gas_used: event.gasUsed ? String(event.gasUsed) : null,
-      effective_gas_price: event.effectiveGasPrice ? String(event.effectiveGasPrice) : null,
-      explorer_url: event.explorerUrl || `https://amoy.polygonscan.com/tx/${event.txHash}`,
-      source: event.source || 'ONCHAIN',
+      explorer_url: event.explorerUrl || (
+        event.chainId === 10143 ? `https://testnet.monadexplorer.com/tx/${event.txHash}` :
+        event.chainId === 43113 ? `https://testnet.snowtrace.io/tx/${event.txHash}` :
+        event.chainId === 84532 ? `https://sepolia.basescan.org/tx/${event.txHash}` :
+        `https://amoy.polygonscan.com/tx/${event.txHash}`
+      ),
       correlation_id: event.correlationId || null,
       ai_telemetry: event.aiTelemetry || null,
       error_code: event.errorCode || null,

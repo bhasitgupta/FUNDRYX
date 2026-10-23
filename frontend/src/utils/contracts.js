@@ -93,7 +93,7 @@ export const SUPPORTED_NETWORKS = {
       CreditPolicy:            getEnvVar('VITE_MONAD_CREDIT_POLICY', '0x27B46c075bf2Cd67D174BD59629cc66b8C9Ea36d'),
       LendingPool:             getEnvVar('VITE_MONAD_LENDING_POOL', '0x68fC6E11cD8a855849D7788e035BA92E320Db0d2'),
       RiskAttestationRegistry: getEnvVar('VITE_MONAD_RISK_REGISTRY', '0xF35DaC9A5Db13c2b621Aa00288A4996D5d91c07C'),
-      MockSwapRouter:          getEnvVar('VITE_MONAD_MOCK_SWAP_ROUTER', null),
+      MockSwapRouter:          getEnvVar('VITE_MONAD_MOCK_SWAP_ROUTER', '0xCa8C5f7AA0717BCc3435cAEbFB96Ff602232dEcC'),
     },
     tokens: {
       FDX:  getEnvVar('VITE_MONAD_FUNDRYX_TOKEN', '0x86E7023f10c5bd119521EB95a8CddF19159f95Cd'),
@@ -137,19 +137,33 @@ export const SUPPORTED_NETWORKS = {
     nativeToken: 'AVAX',
     nativeCurrency: { name: 'Avalanche', symbol: 'AVAX', decimals: 18 },
     wrappedNative: { symbol: 'WAVAX', address: '0xd00ae08403B9bbb9124bB305C09058E32C39A48c' },
-    supportedAssets: ['AVAX', 'USDC'],
-    supportedOperations: ['read_only_telemetry', 'risk_analysis'],
-    rpcUrl: 'https://api.avax-test.network/ext/bc/C/rpc',
+    supportedAssets: ['AVAX', 'WAVAX', 'FDX', 'fUSD', 'USDC'],
+    supportedOperations: ['lending', 'borrowing', 'swap', 'telemetry', 'risk_analysis'],
+    rpcUrl: getEnvVar('VITE_AVAX_FUJI_RPC', 'https://api.avax-test.network/ext/bc/C/rpc'),
     explorerUrl: 'https://testnet.snowtrace.io',
-    status: 'STAGING',
-    contractsDeployed: false,
+    status: 'ACTIVE',
+    contractsDeployed: true,
     bridgeActive: false,
-    statusLabel: 'Pending Contract Deployment',
+    statusLabel: 'Protocol Live',
     relayer: 'Chainlink CCIP (Fuji Router 0xF694...8177)',
     iconColor: '#E84142',
-    contracts: {},
+    contracts: {
+      AccessManager:           getEnvVar('VITE_AVALANCHE_FUJI_ACCESS_MANAGER', '0x8748fa4147c9fE78572D14F3C827d2E8ad4B9138'),
+      PauseController:         getEnvVar('VITE_AVALANCHE_FUJI_PAUSE_CONTROLLER', '0x230829f5EC30A1936fDECE13F1179381daaf69e8'),
+      FundryxToken:            getEnvVar('VITE_AVALANCHE_FUJI_FUNDRYX_TOKEN', '0x86E7023f10c5bd119521EB95a8CddF19159f95Cd'),
+      FundrexUSD:              getEnvVar('VITE_AVALANCHE_FUJI_FUSD', '0xdA2631Aadb95AB5Ea6926e431F66fe2a66EF930E'),
+      CreditHistoryRegistry:   getEnvVar('VITE_AVALANCHE_FUJI_CREDIT_HISTORY_REGISTRY', '0xF4d0F035900c313e44246ED473b3011E42192F77'),
+      CreditPolicy:            getEnvVar('VITE_AVALANCHE_FUJI_CREDIT_POLICY', '0x27B46c075bf2Cd67D174BD59629cc66b8C9Ea36d'),
+      LendingPool:             getEnvVar('VITE_AVALANCHE_FUJI_LENDING_POOL', '0x68fC6E11cD8a855849D7788e035BA92E320Db0d2'),
+      RiskAttestationRegistry: getEnvVar('VITE_AVALANCHE_FUJI_RISK_REGISTRY', '0xF35DaC9A5Db13c2b621Aa00288A4996D5d91c07C'),
+      MockSwapRouter:          getEnvVar('VITE_AVALANCHE_FUJI_MOCK_SWAP_ROUTER', '0xCa8C5f7AA0717BCc3435cAEbFB96Ff602232dEcC'),
+    },
     tokens: {
-      USDC: '0x5425890298aed601595a70ab815c96711a31bc65',
+      FDX:   getEnvVar('VITE_AVALANCHE_FUJI_FUNDRYX_TOKEN', '0x86E7023f10c5bd119521EB95a8CddF19159f95Cd'),
+      fUSD:  getEnvVar('VITE_AVALANCHE_FUJI_FUSD', '0xdA2631Aadb95AB5Ea6926e431F66fe2a66EF930E'),
+      WAVAX: '0xd00ae08403B9bbb9124bB305C09058E32C39A48c',
+      AVAX:  '0x0000000000000000000000000000000000000000',
+      USDC:  '0x5425890298aed601595a70ab815c96711a31bc65',
     },
   },
 
@@ -552,9 +566,48 @@ export const TOKEN_REGISTRY = {
       decimals: 18,
       tokenType: 'native',
       verifiedDeploymentStatus: 'VERIFIED_ON_CHAIN',
-      supportedOperations: ['gas', 'telemetry'],
+      supportedOperations: ['gas', 'telemetry', 'swap'],
       explorerUrl: 'https://testnet.snowtrace.io',
       canAddToWallet: false,
+      logo: 'AVAX',
+    },
+    {
+      chainId: 43113,
+      address: getEnvVar('VITE_AVALANCHE_FUJI_FUNDRYX_TOKEN', '0x86E7023f10c5bd119521EB95a8CddF19159f95Cd'),
+      name: 'Fundryx Protocol Token',
+      symbol: 'FDX',
+      decimals: 18,
+      tokenType: 'protocol_reserve',
+      verifiedDeploymentStatus: 'VERIFIED_ON_CHAIN',
+      supportedOperations: ['lending', 'borrowing', 'swap'],
+      explorerUrl: `https://testnet.snowtrace.io/token/${getEnvVar('VITE_AVALANCHE_FUJI_FUNDRYX_TOKEN', '0x86E7023f10c5bd119521EB95a8CddF19159f95Cd')}`,
+      canAddToWallet: true,
+      logo: 'FDX',
+    },
+    {
+      chainId: 43113,
+      address: getEnvVar('VITE_AVALANCHE_FUJI_FUSD', '0xdA2631Aadb95AB5Ea6926e431F66fe2a66EF930E'),
+      name: 'Fundrex USD',
+      symbol: 'fUSD',
+      decimals: 18,
+      tokenType: 'synthetic_stable',
+      verifiedDeploymentStatus: 'VERIFIED_ON_CHAIN',
+      supportedOperations: ['lending', 'borrowing', 'swap'],
+      explorerUrl: `https://testnet.snowtrace.io/token/${getEnvVar('VITE_AVALANCHE_FUJI_FUSD', '0xdA2631Aadb95AB5Ea6926e431F66fe2a66EF930E')}`,
+      canAddToWallet: true,
+      logo: 'fUSD',
+    },
+    {
+      chainId: 43113,
+      address: '0xd00ae08403B9bbb9124bB305C09058E32C39A48c',
+      name: 'Wrapped AVAX',
+      symbol: 'WAVAX',
+      decimals: 18,
+      tokenType: 'wrapped_native',
+      verifiedDeploymentStatus: 'VERIFIED_ON_CHAIN',
+      supportedOperations: ['swap'],
+      explorerUrl: 'https://testnet.snowtrace.io/token/0xd00ae08403B9bbb9124bB305C09058E32C39A48c',
+      canAddToWallet: true,
       logo: 'AVAX',
     },
     {
@@ -2518,20 +2571,41 @@ export async function checkIsAdminWallet(address) {
   }
 }
 
-export async function verifyTxHashOnChain(txHash) {
+export async function verifyTxHashOnChain(txHash, targetChainId = null) {
   if (!txHash || !txHash.startsWith('0x')) {
     throw new Error('Invalid transaction hash format. Must begin with 0x.');
   }
-  const provider = getReadProvider();
-  const [tx, receipt] = await Promise.all([
-    provider.getTransaction(txHash).catch(() => null),
-    provider.getTransactionReceipt(txHash).catch(() => null),
-  ]);
 
-  if (!tx || !receipt) {
-    throw new Error('Transaction hash not found or not yet mined on-chain.');
+  const preferredChain = getActiveChainId(targetChainId);
+  const chainsToTry = [preferredChain, 80002, 10143, 43113, 84532].filter((v, i, a) => a.indexOf(v) === i);
+
+  let tx = null;
+  let receipt = null;
+  let verifiedChain = preferredChain;
+
+  for (const cid of chainsToTry) {
+    try {
+      const p = getReadProvider(cid);
+      const [t, r] = await Promise.all([
+        p.getTransaction(txHash).catch(() => null),
+        p.getTransactionReceipt(txHash).catch(() => null),
+      ]);
+      if (t && r) {
+        tx = t;
+        receipt = r;
+        verifiedChain = cid;
+        break;
+      }
+    } catch {
+      continue;
+    }
   }
 
+  if (!tx || !receipt) {
+    throw new Error('Transaction hash not found or not yet mined on-chain across monitored networks.');
+  }
+
+  const provider = getReadProvider(verifiedChain);
   const latestBlock = await provider.getBlockNumber().catch(() => receipt.blockNumber);
   const confirmations = Math.max(1, latestBlock - receipt.blockNumber + 1);
 
@@ -2545,7 +2619,8 @@ export async function verifyTxHashOnChain(txHash) {
     gasUsed: receipt.gasUsed.toString(),
     effectiveGasPrice: ethers.formatUnits(receipt.gasPrice || 0n, 'gwei'),
     logsCount: receipt.logs.length,
-    explorerUrl: explorerTxLink(tx.hash),
+    explorerUrl: explorerTxLink(tx.hash, verifiedChain),
+    chainId: verifiedChain,
   };
 }
 
@@ -2680,21 +2755,31 @@ export async function fetchRecentEvents(blockRange = 3000) {
   return combined;
 }
 
-// ─────────────────────────────────────────────────────────────
-// MULTI-CHAIN EXPLORER LINKS
-// ─────────────────────────────────────────────────────────────
-export function explorerTxLink(txHash, chainId = 80002) {
-  const base = SUPPORTED_NETWORKS[chainId]?.explorerUrl || 'https://amoy.polygonscan.com';
+export function getActiveChainId(chainId = null) {
+  if (chainId && SUPPORTED_NETWORKS[Number(chainId)]) return Number(chainId);
+  if (typeof window !== 'undefined' && window.ethereum?.chainId) {
+    const raw = window.ethereum.chainId;
+    const num = typeof raw === 'string' && raw.startsWith('0x') ? parseInt(raw, 16) : Number(raw);
+    if (SUPPORTED_NETWORKS[num]) return num;
+  }
+  return 80002;
+}
+
+export function explorerTxLink(txHash, chainId = null) {
+  const resolved = getActiveChainId(chainId);
+  const base = SUPPORTED_NETWORKS[resolved]?.explorerUrl || 'https://amoy.polygonscan.com';
   return `${base}/tx/${txHash}`;
 }
 
-export function explorerAddressLink(address, chainId = 80002) {
-  const base = SUPPORTED_NETWORKS[chainId]?.explorerUrl || 'https://amoy.polygonscan.com';
+export function explorerAddressLink(address, chainId = null) {
+  const resolved = getActiveChainId(chainId);
+  const base = SUPPORTED_NETWORKS[resolved]?.explorerUrl || 'https://amoy.polygonscan.com';
   return `${base}/address/${address}`;
 }
 
-export function explorerBlockLink(blockNumber, chainId = 80002) {
-  const base = SUPPORTED_NETWORKS[chainId]?.explorerUrl || 'https://amoy.polygonscan.com';
+export function explorerBlockLink(blockNumber, chainId = null) {
+  const resolved = getActiveChainId(chainId);
+  const base = SUPPORTED_NETWORKS[resolved]?.explorerUrl || 'https://amoy.polygonscan.com';
   return `${base}/block/${blockNumber}`;
 }
 
@@ -2901,15 +2986,14 @@ export async function getPairReserves(tokenA, tokenB, chainId = 80002) {
       const code = await provider.getCode(routerAddress).catch(() => '0x');
       if (code && code !== '0x' && code !== '0x0') {
         const [resA, resB] = await router.getReserves(tokenA, tokenB);
-        const rA = Number(ethers.formatEther(resA));
-        const rB = Number(ethers.formatEther(resB));
-        if (rA > 0 || rB > 0) {
-          return { reserveA: rA, reserveB: rB };
-        }
+        return {
+          reserveA: Number(ethers.formatEther(resA)),
+          reserveB: Number(ethers.formatEther(resB)),
+        };
       }
     } catch { }
   }
-  return { reserveA: 1000, reserveB: 250 };
+  return { reserveA: 0, reserveB: 0 };
 }
 
 export async function executeSeedLiquidity(signer, amountFdx = 10, amountNative = 10) {
@@ -2937,7 +3021,26 @@ export async function executeSeedLiquidity(signer, amountFdx = 10, amountNative 
   const fdxWei = ethers.parseEther(amountFdx.toString());
   const nativeWei = ethers.parseEther(amountNative.toString());
 
-  // 1. Wrap native gas token if needed
+  // 1. Verify FDX balance / minting capability BEFORE touching native gas
+  let fdxBal = await fdx.balanceOf(address).catch(() => 0n);
+  if (fdxBal < fdxWei) {
+    const owner = await fdx.owner().catch(() => null);
+    const canMint = owner && owner.toLowerCase() === address.toLowerCase();
+    if (canMint) {
+      const mintAmount = fdxWei - fdxBal;
+      const mintTx = await fdx.mint(address, mintAmount, overrides).catch((err) => {
+        throw new Error(`FDX mint failed: ${parseRevertReason(err)}`);
+      });
+      if (mintTx) await mintTx.wait();
+      fdxBal = await fdx.balanceOf(address).catch(() => fdxWei);
+    } else {
+      throw new Error(
+        `Insufficient FDX balance. You have ${Number(ethers.formatEther(fdxBal)).toFixed(2)} FDX, but need ${amountFdx} FDX to seed the pool. Acquire FDX before adding liquidity.`
+      );
+    }
+  }
+
+  // 2. Wrap native gas token if needed
   const wrappedBal = await wrapped.balanceOf(address).catch(() => 0n);
   if (wrappedBal < nativeWei) {
     const wrapNeeded = nativeWei - wrappedBal;
@@ -2945,14 +3048,6 @@ export async function executeSeedLiquidity(signer, amountFdx = 10, amountNative 
       throw new Error(`Auto-wrap native gas failed: ${parseRevertReason(err)}`);
     });
     if (wrapTx) await wrapTx.wait();
-  }
-
-  // 2. Mint FDX if needed
-  const fdxBal = await fdx.balanceOf(address).catch(() => 0n);
-  if (fdxBal < fdxWei) {
-    const mintAmount = fdxWei - fdxBal;
-    const mintTx = await fdx.mint(address, mintAmount, overrides).catch(() => null);
-    if (mintTx) await mintTx.wait();
   }
 
   // 3. Router checks
@@ -2977,7 +3072,12 @@ export async function executeSeedLiquidity(signer, amountFdx = 10, amountNative 
     }
     const addTx = await router.addLiquidity(fdxAddr, wrappedAddr, fdxWei, nativeWei, overrides);
     const receipt = await addTx.wait();
-    return { tx: addTx, receipt };
+    return {
+      tx: addTx,
+      receipt,
+      chainId: currentChainId,
+      explorerUrl: explorerTxLink(receipt.hash, currentChainId),
+    };
   }
 
   throw new Error(
@@ -2997,7 +3097,12 @@ export async function executeWrap(signer, amount) {
   const overrides = await getNetworkFeeOverrides(provider, currentChainId);
   const tx = await wrapped.deposit({ value: amountWei, ...overrides });
   const receipt = await tx.wait();
-  return { tx, receipt };
+  return {
+    tx,
+    receipt,
+    chainId: currentChainId,
+    explorerUrl: explorerTxLink(receipt.hash, currentChainId),
+  };
 }
 
 export async function executeUnwrap(signer, amount) {
@@ -3012,7 +3117,12 @@ export async function executeUnwrap(signer, amount) {
   const overrides = await getNetworkFeeOverrides(provider, currentChainId);
   const tx = await wrapped.withdraw(amountWei, overrides);
   const receipt = await tx.wait();
-  return { tx, receipt };
+  return {
+    tx,
+    receipt,
+    chainId: currentChainId,
+    explorerUrl: explorerTxLink(receipt.hash, currentChainId),
+  };
 }
 
 export async function executeSwap(signer, tokenInAddress, tokenOutAddress, amountIn, slippageBps = 50) {
@@ -3021,6 +3131,11 @@ export async function executeSwap(signer, tokenInAddress, tokenOutAddress, amoun
   const currentChainId = Number(network.chainId);
   const netConfig = SUPPORTED_NETWORKS[currentChainId] || SUPPORTED_NETWORKS[80002];
   const routerAddress = getRouterAddress(currentChainId);
+
+  const wrappedAddr = netConfig?.wrappedNative?.address;
+  // Sanitize zero address or empty to wrapped native
+  const effectiveIn = (!tokenInAddress || tokenInAddress === ethers.ZeroAddress || tokenInAddress === '0x0000000000000000000000000000000000000000') ? wrappedAddr : tokenInAddress;
+  const effectiveOut = (!tokenOutAddress || tokenOutAddress === ethers.ZeroAddress || tokenOutAddress === '0x0000000000000000000000000000000000000000') ? wrappedAddr : tokenOutAddress;
 
   const address = await signer.getAddress();
   const amountInWei = ethers.parseEther(amountIn.toString());
@@ -3035,10 +3150,9 @@ export async function executeSwap(signer, tokenInAddress, tokenOutAddress, amoun
 
   if (hasRouterBytecode) {
     const router = new ethers.Contract(routerAddress, MOCK_SWAP_ROUTER_ABI, signer);
-    const tokenIn = new ethers.Contract(tokenInAddress, ERC20_ABI, signer);
+    const tokenIn = new ethers.Contract(effectiveIn, ERC20_ABI, signer);
 
-    const wrappedAddr = netConfig?.wrappedNative?.address;
-    const isWrappedIn = wrappedAddr && tokenInAddress.toLowerCase() === wrappedAddr.toLowerCase();
+    const isWrappedIn = wrappedAddr && effectiveIn.toLowerCase() === wrappedAddr.toLowerCase();
 
     // Check balance and auto-wrap native gas if needed
     let balance = await tokenIn.balanceOf(address).catch(() => 0n);
@@ -3064,8 +3178,12 @@ export async function executeSwap(signer, tokenInAddress, tokenOutAddress, amoun
       throw new Error(`Insufficient token balance. You have ${Number(ethers.formatEther(balance)).toFixed(4)}, but requested ${amountIn}.`);
     }
 
-    const [expectedOut, priceImpact] = await router.getAmountOut(tokenInAddress, tokenOutAddress, amountInWei).catch(() => [0n, 0n]);
-    const minOut = expectedOut > 0n ? (expectedOut * BigInt(10000 - slippageBps) / 10000n) : 0n;
+    const [expectedOut, priceImpact] = await router.getAmountOut(effectiveIn, effectiveOut, amountInWei).catch(() => [0n, 0n]);
+    if (expectedOut === 0n) {
+      throw new Error(`AMM pool has zero reserves for this pair on ${netConfig.name}. Please seed initial liquidity first.`);
+    }
+
+    const minOut = (expectedOut * BigInt(10000 - slippageBps) / 10000n);
 
     const allowance = await tokenIn.allowance(address, routerAddress).catch(() => 0n);
     if (allowance < amountInWei) {
@@ -3075,7 +3193,7 @@ export async function executeSwap(signer, tokenInAddress, tokenOutAddress, amoun
       await approveTx.wait();
     }
 
-    const tx = await router.swap(tokenInAddress, tokenOutAddress, amountInWei, minOut, address, overrides).catch((err) => {
+    const tx = await router.swap(effectiveIn, effectiveOut, amountInWei, minOut, address, overrides).catch((err) => {
       throw new Error(parseRevertReason(err));
     });
     const receipt = await tx.wait();

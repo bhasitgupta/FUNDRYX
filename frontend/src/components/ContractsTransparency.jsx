@@ -83,6 +83,10 @@ export default function ContractsTransparency() {
 
   const explorerBase = selectedChain === 10143
     ? 'https://testnet.monadexplorer.com/address/'
+    : selectedChain === 43113
+    ? 'https://testnet.snowtrace.io/address/'
+    : selectedChain === 84532
+    ? 'https://sepolia.basescan.org/address/'
     : 'https://amoy.polygonscan.com/address/';
 
   return (
@@ -127,6 +131,18 @@ export default function ContractsTransparency() {
           >
             <span className="w-2 h-2 rounded-full bg-[#836EF9]" />
             <span>Monad Testnet</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setSelectedChain(43113)}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer flex items-center gap-2 ${
+              selectedChain === 43113
+                ? 'bg-[#1c2e25] text-red-300 border border-red-500/40 shadow-sm'
+                : 'text-[#8ca395] hover:text-white'
+            }`}
+          >
+            <span className="w-2 h-2 rounded-full bg-[#E84142]" />
+            <span>Avalanche Fuji</span>
           </button>
         </div>
       </div>
