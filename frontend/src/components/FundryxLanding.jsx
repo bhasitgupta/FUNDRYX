@@ -183,7 +183,7 @@ Management`,subtitle:o="Gain complete and confident control over each of your va
 .mfl-h2 .mfl-mute{color:color-mix(in srgb,var(--mfl-cream) 50%,transparent)}
 .mfl-feat-sub{margin-top:16px;font-size:14px;color:color-mix(in srgb,var(--mfl-cream) 72%,transparent);max-width:420px}
 .mfl-fcards{display:flex;flex-wrap:wrap;justify-content:center;gap:16px;margin-top:44px;width:100%}
-.mfl-fcard{width:min(100%,430px);padding:8px 8px 22px;border-radius:6px;background:var(--mfl-cream);color:var(--mfl-ink);box-shadow:0 40px 70px -40px rgba(0,0,0,.8);transition:transform .45s cubic-bezier(.2,.8,.2,1),box-shadow .45s}
+.mfl-fcard{width:min(100%,430px);padding:8px 8px 22px;border-radius:6px;background:var(--mfl-cream);color:var(--mfl-ink);box-shadow:0 40px 70px -40px rgba(0,0,0,.8);transition:transform .45s cubic-bezier(.2,.8,.2,1),box-shadow .45s;will-change:transform}
 .mfl-fcard:hover{transform:translateY(-6px);box-shadow:0 50px 80px -40px rgba(0,0,0,.9)}
 .mfl-fmedia{position:relative;height:300px;border-radius:4px;overflow:hidden;display:grid;place-items:center;isolation:isolate}
 .mfl-fmedia .mfl-satin{z-index:-2}
