@@ -5,11 +5,41 @@
     "AccessManager": "0x230829f5EC30A1936fDECE13F1179381daaf69e8",
     "PauseController": "0xF4d0F035900c313e44246ED473b3011E42192F77",
     "FundryxToken": "0xdA2631Aadb95AB5Ea6926e431F66fe2a66EF930E",
+    "FundrexUSD": "0x19a3c4BA6E1108421507a39Dc9193eFad0B9FB34",
     "CreditHistoryRegistry": "0x27B46c075bf2Cd67D174BD59629cc66b8C9Ea36d",
     "CreditPolicy": "0x68fC6E11cD8a855849D7788e035BA92E320Db0d2",
     "LendingPool": "0xF35DaC9A5Db13c2b621Aa00288A4996D5d91c07C",
     "RiskAttestationRegistry": "0xCa8C5f7AA0717BCc3435cAEbFB96Ff602232dEcC",
     "MockSwapRouter": "0x460850Fb8495867E526e23B4149D04810d5b4e39"
+  },
+  "networks": {
+    "polygon_amoy": {
+      "chainId": 80002,
+      "contracts": {
+        "AccessManager": "0x230829f5EC30A1936fDECE13F1179381daaf69e8",
+        "PauseController": "0xF4d0F035900c313e44246ED473b3011E42192F77",
+        "FundryxToken": "0xdA2631Aadb95AB5Ea6926e431F66fe2a66EF930E",
+        "FundrexUSD": "0x19a3c4BA6E1108421507a39Dc9193eFad0B9FB34",
+        "CreditHistoryRegistry": "0x27B46c075bf2Cd67D174BD59629cc66b8C9Ea36d",
+        "CreditPolicy": "0x68fC6E11cD8a855849D7788e035BA92E320Db0d2",
+        "LendingPool": "0xF35DaC9A5Db13c2b621Aa00288A4996D5d91c07C",
+        "RiskAttestationRegistry": "0xCa8C5f7AA0717BCc3435cAEbFB96Ff602232dEcC",
+        "MockSwapRouter": "0x460850Fb8495867E526e23B4149D04810d5b4e39"
+      }
+    },
+    "monad_testnet": {
+      "chainId": 10143,
+      "contracts": {
+        "AccessManager": "0x8748fa4147c9fE78572D14F3C827d2E8ad4B9138",
+        "PauseController": "0x230829f5EC30A1936fDECE13F1179381daaf69e8",
+        "FundryxToken": "0x86E7023f10c5bd119521EB95a8CddF19159f95Cd",
+        "FundrexUSD": "0xdA2631Aadb95AB5Ea6926e431F66fe2a66EF930E",
+        "CreditHistoryRegistry": "0xF4d0F035900c313e44246ED473b3011E42192F77",
+        "CreditPolicy": "0x27B46c075bf2Cd67D174BD59629cc66b8C9Ea36d",
+        "LendingPool": "0x68fC6E11cD8a855849D7788e035BA92E320Db0d2",
+        "RiskAttestationRegistry": "0xF35DaC9A5Db13c2b621Aa00288A4996D5d91c07C"
+      }
+    }
   },
   "roles": {
     "LENDING_POOL_ROLE": "0xa05e016071881d2170d364744d63b2e41aeb933bc5c5727596db7b66f663c3ea",
@@ -17,3 +47,4 @@
     "MONITOR_SIGNER_ROLE": "0xddb33508d222a4ac25871da02a331273f41858be15ffd3493bc61dc5f98e5a4e"
   }
 }
+

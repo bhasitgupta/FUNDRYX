@@ -6,6 +6,19 @@ import {
 } from './supabase.js';
 
 // ─────────────────────────────────────────────────────────────
+// SECURE ENVIRONMENT VARIABLE RETRIEVER
+// ─────────────────────────────────────────────────────────────
+export const getEnvVar = (key, fallback = '') => {
+  if (typeof import.meta !== 'undefined' && import.meta?.env?.[key]) {
+    return import.meta.env[key];
+  }
+  if (typeof process !== 'undefined' && process?.env?.[key]) {
+    return process.env[key];
+  }
+  return fallback;
+};
+
+// ─────────────────────────────────────────────────────────────
 // CENTRALIZED MULTI-CHAIN CONFIGURATION REGISTRY
 // ─────────────────────────────────────────────────────────────
 export const SUPPORTED_NETWORKS = {
@@ -22,7 +35,7 @@ export const SUPPORTED_NETWORKS = {
     wrappedNative: { symbol: 'WPOL', address: '0x360ad4f9a9A8EFe9A8DCB5f461c4Cc1047E1Dcf9' },
     supportedAssets: ['FDX', 'WPOL', 'fUSD', 'USDC'],
     supportedOperations: ['lending', 'borrowing', 'swap', 'telemetry', 'audit', 'cross_chain_bridge'],
-    rpcUrl: 'https://polygon-amoy-bor-rpc.publicnode.com',
+    rpcUrl: getEnvVar('VITE_POLYGON_AMOY_RPC', 'https://polygon-amoy-bor-rpc.publicnode.com'),
     explorerUrl: 'https://amoy.polygonscan.com',
     status: 'ACTIVE',
     contractsDeployed: true,
@@ -31,21 +44,22 @@ export const SUPPORTED_NETWORKS = {
     relayer: 'Chainlink CCIP (Amoy Router 0x9C32...84B2)',
     iconColor: '#8247E5',
     contracts: {
-      AccessManager:           '0x230829f5EC30A1936fDECE13F1179381daaf69e8',
-      PauseController:         '0xF4d0F035900c313e44246ED473b3011E42192F77',
-      FundryxToken:            '0xdA2631Aadb95AB5Ea6926e431F66fe2a66EF930E',
-      CreditHistoryRegistry:   '0x27B46c075bf2Cd67D174BD59629cc66b8C9Ea36d',
-      CreditPolicy:            '0x68fC6E11cD8a855849D7788e035BA92E320Db0d2',
-      LendingPool:             '0xF35DaC9A5Db13c2b621Aa00288A4996D5d91c07C',
-      RiskAttestationRegistry: '0xCa8C5f7AA0717BCc3435cAEbFB96Ff602232dEcC',
-      MockSwapRouter:          '0x460850Fb8495867E526e23B4149D04810d5b4e39',
-      CCIPRouter:              '0x9C32fCB86BF0f4a1A8921a9Fe46de3198bb884B2',
+      AccessManager:           getEnvVar('VITE_POLYGON_ACCESS_MANAGER', '0x230829f5EC30A1936fDECE13F1179381daaf69e8'),
+      PauseController:         getEnvVar('VITE_POLYGON_PAUSE_CONTROLLER', '0xF4d0F035900c313e44246ED473b3011E42192F77'),
+      FundryxToken:            getEnvVar('VITE_POLYGON_FUNDRYX_TOKEN', '0xdA2631Aadb95AB5Ea6926e431F66fe2a66EF930E'),
+      FundrexUSD:              getEnvVar('VITE_POLYGON_FUSD', '0x19a3c4BA6E1108421507a39Dc9193eFad0B9FB34'),
+      CreditHistoryRegistry:   getEnvVar('VITE_POLYGON_CREDIT_HISTORY_REGISTRY', '0x27B46c075bf2Cd67D174BD59629cc66b8C9Ea36d'),
+      CreditPolicy:            getEnvVar('VITE_POLYGON_CREDIT_POLICY', '0x68fC6E11cD8a855849D7788e035BA92E320Db0d2'),
+      LendingPool:             getEnvVar('VITE_POLYGON_LENDING_POOL', '0xF35DaC9A5Db13c2b621Aa00288A4996D5d91c07C'),
+      RiskAttestationRegistry: getEnvVar('VITE_POLYGON_RISK_ATTESTATION_REGISTRY', '0xCa8C5f7AA0717BCc3435cAEbFB96Ff602232dEcC'),
+      MockSwapRouter:          getEnvVar('VITE_POLYGON_MOCK_SWAP_ROUTER', '0x460850Fb8495867E526e23B4149D04810d5b4e39'),
+      CCIPRouter:              getEnvVar('VITE_CCIP_ROUTER_POLYGON_AMOY', '0x9C32fCB86BF0f4a1A8921a9Fe46de3198bb884B2'),
     },
     tokens: {
-      FDX:    '0xdA2631Aadb95AB5Ea6926e431F66fe2a66EF930E',
+      FDX:    getEnvVar('VITE_POLYGON_FUNDRYX_TOKEN', '0xdA2631Aadb95AB5Ea6926e431F66fe2a66EF930E'),
       WPOL:   '0x360ad4f9a9A8EFe9A8DCB5f461c4Cc1047E1Dcf9',
       WMATIC: '0x360ad4f9a9A8EFe9A8DCB5f461c4Cc1047E1Dcf9',
-      fUSD:   '0xdA2631Aadb95AB5Ea6926e431F66fe2a66EF930E',
+      fUSD:   getEnvVar('VITE_POLYGON_FUSD', '0x19a3c4BA6E1108421507a39Dc9193eFad0B9FB34'),
       USDC:   '0x41E94Eb019C0762f9Bfcf9Fb1E58725BfB0e7582',
     },
   },
@@ -59,18 +73,29 @@ export const SUPPORTED_NETWORKS = {
     nativeToken: 'MON',
     nativeCurrency: { name: 'MON', symbol: 'MON', decimals: 18 },
     wrappedNative: { symbol: 'WMON', address: '0x760AfE86e5de5fa0Ee542fc7B7B713e1c5425701' },
-    supportedAssets: ['MON', 'WMON'],
-    supportedOperations: ['read_only_telemetry', 'risk_analysis'],
-    rpcUrl: 'https://testnet-rpc.monad.xyz/',
+    supportedAssets: ['MON', 'WMON', 'FDX', 'fUSD'],
+    supportedOperations: ['lending', 'borrowing', 'swap', 'telemetry', 'risk_analysis'],
+    rpcUrl: getEnvVar('VITE_MONAD_TESTNET_RPC', 'https://testnet-rpc.monad.xyz/'),
     explorerUrl: 'https://testnet.monadexplorer.com',
-    status: 'STAGING',
-    contractsDeployed: false,
+    status: 'ACTIVE',
+    contractsDeployed: true,
     bridgeActive: false,
-    statusLabel: 'Pending Contract Deployment',
+    statusLabel: 'Protocol Live',
     relayer: 'Fundrex Sentinel Quorum Relayer (Pending Deployment)',
     iconColor: '#836EF9',
-    contracts: {},
+    contracts: {
+      AccessManager:           getEnvVar('VITE_MONAD_ACCESS_MANAGER', '0x8748fa4147c9fE78572D14F3C827d2E8ad4B9138'),
+      PauseController:         getEnvVar('VITE_MONAD_PAUSE_CONTROLLER', '0x230829f5EC30A1936fDECE13F1179381daaf69e8'),
+      FundryxToken:            getEnvVar('VITE_MONAD_FUNDRYX_TOKEN', '0x86E7023f10c5bd119521EB95a8CddF19159f95Cd'),
+      FundrexUSD:              getEnvVar('VITE_MONAD_FUSD', '0xdA2631Aadb95AB5Ea6926e431F66fe2a66EF930E'),
+      CreditHistoryRegistry:   getEnvVar('VITE_MONAD_CREDIT_HISTORY_REGISTRY', '0xF4d0F035900c313e44246ED473b3011E42192F77'),
+      CreditPolicy:            getEnvVar('VITE_MONAD_CREDIT_POLICY', '0x27B46c075bf2Cd67D174BD59629cc66b8C9Ea36d'),
+      LendingPool:             getEnvVar('VITE_MONAD_LENDING_POOL', '0x68fC6E11cD8a855849D7788e035BA92E320Db0d2'),
+      RiskAttestationRegistry: getEnvVar('VITE_MONAD_RISK_REGISTRY', '0xF35DaC9A5Db13c2b621Aa00288A4996D5d91c07C'),
+    },
     tokens: {
+      FDX:  getEnvVar('VITE_MONAD_FUNDRYX_TOKEN', '0x86E7023f10c5bd119521EB95a8CddF19159f95Cd'),
+      fUSD: getEnvVar('VITE_MONAD_FUSD', '0xdA2631Aadb95AB5Ea6926e431F66fe2a66EF930E'),
       WMON: '0x760AfE86e5de5fa0Ee542fc7B7B713e1c5425701',
     },
   },
@@ -251,6 +276,12 @@ export const CHAIN_ID = 80002;
 export const CONTRACT_ADDRESSES = SUPPORTED_NETWORKS[80002].contracts;
 export const SUPPORTED_TOKENS = SUPPORTED_NETWORKS[80002].tokens;
 
+export function getContractAddresses(chainId = 80002) {
+  const numId = typeof chainId === 'string' ? (chainId.startsWith('0x') ? parseInt(chainId, 16) : Number(chainId)) : chainId;
+  return SUPPORTED_NETWORKS[numId]?.contracts || SUPPORTED_NETWORKS[80002].contracts;
+}
+
+
 // ─────────────────────────────────────────────────────────────
 // CENTRALIZED, CHAIN-AWARE TOKEN REGISTRY
 // ─────────────────────────────────────────────────────────────
@@ -258,27 +289,27 @@ export const TOKEN_REGISTRY = {
   80002: [
     {
       chainId: 80002,
-      address: '0xdA2631Aadb95AB5Ea6926e431F66fe2a66EF930E',
+      address: getEnvVar('VITE_POLYGON_FUNDRYX_TOKEN', '0xdA2631Aadb95AB5Ea6926e431F66fe2a66EF930E'),
       name: 'Fundryx Protocol Token',
       symbol: 'FDX',
       decimals: 18,
       tokenType: 'test_asset',
       verifiedDeploymentStatus: 'VERIFIED_ON_CHAIN',
       supportedOperations: ['lending', 'borrowing', 'swap', 'deposit', 'repay', 'cross_chain'],
-      explorerUrl: 'https://amoy.polygonscan.com/token/0xdA2631Aadb95AB5Ea6926e431F66fe2a66EF930E',
+      explorerUrl: `https://amoy.polygonscan.com/token/${getEnvVar('VITE_POLYGON_FUNDRYX_TOKEN', '0xdA2631Aadb95AB5Ea6926e431F66fe2a66EF930E')}`,
       canAddToWallet: true,
       logo: 'FDX',
     },
     {
       chainId: 80002,
-      address: '0xdA2631Aadb95AB5Ea6926e431F66fe2a66EF930E',
+      address: getEnvVar('VITE_POLYGON_FUSD', '0x19a3c4BA6E1108421507a39Dc9193eFad0B9FB34'),
       name: 'Fundrex USD',
       symbol: 'fUSD',
       decimals: 6,
       tokenType: 'test_asset',
       verifiedDeploymentStatus: 'VERIFIED_ON_CHAIN',
       supportedOperations: ['lending', 'borrowing', 'deposit', 'repay', 'cross_chain'],
-      explorerUrl: 'https://amoy.polygonscan.com/token/0xdA2631Aadb95AB5Ea6926e431F66fe2a66EF930E',
+      explorerUrl: `https://amoy.polygonscan.com/token/${getEnvVar('VITE_POLYGON_FUSD', '0x19a3c4BA6E1108421507a39Dc9193eFad0B9FB34')}`,
       canAddToWallet: true,
       logo: 'fUSD',
     },
@@ -325,6 +356,32 @@ export const TOKEN_REGISTRY = {
   10143: [
     {
       chainId: 10143,
+      address: getEnvVar('VITE_MONAD_FUNDRYX_TOKEN', '0x86E7023f10c5bd119521EB95a8CddF19159f95Cd'),
+      name: 'Fundryx Protocol Token',
+      symbol: 'FDX',
+      decimals: 18,
+      tokenType: 'test_asset',
+      verifiedDeploymentStatus: 'VERIFIED_ON_CHAIN',
+      supportedOperations: ['lending', 'borrowing', 'swap', 'deposit', 'repay'],
+      explorerUrl: `https://testnet.monadexplorer.com/token/${getEnvVar('VITE_MONAD_FUNDRYX_TOKEN', '0x86E7023f10c5bd119521EB95a8CddF19159f95Cd')}`,
+      canAddToWallet: true,
+      logo: 'FDX',
+    },
+    {
+      chainId: 10143,
+      address: getEnvVar('VITE_MONAD_FUSD', '0xdA2631Aadb95AB5Ea6926e431F66fe2a66EF930E'),
+      name: 'Fundrex USD',
+      symbol: 'fUSD',
+      decimals: 6,
+      tokenType: 'test_asset',
+      verifiedDeploymentStatus: 'VERIFIED_ON_CHAIN',
+      supportedOperations: ['lending', 'borrowing', 'deposit', 'repay'],
+      explorerUrl: `https://testnet.monadexplorer.com/token/${getEnvVar('VITE_MONAD_FUSD', '0xdA2631Aadb95AB5Ea6926e431F66fe2a66EF930E')}`,
+      canAddToWallet: true,
+      logo: 'fUSD',
+    },
+    {
+      chainId: 10143,
       address: null,
       name: 'Monad Native MON',
       symbol: 'MON',
@@ -338,15 +395,15 @@ export const TOKEN_REGISTRY = {
     },
     {
       chainId: 10143,
-      address: null,
+      address: '0x760AfE86e5de5fa0Ee542fc7B7B713e1c5425701',
       name: 'Wrapped MON',
       symbol: 'WMON',
       decimals: 18,
       tokenType: 'wrapped-native',
-      verifiedDeploymentStatus: 'STAGING_UNVERIFIED',
+      verifiedDeploymentStatus: 'VERIFIED_ON_CHAIN',
       supportedOperations: ['cross_chain_staging'],
-      explorerUrl: 'https://testnet.monadexplorer.com',
-      canAddToWallet: false,
+      explorerUrl: 'https://testnet.monadexplorer.com/token/0x760AfE86e5de5fa0Ee542fc7B7B713e1c5425701',
+      canAddToWallet: true,
       logo: 'MON',
     },
   ],
@@ -1065,42 +1122,57 @@ export async function addTokenToMetaMask(tokenAddressOrObj, symbol = 'FDX', deci
 // ─────────────────────────────────────────────────────────────
 // CONTRACT FACTORIES
 // ─────────────────────────────────────────────────────────────
-export function getLendingPool(signerOrProvider) {
-  return new ethers.Contract(CONTRACT_ADDRESSES.LendingPool, LENDING_POOL_ABI, signerOrProvider);
+export function getLendingPool(signerOrProvider, chainId = null) {
+  const targetChain = chainId || (signerOrProvider?._network?.chainId ? Number(signerOrProvider._network.chainId) : 80002);
+  const addr = SUPPORTED_NETWORKS[targetChain]?.contracts?.LendingPool || CONTRACT_ADDRESSES.LendingPool;
+  return new ethers.Contract(addr, LENDING_POOL_ABI, signerOrProvider);
 }
 
-export function getCreditPolicy(signerOrProvider) {
-  return new ethers.Contract(CONTRACT_ADDRESSES.CreditPolicy, CREDIT_POLICY_ABI, signerOrProvider);
+export function getCreditPolicy(signerOrProvider, chainId = null) {
+  const targetChain = chainId || (signerOrProvider?._network?.chainId ? Number(signerOrProvider._network.chainId) : 80002);
+  const addr = SUPPORTED_NETWORKS[targetChain]?.contracts?.CreditPolicy || CONTRACT_ADDRESSES.CreditPolicy;
+  return new ethers.Contract(addr, CREDIT_POLICY_ABI, signerOrProvider);
 }
 
-export function getCreditHistory(signerOrProvider) {
-  return new ethers.Contract(CONTRACT_ADDRESSES.CreditHistoryRegistry, CREDIT_HISTORY_ABI, signerOrProvider);
+export function getCreditHistory(signerOrProvider, chainId = null) {
+  const targetChain = chainId || (signerOrProvider?._network?.chainId ? Number(signerOrProvider._network.chainId) : 80002);
+  const addr = SUPPORTED_NETWORKS[targetChain]?.contracts?.CreditHistoryRegistry || CONTRACT_ADDRESSES.CreditHistoryRegistry;
+  return new ethers.Contract(addr, CREDIT_HISTORY_ABI, signerOrProvider);
 }
 
-export function getFundryxToken(signerOrProvider) {
-  return new ethers.Contract(CONTRACT_ADDRESSES.FundryxToken, ERC20_ABI, signerOrProvider);
+export function getFundryxToken(signerOrProvider, chainId = null) {
+  const targetChain = chainId || (signerOrProvider?._network?.chainId ? Number(signerOrProvider._network.chainId) : 80002);
+  const addr = SUPPORTED_NETWORKS[targetChain]?.contracts?.FundryxToken || CONTRACT_ADDRESSES.FundryxToken;
+  return new ethers.Contract(addr, ERC20_ABI, signerOrProvider);
 }
 
-export function getPauseController(signerOrProvider) {
-  return new ethers.Contract(CONTRACT_ADDRESSES.PauseController, PAUSE_CONTROLLER_ABI, signerOrProvider);
+export function getPauseController(signerOrProvider, chainId = null) {
+  const targetChain = chainId || (signerOrProvider?._network?.chainId ? Number(signerOrProvider._network.chainId) : 80002);
+  const addr = SUPPORTED_NETWORKS[targetChain]?.contracts?.PauseController || CONTRACT_ADDRESSES.PauseController;
+  return new ethers.Contract(addr, PAUSE_CONTROLLER_ABI, signerOrProvider);
 }
 
-export function getRiskRegistry(signerOrProvider) {
-  return new ethers.Contract(CONTRACT_ADDRESSES.RiskAttestationRegistry, RISK_REGISTRY_ABI, signerOrProvider);
+export function getRiskRegistry(signerOrProvider, chainId = null) {
+  const targetChain = chainId || (signerOrProvider?._network?.chainId ? Number(signerOrProvider._network.chainId) : 80002);
+  const addr = SUPPORTED_NETWORKS[targetChain]?.contracts?.RiskAttestationRegistry || CONTRACT_ADDRESSES.RiskAttestationRegistry;
+  return new ethers.Contract(addr, RISK_REGISTRY_ABI, signerOrProvider);
 }
 
-export function getAccessManager(signerOrProvider) {
-  return new ethers.Contract(CONTRACT_ADDRESSES.AccessManager, ACCESS_MANAGER_ABI, signerOrProvider);
+export function getAccessManager(signerOrProvider, chainId = null) {
+  const targetChain = chainId || (signerOrProvider?._network?.chainId ? Number(signerOrProvider._network.chainId) : 80002);
+  const addr = SUPPORTED_NETWORKS[targetChain]?.contracts?.AccessManager || CONTRACT_ADDRESSES.AccessManager;
+  return new ethers.Contract(addr, ACCESS_MANAGER_ABI, signerOrProvider);
 }
 
 // ─────────────────────────────────────────────────────────────
 // READ PROTOCOL STATS — calls real deployed contracts
 // ─────────────────────────────────────────────────────────────
-export async function fetchProtocolStats() {
-  const provider = getReadProvider();
-  const pool = getLendingPool(provider);
-  const policy = getCreditPolicy(provider);
-  const pause = getPauseController(provider);
+export async function fetchProtocolStats(chainId = CHAIN_ID) {
+  const provider = getReadProvider(chainId);
+  const pool = getLendingPool(provider, chainId);
+  const policy = getCreditPolicy(provider, chainId);
+  const pause = getPauseController(provider, chainId);
+
 
   const [totalDeposits, totalBorrowed, availableLiquidity, policyVersion, borrowingPaused, depositsPaused] =
     await Promise.all([
@@ -1681,10 +1753,14 @@ export function verifyCrossChainRoute(sourceChainId, destChainId, sourceSymbol, 
 
   // TESTNET ROUTE EVALUATION (Fundrex Protocol CCIP / Sentinel Quorum)
   // Both source and destination chains must have deployed protocol contracts.
-  if (!sourceNet.contractsDeployed || !destNet.contractsDeployed) {
-    const missing = !sourceNet.contractsDeployed && !destNet.contractsDeployed
-      ? `${sourceNet.name} and ${destNet.name}`
-      : (!sourceNet.contractsDeployed ? sourceNet.name : destNet.name);
+  if (!sourceNet.contractsDeployed || !destNet.contractsDeployed || !sourceNet.bridgeActive || !destNet.bridgeActive) {
+    const missing = !sourceNet.contractsDeployed || !destNet.contractsDeployed
+      ? (!sourceNet.contractsDeployed && !destNet.contractsDeployed
+          ? `${sourceNet.name} and ${destNet.name}`
+          : (!sourceNet.contractsDeployed ? sourceNet.name : destNet.name))
+      : (!sourceNet.bridgeActive && !destNet.bridgeActive
+          ? `${sourceNet.name} and ${destNet.name}`
+          : (!sourceNet.bridgeActive ? sourceNet.name : destNet.name));
     return {
       verified: false,
       isAudited: false,
@@ -2293,8 +2369,10 @@ export async function executeCrossChainSwap(signerOrOpts, quoteArg, onStateUpdat
 // ─────────────────────────────────────────────────────────────
 export const ADMIN_WALLETS = [
   '0xc90A124b741d48a486950F668BfD62D4B5cF96b4'.toLowerCase(),
-  '0x230829f5EC30A1936fDECE13F1179381daaf69e8'.toLowerCase(), // AccessManager Contract
+  (getEnvVar('VITE_POLYGON_ACCESS_MANAGER', '0x230829f5EC30A1936fDECE13F1179381daaf69e8')).toLowerCase(),
+  (getEnvVar('VITE_MONAD_ACCESS_MANAGER', '0x8748fa4147c9fE78572D14F3C827d2E8ad4B9138')).toLowerCase(),
 ];
+
 
 export async function checkIsAdminWallet(address) {
   if (!address) return false;
@@ -2587,9 +2665,10 @@ export async function fetchCreditPreFlight(address) {
 
 // Swap Router deployed address on Polygon Amoy
 export const MOCK_SWAP_ROUTER_ADDRESS =
-  (typeof import.meta !== 'undefined' && import.meta?.env?.VITE_MOCK_SWAP_ROUTER) ||
-  (typeof process !== 'undefined' && process?.env?.VITE_MOCK_SWAP_ROUTER) ||
+  getEnvVar('VITE_POLYGON_MOCK_SWAP_ROUTER') ||
+  getEnvVar('VITE_MOCK_SWAP_ROUTER') ||
   '0x460850Fb8495867E526e23B4149D04810d5b4e39';
+
 
 export const MOCK_SWAP_ROUTER_ABI = [
   'function swap(address tokenIn, address tokenOut, uint256 amountIn, uint256 minAmountOut, address to) external returns (uint256 amountOut)',
