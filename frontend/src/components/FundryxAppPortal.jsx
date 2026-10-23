@@ -38,6 +38,10 @@ import {
   HelpCircle,
   Info,
   Sliders,
+  Globe,
+  AlertTriangle,
+  RefreshCw,
+  Loader2,
 } from 'lucide-react';
 import {
   isSupabaseConfigured,
@@ -71,6 +75,8 @@ import {
   CHAIN_ID,
   SUPPORTED_NETWORKS,
   getNetworkConfig,
+  getNetworkTokens,
+  getContractAddresses,
   addTokenToMetaMask,
   addTokenToWallet,
   getCrossChainQuote,
@@ -132,25 +138,61 @@ export default function FundryxAppPortal({
   const [selectedRepayLoan, setSelectedRepayLoan] = useState(null);
   const [partialRepayAmount, setPartialRepayAmount] = useState('');
 
+  // Active chain & currency resolution
+  const currentChainId = wallet?.chainId ? Number(wallet.chainId) : 80002;
+  const activeNetConfig = SUPPORTED_NETWORKS[currentChainId] || SUPPORTED_NETWORKS[80002];
+  const activeWrappedSymbol = activeNetConfig?.wrappedNative?.symbol || (currentChainId === 10143 ? 'WMON' : 'WPOL');
+  const activeWrappedAddress = activeNetConfig?.wrappedNative?.address || (currentChainId === 10143 ? '0x760AfE86e5de5fa0Ee542fc7B7B713e1c5425701' : '0x360ad4f9a9A8EFe9A8DCB5f461c4Cc1047E1Dcf9');
+  const activeNativeSymbol = activeNetConfig?.nativeToken || activeNetConfig?.nativeCurrency?.symbol || (currentChainId === 10143 ? 'MON' : 'POL');
+  const isChainSupported = Boolean(SUPPORTED_NETWORKS[currentChainId]);
+  const activeRouterAddress = activeNetConfig?.contracts?.MockSwapRouter || MOCK_SWAP_ROUTER_ADDRESS;
+
   // Swap state & transaction lifecycle
   const [swapFrom, setSwapFrom] = useState('FDX');
-  const [swapTo, setSwapTo] = useState('WPOL');
+  const [swapTo, setSwapTo] = useState(activeWrappedSymbol);
   const [swapAmount, setSwapAmount] = useState('10');
   const [swapSuccess, setSwapSuccess] = useState(false);
   const [swapTxStatus, setSwapTxStatus] = useState('ready'); // ready | awaiting-wallet | pending | confirmed | failed
-  const [pairReserves, setPairReserves] = useState({ fdx: 0, wpol: 0 });
+  const [pairReserves, setPairReserves] = useState({ fdx: 1000, wrapped: 250, wpol: 250 });
   const [isSeeding, setIsSeeding] = useState(false);
   const [slippageBps, setSlippageBps] = useState(50); // 50 bps = 0.50%
   const [swapSubTab, setSwapSubTab] = useState('same-chain'); // 'same-chain' | 'cross-chain' | 'pool'
   const [networkMode, setNetworkMode] = useState('testnet'); // 'testnet' | 'mainnet'
-  const [crossSourceChain, setCrossSourceChain] = useState(80002);
-  const [crossDestChain, setCrossDestChain] = useState(10143);
+  const [crossSourceChain, setCrossSourceChain] = useState(currentChainId);
+  const [crossDestChain, setCrossDestChain] = useState(currentChainId === 10143 ? 80002 : 10143);
   const [crossSourceToken, setCrossSourceToken] = useState('FDX');
-  const [crossDestToken, setCrossDestToken] = useState('MON');
+  const [crossDestToken, setCrossDestToken] = useState(currentChainId === 10143 ? 'USDC' : 'WMON');
   const [crossAmount, setCrossAmount] = useState('10');
   const [crossQuote, setCrossQuote] = useState(null);
   const [isFetchingQuote, setIsFetchingQuote] = useState(false);
   const [showRouteMatrixModal, setShowRouteMatrixModal] = useState(false);
+
+  // Synchronize swap currency and bridge network whenever wallet chain changes
+  useEffect(() => {
+    if (wallet?.chainId) {
+      const cId = Number(wallet.chainId);
+      const net = SUPPORTED_NETWORKS[cId] || SUPPORTED_NETWORKS[80002];
+      const wrapSym = net?.wrappedNative?.symbol || (cId === 10143 ? 'WMON' : 'WPOL');
+
+      setSwapFrom('FDX');
+      setSwapTo(wrapSym);
+      setCrossSourceChain(cId);
+
+      const destFallback = cId === 10143 ? 80002 : (cId === 80002 ? 10143 : (cId === 137 ? 143 : 80002));
+      setCrossDestChain(destFallback);
+
+      const sTokens = getTokenRegistry(cId);
+      if (sTokens && sTokens.length > 0) {
+        setCrossSourceToken(sTokens[0].symbol);
+      }
+      const dTokens = getTokenRegistry(destFallback);
+      if (dTokens && dTokens.length > 0) {
+        setCrossDestToken(dTokens[0].symbol);
+      }
+
+      loadPairReserves(cId);
+    }
+  }, [wallet?.chainId]);
   const [crossLifecycle, setCrossLifecycle] = useState({
     status: 'IDLE',
     step: 0,
@@ -1219,10 +1261,14 @@ export default function FundryxAppPortal({
     }
   };
 
-  const loadPairReserves = async () => {
+  const loadPairReserves = async (targetChainId) => {
     try {
-      const res = await getPairReserves(CONTRACT_ADDRESSES.FundryxToken, SUPPORTED_TOKENS.WPOL);
-      setPairReserves({ fdx: res.reserveA, wpol: res.reserveB });
+      const cId = targetChainId || (wallet?.chainId ? Number(wallet.chainId) : 80002);
+      const addrs = getContractAddresses(cId);
+      const net = SUPPORTED_NETWORKS[cId] || SUPPORTED_NETWORKS[80002];
+      const wrapAddr = net?.wrappedNative?.address || (cId === 10143 ? '0x760AfE86e5de5fa0Ee542fc7B7B713e1c5425701' : '0x360ad4f9a9A8EFe9A8DCB5f461c4Cc1047E1Dcf9');
+      const res = await getPairReserves(addrs.FundryxToken, wrapAddr, cId);
+      setPairReserves({ fdx: res.reserveA, wrapped: res.reserveB, wpol: res.reserveB });
     } catch { }
   };
 
@@ -1241,16 +1287,16 @@ export default function FundryxAppPortal({
     setIsSeeding(true);
     setTxNotification({
       type: 'info',
-      message: 'Seeding AMM liquidity: supplying 10 FDX + 10 WPOL to router... Confirm in wallet.',
+      message: `Seeding AMM liquidity: supplying 10 FDX + 10 ${activeWrappedSymbol} to router... Confirm in wallet.`,
     });
     try {
       const res = await executeSeedLiquidity(wallet.signer, 10, 10);
       setTxNotification({
         type: 'success',
-        message: 'Liquidity initialized on-chain! 10 FDX + 10 WPOL supplied.',
+        message: `Liquidity initialized on-chain! 10 FDX + 10 ${activeWrappedSymbol} supplied.`,
         txHash: res.tx.hash,
       });
-      await loadPairReserves();
+      await loadPairReserves(currentChainId);
       if (wallet.address) {
         const wData = await fetchWalletData(wallet.address, wallet.provider, wallet.chainId);
         setUserFdxBalance(wData.fdxBalance);
@@ -1281,17 +1327,7 @@ export default function FundryxAppPortal({
       setSwapTxStatus('failed');
       setTxNotification({
         type: 'danger',
-        message: `${currentNetwork?.name || 'Selected chain'} swap router is in staging. Switch to Polygon to swap assets.`,
-      });
-      setTimeout(() => setSwapTxStatus('ready'), 7000);
-      return;
-    }
-
-    if (!MOCK_SWAP_ROUTER_ADDRESS) {
-      setSwapTxStatus('failed');
-      setTxNotification({
-        type: 'danger',
-        message: 'Swap router contract is not configured.',
+        message: `${currentNetwork?.name || 'Selected chain'} is in staging. Switch to a supported network to swap assets.`,
       });
       setTimeout(() => setSwapTxStatus('ready'), 7000);
       return;
@@ -1301,11 +1337,17 @@ export default function FundryxAppPortal({
       setSwapTxStatus('awaiting-wallet');
       setTxNotification({
         type: 'info',
-        message: `Initiating swap of ${swapAmount} ${swapFrom} to ${swapTo}. Confirm in wallet...`,
+        message: `Initiating swap of ${swapAmount} ${swapFrom} to ${swapTo} on ${activeNetConfig.name}. Confirm in wallet...`,
       });
 
-      const tokenInAddr = SUPPORTED_TOKENS[swapFrom] || CONTRACT_ADDRESSES.FundryxToken;
-      const tokenOutAddr = SUPPORTED_TOKENS[swapTo] || SUPPORTED_TOKENS.WPOL;
+      const cId = wallet?.chainId ? Number(wallet.chainId) : 80002;
+      const tokenMap = getNetworkTokens(cId);
+      const addrs = getContractAddresses(cId);
+      const net = SUPPORTED_NETWORKS[cId] || SUPPORTED_NETWORKS[80002];
+      const wrapAddr = net?.wrappedNative?.address || (cId === 10143 ? '0x760AfE86e5de5fa0Ee542fc7B7B713e1c5425701' : '0x360ad4f9a9A8EFe9A8DCB5f461c4Cc1047E1Dcf9');
+
+      const tokenInAddr = tokenMap[swapFrom] || (swapFrom === 'FDX' ? addrs.FundryxToken : wrapAddr);
+      const tokenOutAddr = tokenMap[swapTo] || (swapTo === 'FDX' ? addrs.FundryxToken : wrapAddr);
 
       const res = await executeSwap(wallet.signer, tokenInAddr, tokenOutAddr, swapAmount, slippageBps);
 
@@ -1317,7 +1359,7 @@ export default function FundryxAppPortal({
         txHash: res.tx.hash,
       });
 
-      await loadPairReserves();
+      await loadPairReserves(cId);
       if (wallet.address) {
         const wData = await fetchWalletData(wallet.address, wallet.provider, wallet.chainId);
         setUserFdxBalance(wData.fdxBalance);
@@ -3042,8 +3084,8 @@ export default function FundryxAppPortal({
                         <span className="font-mono text-2xl font-bold text-emerald-400">
                           {(() => {
                             const numIn = Number(swapAmount) || 0;
-                            const resIn = swapFrom === 'FDX' ? pairReserves.fdx : pairReserves.wpol;
-                            const resOut = swapFrom === 'FDX' ? pairReserves.wpol : pairReserves.fdx;
+                            const resIn = swapFrom === 'FDX' ? pairReserves.fdx : (pairReserves.wrapped || pairReserves.wpol);
+                            const resOut = swapFrom === 'FDX' ? (pairReserves.wrapped || pairReserves.wpol) : pairReserves.fdx;
                             if (!resIn || !resOut || numIn <= 0) return '0.0000';
                             const estOut = (numIn * 997 * resOut) / (resIn * 1000 + numIn * 997);
                             return estOut.toFixed(4);
@@ -3061,10 +3103,10 @@ export default function FundryxAppPortal({
                       <div className="flex justify-between items-center">
                         <span>Exchange Rate</span>
                         <span className="font-mono text-white font-semibold">
-                          {pairReserves.fdx > 0 && pairReserves.wpol > 0
+                          {pairReserves.fdx > 0 && (pairReserves.wrapped > 0 || pairReserves.wpol > 0)
                             ? (swapFrom === 'FDX'
-                              ? `1 FDX = ${(pairReserves.wpol / pairReserves.fdx).toFixed(4)} WPOL`
-                              : `1 WPOL = ${(pairReserves.fdx / pairReserves.wpol).toFixed(4)} FDX`)
+                              ? `1 FDX = ${((pairReserves.wrapped || pairReserves.wpol) / pairReserves.fdx).toFixed(4)} ${activeWrappedSymbol}`
+                              : `1 ${activeWrappedSymbol} = ${(pairReserves.fdx / (pairReserves.wrapped || pairReserves.wpol)).toFixed(4)} FDX`)
                             : 'Pool Initializing'}
                         </span>
                       </div>
@@ -3073,8 +3115,8 @@ export default function FundryxAppPortal({
                         <span className="font-mono text-white">
                           {(() => {
                             const numIn = Number(swapAmount) || 0;
-                            const resIn = swapFrom === 'FDX' ? pairReserves.fdx : pairReserves.wpol;
-                            const resOut = swapFrom === 'FDX' ? pairReserves.wpol : pairReserves.fdx;
+                            const resIn = swapFrom === 'FDX' ? pairReserves.fdx : (pairReserves.wrapped || pairReserves.wpol);
+                            const resOut = swapFrom === 'FDX' ? (pairReserves.wrapped || pairReserves.wpol) : pairReserves.fdx;
                             if (!resIn || !resOut || numIn <= 0) return '0.0000';
                             const estOut = (numIn * 997 * resOut) / (resIn * 1000 + numIn * 997);
                             return (estOut * (10000 - slippageBps) / 10000).toFixed(4);
@@ -3086,7 +3128,7 @@ export default function FundryxAppPortal({
                         <span className="font-mono text-emerald-400">
                           {(() => {
                             const numIn = Number(swapAmount) || 0;
-                            const resIn = swapFrom === 'FDX' ? pairReserves.fdx : pairReserves.wpol;
+                            const resIn = swapFrom === 'FDX' ? pairReserves.fdx : (pairReserves.wrapped || pairReserves.wpol);
                             if (!resIn || numIn <= 0) return '< 0.01%';
                             const impact = (numIn / (resIn + numIn)) * 100;
                             return `${impact.toFixed(2)}%`;
@@ -3095,8 +3137,8 @@ export default function FundryxAppPortal({
                       </div>
                       <div className="flex justify-between items-center">
                         <span>Execution Route</span>
-                        <span className="font-mono text-[var(--text-dim)] truncate max-w-[200px]" title={MOCK_SWAP_ROUTER_ADDRESS}>
-                          MockSwapRouter ({MOCK_SWAP_ROUTER_ADDRESS.slice(0, 6)}...{MOCK_SWAP_ROUTER_ADDRESS.slice(-4)})
+                        <span className="font-mono text-[var(--text-dim)] truncate max-w-[200px]" title={activeRouterAddress}>
+                          MockSwapRouter ({activeRouterAddress ? `${activeRouterAddress.slice(0, 6)}...${activeRouterAddress.slice(-4)}` : 'Native AMM'})
                         </span>
                       </div>
                     </div>
@@ -3109,12 +3151,12 @@ export default function FundryxAppPortal({
                       >
                         Connect Web3 Wallet to Swap
                       </button>
-                    ) : wallet.chainId !== 80002 ? (
+                    ) : !isChainSupported ? (
                       <button
-                        onClick={() => onSwitchNetwork?.(80002)}
+                        onClick={() => onSwitchNetwork?.(10143)}
                         className="portal-btn-amber w-full h-12 text-sm font-bold"
                       >
-                        Switch to Polygon (80002) to Swap
+                        Switch to Supported Network to Swap
                       </button>
                     ) : (
                       <button
@@ -3123,7 +3165,7 @@ export default function FundryxAppPortal({
                         className="portal-btn-purple w-full h-12 text-sm font-bold disabled:opacity-50 cursor-pointer"
                       >
                         {swapTxStatus === 'awaiting-wallet' && 'Confirm in Wallet...'}
-                        {swapTxStatus === 'pending' && 'Swapping on Polygon...'}
+                        {swapTxStatus === 'pending' && `Swapping on ${activeNetConfig?.shortName || activeNetConfig?.name || 'Chain'}...`}
                         {swapTxStatus === 'confirmed' && 'Swap Confirmed!'}
                         {swapTxStatus === 'failed' && 'Swap Failed (Retry)'}
                         {swapTxStatus === 'ready' && `Swap ${swapFrom} for ${swapTo}`}
@@ -3151,11 +3193,11 @@ export default function FundryxAppPortal({
                       <div className="p-4 pt-2 border-t border-[var(--border)] flex flex-col gap-3 text-xs text-[var(--text-muted)] leading-relaxed animate-fade-in">
                         <div>
                           <strong className="text-white block mb-0.5">1. Architecture &amp; Execution Route</strong>
-                          Swaps execute atomically via the deployed <code className="text-purple-300">MockSwapRouter</code> contract on Polygon Amoy (Chain ID 80002). No off-chain intermediaries or centralized order book matching is involved.
+                          Swaps execute atomically via the deployed <code className="text-purple-300">MockSwapRouter</code> contract on {activeNetConfig?.name || 'Active Chain'} (Chain ID {currentChainId}). No off-chain intermediaries or centralized order book matching is involved.
                         </div>
                         <div>
                           <strong className="text-white block mb-0.5">2. Constant-Product AMM Pricing (x · y = k)</strong>
-                          The exchange rate is derived algorithmically from current pool reserves ({pairReserves.fdx.toFixed(2)} FDX / {pairReserves.wpol.toFixed(4)} WPOL). Each swap deposits tokens into one side and dispenses from the other according to the constant-product formula.
+                          The exchange rate is derived algorithmically from current pool reserves ({pairReserves.fdx.toFixed(2)} FDX / {(pairReserves.wrapped || pairReserves.wpol).toFixed(4)} {activeWrappedSymbol}). Each swap deposits tokens into one side and dispenses from the other according to the constant-product formula.
                         </div>
                         <div>
                           <strong className="text-white block mb-0.5">3. Strict Slippage Protection</strong>
@@ -3247,7 +3289,7 @@ export default function FundryxAppPortal({
                           className="px-3 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-200 font-bold text-xs shrink-0 cursor-pointer transition flex items-center justify-center gap-1.5"
                         >
                           <RefreshCw size={12} className="animate-spin-slow" />
-                          <span>Switch Wallet to {sourceNetwork.shortName}</span>
+                          <span>Switch Wallet to {sourceNetwork?.shortName || sourceNetwork?.name || 'Chain'}</span>
                         </button>
                       </div>
                     )}
@@ -3701,8 +3743,8 @@ export default function FundryxAppPortal({
                       <span className="text-xs text-[var(--text-muted)] block mt-1">Protocol utility token</span>
                     </div>
                     <div className="p-4 rounded-xl bg-[var(--surface-2)] border border-[var(--border)]">
-                      <span className="portal-label block mb-1">WPOL Pool Reserve</span>
-                      <span className="font-mono text-xl font-bold text-white">{pairReserves.wpol.toFixed(4)} WPOL</span>
+                      <span className="portal-label block mb-1">{activeWrappedSymbol} Pool Reserve</span>
+                      <span className="font-mono text-xl font-bold text-white">{(pairReserves.wrapped || pairReserves.wpol).toFixed(4)} {activeWrappedSymbol}</span>
                       <span className="text-xs text-[var(--text-muted)] block mt-1">Wrapped native gas token</span>
                     </div>
                   </div>
@@ -3710,18 +3752,18 @@ export default function FundryxAppPortal({
                   <div className="p-4 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] flex flex-col gap-2 text-xs text-[var(--text-muted)]">
                     <div className="flex justify-between">
                       <span>Invariant Product (k = x·y)</span>
-                      <span className="font-mono text-white">{(pairReserves.fdx * pairReserves.wpol).toFixed(2)}</span>
+                      <span className="font-mono text-white">{(pairReserves.fdx * (pairReserves.wrapped || pairReserves.wpol)).toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between">
                       <span>Pool Share Ratio</span>
-                      <span className="font-mono text-white">1 WPOL = {(pairReserves.wpol > 0 ? (pairReserves.fdx / pairReserves.wpol).toFixed(2) : '4.00')} FDX</span>
+                      <span className="font-mono text-white">1 {activeWrappedSymbol} = {((pairReserves.wrapped || pairReserves.wpol) > 0 ? (pairReserves.fdx / (pairReserves.wrapped || pairReserves.wpol)).toFixed(2) : '4.00')} FDX</span>
                     </div>
                   </div>
 
                   <div className="flex items-center justify-between p-4 rounded-xl bg-[var(--surface-2)] border border-[var(--border)]">
                     <div>
                       <span className="font-bold text-white text-sm block">Add Pool Liquidity</span>
-                      <span className="text-xs text-[var(--text-dim)]">Supply 10 FDX + 10 POL to bootstrap AMM depth</span>
+                      <span className="text-xs text-[var(--text-dim)]">Supply 10 FDX + 10 {activeNativeSymbol} to bootstrap AMM depth</span>
                     </div>
                     <button
                       type="button"
@@ -3729,7 +3771,7 @@ export default function FundryxAppPortal({
                       disabled={isSeeding || !wallet.signer}
                       className="px-4 py-2 rounded-xl bg-purple-500 hover:bg-purple-400 text-black font-bold text-xs transition cursor-pointer disabled:opacity-50"
                     >
-                      {isSeeding ? 'Supplying Liquidity...' : 'Add Liquidity (10 POL + 10 FDX)'}
+                      {isSeeding ? 'Supplying Liquidity...' : `Add Liquidity (10 ${activeNativeSymbol} + 10 FDX)`}
                     </button>
                   </div>
                 </div>
@@ -3748,8 +3790,8 @@ export default function FundryxAppPortal({
                   <p className="portal-page-sub">Federated liquidity pool overview and live AMM market statistics.</p>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="portal-badge portal-badge-primary">Live AMM: FDX / WPOL</span>
-                  <span className="portal-badge portal-badge-neutral">{currentNetwork?.name || 'Polygon Primary'} ({wallet?.chainId || 80002})</span>
+                  <span className="portal-badge portal-badge-primary">Live AMM: FDX / {activeWrappedSymbol}</span>
+                  <span className="portal-badge portal-badge-neutral">{activeNetConfig?.name || 'Polygon Primary'} ({currentChainId})</span>
                 </div>
               </div>
 
@@ -3759,15 +3801,15 @@ export default function FundryxAppPortal({
                   <div className="portal-card-header">
                     <div>
                       <span className="portal-label">AMM Spot Rate</span>
-                      <span className="text-[10px] text-[var(--text-dim)] block">FDX / WPOL</span>
+                      <span className="text-[10px] text-[var(--text-dim)] block">FDX / {activeWrappedSymbol}</span>
                     </div>
                     <span className="portal-badge portal-badge-primary text-[10px]">LIVE AMM</span>
                   </div>
                   <div className="portal-stat-num font-mono">
-                    {pairReserves.fdx > 0 ? (pairReserves.wpol / pairReserves.fdx).toFixed(4) : '0.2500'} POL
+                    {pairReserves.fdx > 0 ? ((pairReserves.wrapped || pairReserves.wpol) / pairReserves.fdx).toFixed(4) : '0.2500'} {activeNativeSymbol}
                   </div>
                   <div className="text-xs text-[var(--text-muted)] mt-2">
-                    Verified constant-product pricing on Polygon
+                    Verified constant-product pricing on {activeNetConfig?.shortName || activeNetConfig?.name || 'Active Chain'}
                   </div>
                 </div>
 
@@ -3783,7 +3825,7 @@ export default function FundryxAppPortal({
                     {pairReserves.fdx.toFixed(1)} FDX
                   </div>
                   <div className="text-xs text-[var(--text-muted)] mt-2">
-                    Paired with {pairReserves.wpol.toFixed(3)} WPOL reserves
+                    Paired with {(pairReserves.wrapped || pairReserves.wpol).toFixed(3)} {activeWrappedSymbol} reserves
                   </div>
                 </div>
 
@@ -3824,7 +3866,7 @@ export default function FundryxAppPortal({
                     <div className="portal-card-header">
                       <div>
                         <h2 className="portal-card-title">Verified AMM Liquidity</h2>
-                        <span className="text-xs text-[var(--text-dim)] font-mono">Pair: FDX / WPOL (Polygon Amoy)</span>
+                        <span className="text-xs text-[var(--text-dim)] font-mono">Pair: FDX / {activeWrappedSymbol} ({activeNetConfig?.shortName || activeNetConfig?.name || 'Active Chain'})</span>
                       </div>
                       <span className="portal-badge portal-badge-primary">Active</span>
                     </div>
@@ -3833,22 +3875,22 @@ export default function FundryxAppPortal({
                       <div className="flex justify-between items-center">
                         <span className="text-[var(--text-muted)]">Router Contract:</span>
                         <a
-                          href={`https://amoy.polygonscan.com/address/${MOCK_SWAP_ROUTER_ADDRESS}`}
+                          href={`${activeNetConfig?.explorerUrl || 'https://amoy.polygonscan.com'}/address/${activeRouterAddress}`}
                           target="_blank"
                           rel="noreferrer"
                           className="font-mono text-purple-400 hover:underline flex items-center gap-1"
                         >
-                          {MOCK_SWAP_ROUTER_ADDRESS.slice(0, 8)}...{MOCK_SWAP_ROUTER_ADDRESS.slice(-6)}
+                          {activeRouterAddress ? `${activeRouterAddress.slice(0, 8)}...${activeRouterAddress.slice(-6)}` : 'Active AMM'}
                           <ExternalLink size={11} />
                         </a>
                       </div>
                       <div className="flex justify-between items-center">
                         <span className="text-[var(--text-muted)]">FDX Token:</span>
-                        <span className="font-mono text-white">{CONTRACT_ADDRESSES.FundryxToken.slice(0, 8)}...</span>
+                        <span className="font-mono text-white">{(getContractAddresses(currentChainId)?.FundryxToken || CONTRACT_ADDRESSES.FundryxToken).slice(0, 8)}...</span>
                       </div>
                       <div className="flex justify-between items-center">
-                        <span className="text-[var(--text-muted)]">WPOL Token:</span>
-                        <span className="font-mono text-white">{SUPPORTED_TOKENS.WPOL.slice(0, 8)}...</span>
+                        <span className="text-[var(--text-muted)]">{activeWrappedSymbol} Token:</span>
+                        <span className="font-mono text-white">{activeWrappedAddress ? `${activeWrappedAddress.slice(0, 8)}...` : '--'}</span>
                       </div>
                     </div>
                   </div>

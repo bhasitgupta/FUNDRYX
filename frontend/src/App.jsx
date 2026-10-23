@@ -34,6 +34,9 @@ class PortalErrorBoundary extends React.Component {
               <button
                 onClick={() => {
                   this.setState({ hasError: false, error: null });
+                  if (!window.location.hash || window.location.hash === '#') {
+                    window.location.hash = '#app';
+                  }
                   window.location.reload();
                 }}
                 className="px-4 py-2 rounded-xl bg-emerald-500 text-black font-semibold text-xs hover:bg-emerald-400 transition cursor-pointer"
