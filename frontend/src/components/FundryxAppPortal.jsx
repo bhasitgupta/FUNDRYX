@@ -1518,20 +1518,20 @@ export default function FundryxAppPortal({
 
   const sidebarNavItems = useMemo(() => {
     const governanceKids = [
-      ...(isAdmin ? [{ value: 'audit', label: 'Admin On-Chain Audit', icon: <ShieldCheck size={16} />, accent: '#FBBF24' }] : []),
-      { value: 'terms', label: 'Legal & Risk Terms', icon: Download04Icon, accent: '#A78BFA' },
-      { value: 'landing', label: 'Website Home', icon: Rocket01Icon, accent: '#2EE6A6' }
+      ...(isAdmin ? [{ value: 'audit', label: 'Admin On-Chain Audit', icon: <ShieldCheck size={16} /> }] : []),
+      { value: 'terms', label: 'Legal & Risk Terms', icon: Download04Icon },
+      { value: 'landing', label: 'Website Home', icon: Rocket01Icon }
     ];
     return [
       {
         label: 'Protocol Facilities',
         children: [
-          { value: 'overview', label: 'Overview & Portfolio', icon: Layers01Icon, accent: '#2EE6A6' },
-          { value: 'lending', label: 'Able Credit (Borrow & Lend)', icon: Rocket01Icon, accent: '#2EE6A6' },
-          { value: 'swap', label: 'Instant Swap (AMM)', icon: <ArrowLeftRight size={16} />, accent: '#A78BFA' },
-          { value: 'credit', label: 'Borderline Verify (Score)', icon: CursorPointer01Icon, accent: '#FBBF24' },
-          { value: 'risk', label: 'AI Risk Telemetry', icon: Notification03Icon, accent: '#22D3EE' },
-          { value: 'markets', label: 'Capital Markets', icon: TextFontIcon, accent: '#22D3EE' }
+          { value: 'overview', label: 'Overview & Portfolio', icon: Layers01Icon },
+          { value: 'lending', label: 'Able Credit (Borrow & Lend)', icon: Rocket01Icon },
+          { value: 'swap', label: 'Instant Swap (AMM)', icon: <ArrowLeftRight size={16} /> },
+          { value: 'credit', label: 'Borderline Verify (Score)', icon: CursorPointer01Icon },
+          { value: 'risk', label: 'AI Risk Telemetry', icon: Notification03Icon },
+          { value: 'markets', label: 'Capital Markets', icon: TextFontIcon }
         ]
       },
       {
@@ -1545,18 +1545,17 @@ export default function FundryxAppPortal({
     <div className="portal-layout">
 
       {/* ========================================================= */}
-      {/* LEFT SIDEBAR NAVIGATION PANEL - ACCENT TREATED             */}
+      {/* LEFT SIDEBAR NAVIGATION PANEL - RESTORED TO ORIGINAL      */}
       {/* ========================================================= */}
-      <aside className="hidden lg:flex w-72 xl:w-80 shrink-0 min-h-screen border-r border-[#2EE6A6]/12 bg-gradient-to-b from-[#08130F] to-[#050B09] sticky top-0 h-screen flex-col justify-between p-6 z-40 overflow-y-auto">
+      <aside className="hidden lg:flex w-72 xl:w-80 shrink-0 min-h-screen border-r border-[#1c2e24] bg-[#0c1410] sticky top-0 h-screen flex-col justify-between p-6 z-40 overflow-y-auto">
         <div className="flex flex-col gap-6">
           {/* Brand Logo & Portal Badge (Identical container styling to landing navbar) */}
           <button onClick={onBackToLanding} className="flex items-center gap-3.5 cursor-pointer group text-left">
             <div
               className="px-3 py-1.5 rounded-lg shadow-sm flex items-center justify-center shrink-0"
               style={{
-                background: 'color-mix(in srgb, #e6e5db 70%, #c9c2b4)',
+                background: 'color-mix(in srgb, #efe9df 70%, #c9c2b4)',
                 backdropFilter: 'blur(8px)',
-                border: '1px solid rgba(0,0,0,0.08)',
                 boxShadow: '0 10px 30px -12px rgba(0,0,0,0.45)'
               }}
             >
@@ -1586,8 +1585,8 @@ export default function FundryxAppPortal({
                 }
               }}
               color="#8fa799"
-              accentColor="#2EE6A6"
-              lineColor="#1c2e24"
+              accentColor="#10b981"
+              lineColor="#263e30"
               width={260}
               rowHeight={40}
               indent={38}
@@ -1600,7 +1599,7 @@ export default function FundryxAppPortal({
         </div>
 
         {/* Sidebar Institutional Bottom Card */}
-        <div className="pt-5 border-t border-[#2EE6A6]/10 flex flex-col gap-2.5 text-xs text-[#71877b]">
+        <div className="pt-5 border-t border-[#1c2e24] flex flex-col gap-2.5 text-xs text-[#71877b]">
           <div className="flex items-center gap-2 text-white font-medium">
             <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
             <span>Quorum 3/3 Synchronized</span>
@@ -1812,8 +1811,8 @@ export default function FundryxAppPortal({
                 }
               }}
               color="#8fa799"
-              accentColor="#2EE6A6"
-              lineColor="#1c2e24"
+              accentColor="#10b981"
+              lineColor="#263e30"
               width={280}
               rowHeight={36}
               indent={36}
@@ -2127,425 +2126,467 @@ export default function FundryxAppPortal({
               </div>
 
               {/* Two Hero Cards Side by Side (Stacked on screens < 1100px) */}
-              <div className="flex flex-col min-[1100px]:flex-row gap-6 items-stretch">
+              <div className="grid grid-cols-1 min-[1100px]:grid-cols-2 gap-6 items-stretch">
 
                 {/* Hero Card 1: Borrow Card */}
-                <div className="portal-card portal-card-gradient-emerald flex-1 min-[1100px]:min-w-[560px] min-h-[680px] p-9 flex flex-col justify-between">
-                  <div>
-                    {/* Header: title, explanation, Zero Collateral pill */}
-                    <div className="flex justify-between items-start gap-4 mb-4">
-                      <div>
-                        <h2 className="text-[26px] font-bold text-white tracking-tight leading-snug">
-                          Request Uncollateralized Loan
-                        </h2>
-                        <p className="text-xs text-[var(--text-muted)] mt-1">
-                          Borrow up to your credit line with instant algorithmic disbursement.
-                        </p>
-                      </div>
-                      <span className="portal-badge portal-badge-primary shrink-0">
-                        Zero Collateral
-                      </span>
-                    </div>
+                {(() => {
+                  const poolAvail = Number(livePool?.availableLiquidity || 0);
+                  const maxCap = Number(creditProfile?.maxCredit || 0);
+                  const borrowVal = Number(borrowInput || 0);
 
-                    {/* Key Facts Strip */}
-                    <div className="grid grid-cols-3 gap-2.5 mb-6">
-                      <div className="p-2.5 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-center">
-                        <span className="text-[10px] font-mono text-[var(--text-dim)] uppercase block">Available Pool</span>
-                        <span className="text-xs font-mono font-bold text-emerald-400">
-                          {Number(livePool?.availableLiquidity || 0).toLocaleString()} FDX
-                        </span>
-                      </div>
-                      <div className="p-2.5 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-center">
-                        <span className="text-[10px] font-mono text-[var(--text-dim)] uppercase block">Prime Rate</span>
-                        <span className="text-xs font-mono font-bold text-white">5.20% Fixed</span>
-                      </div>
-                      <div className="p-2.5 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-center">
-                        <span className="text-[10px] font-mono text-[var(--text-dim)] uppercase block">Max Credit Line</span>
-                        <span className="text-xs font-mono font-bold text-white">
-                          {creditProfile?.maxCredit !== undefined ? Number(creditProfile.maxCredit).toFixed(0) : 0} FDX
-                        </span>
-                      </div>
-                    </div>
+                  let borrowDisabledReason = null;
+                  let isBorrowDisabled = false;
 
-                    {/* Large Amount Input (64px height, 32px font, FDX chip, MAX button) */}
-                    <div className="mb-6">
-                      <div className="flex justify-between items-center mb-2">
-                        <label className="portal-label">Borrow Amount</label>
-                        <span className="text-xs text-[var(--text-dim)] font-mono">
-                          Cap: {creditProfile?.maxCredit !== undefined ? Number(creditProfile.maxCredit).toFixed(0) : 0} FDX
+                  if (!wallet.address) {
+                    isBorrowDisabled = true;
+                    borrowDisabledReason = 'Connect Web3 wallet to access uncollateralized lending facilities.';
+                  } else if (borrowTxStatus === 'awaiting-wallet' || borrowTxStatus === 'pending') {
+                    isBorrowDisabled = true;
+                    borrowDisabledReason = 'Transaction is currently awaiting block confirmation on-chain.';
+                  } else if (poolAvail <= 0) {
+                    isBorrowDisabled = true;
+                    borrowDisabledReason = 'Pool liquidity is currently depleted — supply liquidity into vault to enable borrowing.';
+                  } else if (borrowVal <= 0) {
+                    isBorrowDisabled = true;
+                    borrowDisabledReason = 'Enter a borrow amount of at least 10 FDX.';
+                  } else if (borrowVal > poolAvail) {
+                    isBorrowDisabled = true;
+                    borrowDisabledReason = `Requested amount exceeds available pool liquidity (${poolAvail.toFixed(0)} FDX).`;
+                  } else if (maxCap > 0 && borrowVal > maxCap) {
+                    isBorrowDisabled = true;
+                    borrowDisabledReason = `Requested amount exceeds your maximum on-chain credit cap (${maxCap.toFixed(0)} FDX).`;
+                  }
+
+                  return (
+                    <div className="portal-card portal-card-gradient-emerald p-[36px] rounded-[20px] flex flex-col gap-[28px] h-full">
+                      {/* Section 1: Header */}
+                      <div className="flex justify-between items-center gap-4">
+                        <div>
+                          <h2 className="text-[28px] font-semibold text-white leading-[1.2] tracking-normal">
+                            Request Uncollateralized Loan
+                          </h2>
+                          <p className="text-[15px] text-[var(--text-muted)] leading-[1.5] mt-2">
+                            Borrow up to your credit line with instant algorithmic disbursement.
+                          </p>
+                        </div>
+                        <span className="h-[32px] px-[14px] rounded-full text-xs font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 flex items-center justify-center shrink-0">
+                          Zero Collateral
                         </span>
                       </div>
-                      <div className="h-16 px-4 rounded-2xl bg-[var(--surface-2)] border border-[var(--border)] flex items-center justify-between gap-3 focus-within:border-emerald-400/60 transition mb-3">
-                        <input
-                          type="number"
-                          value={borrowInput}
-                          onChange={(e) => setBorrowInput(e.target.value)}
-                          className="bg-transparent font-mono text-[32px] font-extrabold text-white outline-none w-full min-w-0"
-                          placeholder="0"
-                        />
-                        <div className="flex items-center gap-2 shrink-0">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const maxLimit = Math.min(
-                                Number(creditProfile?.maxCredit || 0),
-                                Number(livePool?.availableLiquidity || 0)
-                              );
-                              setBorrowInput(maxLimit > 0 ? maxLimit.toString() : '0');
-                            }}
-                            className="px-2.5 py-1 text-xs font-bold text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 rounded-lg border border-emerald-500/30 uppercase cursor-pointer transition"
-                          >
-                            Max
-                          </button>
-                          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[var(--surface)] border border-[var(--border)] font-bold text-white text-sm">
-                            <span className="w-2 h-2 rounded-full bg-emerald-400" />
-                            <span>FDX</span>
-                          </div>
+
+                      {/* Section 2: Key Facts Strip */}
+                      <div className="grid grid-cols-3 gap-[12px]">
+                        <div className="h-[76px] px-[16px] py-[14px] rounded-xl bg-[var(--surface-2)] border border-[var(--border)] flex flex-col justify-between">
+                          <span className="text-[12px] uppercase text-[var(--text-muted)] font-medium tracking-wider">Available Pool</span>
+                          <span className="text-[18px] font-semibold text-emerald-400 leading-none">
+                            {poolAvail.toLocaleString()} FDX
+                          </span>
+                        </div>
+                        <div className="h-[76px] px-[16px] py-[14px] rounded-xl bg-[var(--surface-2)] border border-[var(--border)] flex flex-col justify-between">
+                          <span className="text-[12px] uppercase text-[var(--text-muted)] font-medium tracking-wider">Prime Rate</span>
+                          <span className="text-[18px] font-semibold text-white leading-none">5.20% Fixed</span>
+                        </div>
+                        <div className="h-[76px] px-[16px] py-[14px] rounded-xl bg-[var(--surface-2)] border border-[var(--border)] flex flex-col justify-between">
+                          <span className="text-[12px] uppercase text-[var(--text-muted)] font-medium tracking-wider">Max Credit Line</span>
+                          <span className="text-[18px] font-semibold text-white leading-none">
+                            {maxCap > 0 ? maxCap.toFixed(0) : '0'} FDX
+                          </span>
                         </div>
                       </div>
-                      <input
-                        type="range"
-                        min="0"
-                        max={Math.max(10, Math.min(Number(creditProfile?.maxCredit || 0), Number(livePool?.availableLiquidity || 0)))}
-                        step="5"
-                        value={borrowInput}
-                        onChange={(e) => setBorrowInput(e.target.value)}
-                        className="portal-slider w-full"
-                      />
-                      <div className="flex justify-between text-xs text-[var(--text-dim)] font-mono mt-2">
-                        <span>Min 10 FDX</span>
-                        <span>Available Pool: {Number(livePool?.availableLiquidity || 0).toFixed(0)} FDX</span>
-                      </div>
-                    </div>
 
-                    {/* Repayment Tenure as 3-option Segmented Control with APRs */}
-                    <div className="mb-6">
-                      <label className="portal-label block mb-2">Repayment Tenure</label>
-                      <div className="grid grid-cols-3 gap-2 p-1 rounded-xl bg-[var(--surface-2)] border border-[var(--border)]">
-                        {[
-                          { days: 7, apr: '5.00%' },
-                          { days: 14, apr: '5.20%' },
-                          { days: 30, apr: '5.50%' },
-                        ].map((opt) => (
-                          <button
-                            key={opt.days}
-                            type="button"
-                            onClick={() => setBorrowTerm(opt.days)}
-                            className={`py-2 px-3 rounded-lg text-center transition cursor-pointer flex flex-col items-center justify-center ${
-                              borrowTerm === opt.days
-                                ? 'bg-emerald-500/20 text-white border border-emerald-400/50 shadow-sm'
-                                : 'text-[var(--text-muted)] hover:text-white hover:bg-[var(--surface)]'
-                            }`}
-                          >
-                            <span className="text-xs font-bold">{opt.days} Days</span>
-                            <span className="text-[10px] font-mono text-emerald-400/80">{opt.apr} APR</span>
-                          </button>
-                        ))}
+                      {/* Section 3: Amount Input */}
+                      <div className="flex flex-col">
+                        <div className="flex justify-between items-center text-[13px] mb-[10px]">
+                          <label className="text-[13px] font-medium text-[var(--text)]">Borrow Amount</label>
+                          <span className="text-[13px] text-[var(--text-muted)]">
+                            Cap: {maxCap > 0 ? maxCap.toFixed(0) : '0'} FDX
+                          </span>
+                        </div>
+                        <div className="h-[80px] px-[20px] rounded-2xl bg-[var(--surface-2)] border border-[var(--border)] flex items-center justify-between gap-3 focus-within:border-emerald-400/60 transition">
+                          <input
+                            type="number"
+                            value={borrowInput}
+                            onChange={(e) => setBorrowInput(e.target.value)}
+                            className="bg-transparent text-[32px] font-semibold text-white outline-none w-full min-w-0"
+                            placeholder="0"
+                          />
+                          <div className="flex items-center gap-[12px] shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const maxLimit = Math.min(
+                                  Number(creditProfile?.maxCredit || 0),
+                                  Number(livePool?.availableLiquidity || 0)
+                                );
+                                setBorrowInput(maxLimit > 0 ? maxLimit.toString() : '0');
+                              }}
+                              className="h-[36px] px-3 text-xs font-bold text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 rounded-lg border border-emerald-500/30 uppercase cursor-pointer transition flex items-center justify-center"
+                            >
+                              Max
+                            </button>
+                            <div className="h-[36px] flex items-center gap-2 px-3 rounded-xl bg-[var(--surface)] border border-[var(--border)] font-semibold text-white text-sm">
+                              <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                              <span>FDX</span>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="mt-[12px]">
+                          <input
+                            type="range"
+                            min="0"
+                            max={Math.max(10, Math.min(Number(creditProfile?.maxCredit || 0), poolAvail))}
+                            step="5"
+                            value={borrowInput}
+                            onChange={(e) => setBorrowInput(e.target.value)}
+                            className="portal-slider w-full h-[8px]"
+                          />
+                        </div>
+                        <div className="flex justify-between text-[13px] text-[var(--text-muted)] mt-[10px]">
+                          <span>Min 10 FDX</span>
+                          <span>Available Pool: {poolAvail.toFixed(0)} FDX</span>
+                        </div>
                       </div>
-                    </div>
 
-                    {/* Summary Panel (surface-2 background, 20px padding, 14px row spacing) */}
-                    <div className="p-5 rounded-2xl bg-[var(--surface-2)] border border-[var(--border)] flex flex-col gap-3.5 text-xs text-[var(--text-muted)]">
-                      <div className="flex justify-between items-center">
-                        <span>You Receive</span>
-                        <span className="font-mono font-bold text-white text-sm">{Number(borrowInput || 0).toLocaleString()} FDX</span>
+                      {/* Section 4: Repayment Tenure */}
+                      <div className="flex flex-col">
+                        <label className="text-[13px] font-medium text-[var(--text)] mb-[10px]">Repayment Tenure</label>
+                        <div className="h-[64px] grid grid-cols-3 gap-2 p-1 rounded-xl bg-[var(--surface-2)] border border-[var(--border)]">
+                          {[
+                            { days: 7, apr: '5.00%' },
+                            { days: 14, apr: '5.20%' },
+                            { days: 30, apr: '5.50%' },
+                          ].map((opt) => (
+                            <button
+                              key={opt.days}
+                              type="button"
+                              onClick={() => setBorrowTerm(opt.days)}
+                              className={`h-full rounded-lg transition cursor-pointer flex flex-col items-center justify-center gap-[4px] ${
+                                borrowTerm === opt.days
+                                  ? 'bg-emerald-500/20 text-white border border-emerald-400/50 shadow-sm'
+                                  : 'text-[var(--text-muted)] hover:text-white hover:bg-[var(--surface)]'
+                              }`}
+                            >
+                              <span className="text-[15px] font-semibold leading-none">{opt.days} Days</span>
+                              <span className="text-[12px] text-emerald-400/90 leading-none">{opt.apr} APR</span>
+                            </button>
+                          ))}
+                        </div>
                       </div>
-                      <div className="flex justify-between items-center">
-                        <span>Fixed APR</span>
-                        <span className="font-mono font-semibold text-emerald-400">5.20%</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span>Protocol Fee</span>
-                        <span className="font-mono text-white">{(Number(borrowInput || 0) * 0.052 * (borrowTerm / 365)).toFixed(2)} FDX</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span>Total Repayment</span>
-                        <span className="font-mono font-bold text-white text-sm">{(Number(borrowInput || 0) * (1 + 0.052 * (borrowTerm / 365))).toFixed(2)} FDX</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span>Due Date</span>
-                        <span className="font-mono text-white">{borrowTerm} Days from disbursement</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span>Collateral Required</span>
-                        <span className="portal-badge portal-badge-primary text-[11px]">Zero Collateral</span>
-                      </div>
-                    </div>
 
-                    {/* 3-Step "How it works" Line */}
-                    <div className="text-[11px] text-[var(--text-dim)] font-mono text-center mt-4">
-                      Request loan &rarr; Instant on-chain disbursement &rarr; Repay to boost credit score
-                    </div>
-                  </div>
+                      {/* Section 5: Summary Panel */}
+                      <div className="bg-[var(--surface-2)] border border-[var(--border)] rounded-[14px] px-[20px] py-[8px] flex flex-col text-[14px]">
+                        <div className="h-[48px] flex justify-between items-center border-b border-[var(--border)]/60">
+                          <span className="text-[var(--text-muted)]">You Receive</span>
+                          <span className="font-semibold text-white">{Number(borrowInput || 0).toLocaleString()} FDX</span>
+                        </div>
+                        <div className="h-[48px] flex justify-between items-center border-b border-[var(--border)]/60">
+                          <span className="text-[var(--text-muted)]">Fixed APR</span>
+                          <span className="font-semibold text-emerald-400">5.20%</span>
+                        </div>
+                        <div className="h-[48px] flex justify-between items-center border-b border-[var(--border)]/60">
+                          <span className="text-[var(--text-muted)]">Protocol Fee</span>
+                          <span className="font-semibold text-white">{(Number(borrowInput || 0) * 0.052 * (borrowTerm / 365)).toFixed(2)} FDX</span>
+                        </div>
+                        <div className="h-[48px] flex justify-between items-center border-b border-[var(--border)]/60">
+                          <span className="text-[var(--text-muted)]">Total Repayment</span>
+                          <span className="font-semibold text-white">{(Number(borrowInput || 0) * (1 + 0.052 * (borrowTerm / 365))).toFixed(2)} FDX</span>
+                        </div>
+                        <div className="h-[48px] flex justify-between items-center border-b border-[var(--border)]/60">
+                          <span className="text-[var(--text-muted)]">Due Date</span>
+                          <span className="font-semibold text-white">{borrowTerm} Days from disbursement</span>
+                        </div>
+                        <div className="h-[48px] flex justify-between items-center">
+                          <span className="text-[var(--text-muted)]">Collateral Required</span>
+                          <span className="h-[28px] px-3 rounded-full text-xs font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 flex items-center justify-center">
+                            Zero Collateral
+                          </span>
+                        </div>
+                      </div>
 
-                  {/* Primary Action Button (56px height, mt-auto alignment) */}
-                  <div className="mt-6 pt-2">
-                    <button
-                      onClick={handleExecuteBorrow}
-                      disabled={
-                        borrowTxStatus === 'awaiting-wallet' ||
-                        borrowTxStatus === 'pending' ||
-                        Number(borrowInput) <= 0 ||
-                        Number(livePool?.availableLiquidity || 0) <= 0 ||
-                        Number(borrowInput) > Number(livePool?.availableLiquidity || 0)
-                      }
-                      className="portal-btn-primary w-full h-14 text-base font-bold disabled:opacity-60 disabled:cursor-not-allowed"
-                    >
-                      {borrowTxStatus === 'awaiting-wallet' && 'Confirm in Wallet...'}
-                      {borrowTxStatus === 'pending' && 'Confirming on-chain...'}
-                      {borrowTxStatus === 'confirmed' && 'Loan Disbursed!'}
-                      {borrowTxStatus === 'failed' && 'Borrow Failed (Retry)'}
-                      {borrowTxStatus === 'ready' && (
-                        Number(livePool?.availableLiquidity || 0) <= 0
-                          ? 'Zero Pool Liquidity'
-                          : Number(borrowInput) > Number(livePool?.availableLiquidity || 0)
-                            ? `Exceeds Available Liquidity (${Number(livePool?.availableLiquidity || 0).toFixed(0)} FDX)`
-                            : 'Execute Uncollateralized Loan'
-                      )}
-                    </button>
-                    {Number(livePool?.availableLiquidity || 0) <= 0 && (
-                      <div className="mt-2.5 text-center text-xs text-amber-300">
-                        <span>Pool liquidity is currently depleted. </span>
+                      {/* Section 6: Flow Hint Chips */}
+                      <div className="flex items-center justify-center gap-[8px] flex-wrap">
+                        <span className="px-3 py-1.5 rounded-lg bg-[var(--surface-2)] border border-[var(--border)] text-[13px] text-[var(--text-muted)] font-normal">
+                          1. Request loan
+                        </span>
+                        <span className="text-[var(--text-dim)]">&rarr;</span>
+                        <span className="px-3 py-1.5 rounded-lg bg-[var(--surface-2)] border border-[var(--border)] text-[13px] text-[var(--text-muted)] font-normal">
+                          2. Instant disbursement
+                        </span>
+                        <span className="text-[var(--text-dim)]">&rarr;</span>
+                        <span className="px-3 py-1.5 rounded-lg bg-[var(--surface-2)] border border-[var(--border)] text-[13px] text-[var(--text-muted)] font-normal">
+                          3. Repay to boost credit
+                        </span>
+                      </div>
+
+                      {/* Section 7: Primary Action Button pinned to bottom */}
+                      <div className="mt-auto flex flex-col gap-2">
+                        {isBorrowDisabled && borrowDisabledReason && (
+                          <div className="text-center text-[13px] text-[var(--text-muted)]">
+                            {borrowDisabledReason}
+                          </div>
+                        )}
                         <button
-                          type="button"
-                          onClick={() => {
-                            const el = document.getElementById('supply-card');
-                            el?.scrollIntoView({ behavior: 'smooth' });
-                          }}
-                          className="underline font-semibold hover:text-white cursor-pointer ml-1"
+                          onClick={handleExecuteBorrow}
+                          disabled={isBorrowDisabled}
+                          className="portal-btn-primary w-full h-[56px] rounded-[16px] text-[17px] font-semibold disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer transition flex items-center justify-center"
                         >
-                          Supply liquidity in vault &rarr;
+                          {borrowTxStatus === 'awaiting-wallet' && 'Confirm in Wallet...'}
+                          {borrowTxStatus === 'pending' && 'Disbursing on-chain...'}
+                          {borrowTxStatus === 'confirmed' && 'Loan Disbursed!'}
+                          {borrowTxStatus === 'failed' && 'Borrow Failed (Retry)'}
+                          {borrowTxStatus === 'ready' && (
+                            poolAvail <= 0
+                              ? 'Zero Pool Liquidity'
+                              : borrowVal > poolAvail
+                                ? 'Exceeds Available Liquidity'
+                                : 'Request Uncollateralized Loan'
+                          )}
                         </button>
                       </div>
-                    )}
-                  </div>
-                </div>
+                    </div>
+                  );
+                })()}
 
                 {/* Hero Card 2: Supply Card */}
-                <div id="supply-card" className="portal-card portal-card-gradient-cyan flex-1 min-[1100px]:min-w-[560px] min-h-[680px] p-9 flex flex-col justify-between">
-                  <div>
-                    {/* Header: title, explanation, APY pill */}
-                    <div className="flex justify-between items-start gap-4 mb-4">
-                      <div>
-                        <h2 className="text-[26px] font-bold text-white tracking-tight leading-snug">
-                          Supply Liquidity Vaults
-                        </h2>
-                        <p className="text-xs text-[var(--text-muted)] mt-1">
-                          Shared protocol vault for uncollateralized lending yield.
-                        </p>
-                      </div>
-                      <span className="portal-badge portal-badge-cyan shrink-0">
-                        7.80% APY
-                      </span>
-                    </div>
+                {(() => {
+                  const supplyVal = Number(supplyMode === 'deposit' ? supplyAmount : withdrawAmount || 0);
+                  let supplyDisabledReason = null;
+                  let isSupplyDisabled = false;
 
-                    {/* Key Facts Strip */}
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-6">
-                      <div className="p-2.5 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-center">
-                        <span className="text-[10px] font-mono text-[var(--text-dim)] uppercase block">Supply APY</span>
-                        <span className="text-xs font-mono font-bold text-[var(--accent-cyan)]">7.80%</span>
-                      </div>
-                      <div className="p-2.5 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-center">
-                        <span className="text-[10px] font-mono text-[var(--text-dim)] uppercase block">Pool Util.</span>
-                        <span className="text-xs font-mono font-bold text-white">{Number(livePool.utilizationRate || 0).toFixed(1)}%</span>
-                      </div>
-                      <div className="p-2.5 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-center">
-                        <span className="text-[10px] font-mono text-[var(--text-dim)] uppercase block">Your Supplied</span>
-                        <span className="text-xs font-mono font-bold text-white">{userLenderBalance.toFixed(0)} FDX</span>
-                      </div>
-                      <div className="p-2.5 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-center">
-                        <span className="text-[10px] font-mono text-[var(--text-dim)] uppercase block">Vault Cap</span>
-                        <span className="text-xs font-mono font-bold text-white">50k FDX</span>
-                      </div>
-                    </div>
+                  if (!wallet.address) {
+                    isSupplyDisabled = true;
+                    supplyDisabledReason = 'Connect Web3 wallet to supply or withdraw vault liquidity.';
+                  } else if (supplyMode === 'deposit') {
+                    if (supplyTxStatus === 'awaiting-wallet' || supplyTxStatus === 'pending') {
+                      isSupplyDisabled = true;
+                      supplyDisabledReason = 'Deposit transaction awaiting block confirmation.';
+                    } else if (supplyVal <= 0) {
+                      isSupplyDisabled = true;
+                      supplyDisabledReason = 'Enter a deposit amount greater than zero.';
+                    }
+                  } else {
+                    if (isWithdrawing || withdrawTxStatus === 'awaiting-wallet') {
+                      isSupplyDisabled = true;
+                      supplyDisabledReason = 'Withdrawal transaction awaiting block confirmation.';
+                    } else if (userLenderBalance <= 0) {
+                      isSupplyDisabled = true;
+                      supplyDisabledReason = 'You currently have zero supplied capital deposited in this vault.';
+                    } else if (supplyVal <= 0) {
+                      isSupplyDisabled = true;
+                      supplyDisabledReason = 'Enter a withdrawal amount greater than zero.';
+                    } else if (supplyVal > userLenderBalance) {
+                      isSupplyDisabled = true;
+                      supplyDisabledReason = `Withdrawal exceeds your supplied capital (${userLenderBalance.toFixed(2)} FDX).`;
+                    }
+                  }
 
-                    {/* Mode Segmented Control: Deposit vs Withdraw */}
-                    <div className="grid grid-cols-2 p-1 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] mb-5">
-                      <button
-                        type="button"
-                        onClick={() => setSupplyMode('deposit')}
-                        className={`py-2 text-xs font-bold rounded-lg transition cursor-pointer ${
-                          supplyMode === 'deposit'
-                            ? 'bg-cyan-500 text-black shadow'
-                            : 'text-[var(--text-muted)] hover:text-white'
-                        }`}
-                      >
-                        Deposit Capital
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setSupplyMode('withdraw')}
-                        className={`py-2 text-xs font-bold rounded-lg transition cursor-pointer ${
-                          supplyMode === 'withdraw'
-                            ? 'bg-cyan-500 text-black shadow'
-                            : 'text-[var(--text-muted)] hover:text-white'
-                        }`}
-                      >
-                        Withdraw Capital
-                      </button>
-                    </div>
-
-                    {/* Pool Funding Progress Bar (Label & % ABOVE bar with 8px spacing) */}
-                    <div className="mb-6">
-                      <div className="flex justify-between items-center text-xs mb-2">
-                        <span className="portal-label">Pool Funding Progress</span>
-                        <span className="font-mono font-semibold text-white">
-                          {((Number(livePool.totalDeposits || 0) / 50000) * 100).toFixed(1)}% ({Number(livePool.totalDeposits || 0).toLocaleString()} / 50,000 FDX)
+                  return (
+                    <div id="supply-card" className="portal-card portal-card-gradient-cyan p-[36px] rounded-[20px] flex flex-col gap-[28px] h-full">
+                      {/* Section 1: Header */}
+                      <div className="flex justify-between items-center gap-4">
+                        <div>
+                          <h2 className="text-[28px] font-semibold text-white leading-[1.2] tracking-normal">
+                            Supply Liquidity Vaults
+                          </h2>
+                          <p className="text-[15px] text-[var(--text-muted)] leading-[1.5] mt-2">
+                            Shared protocol vault for uncollateralized lending yield.
+                          </p>
+                        </div>
+                        <span className="h-[32px] px-[14px] rounded-full text-xs font-semibold bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 flex items-center justify-center shrink-0">
+                          7.80% APY
                         </span>
                       </div>
-                      <div className="w-full h-2 bg-[var(--surface-2)] rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-gradient-to-r from-emerald-400 to-cyan-400 rounded-full transition-all duration-500"
-                          style={{ width: `${Math.min(100, Math.max(2, (Number(livePool.totalDeposits || 0) / 50000) * 100))}%` }}
-                        />
-                      </div>
-                    </div>
 
-                    {supplyMode === 'deposit' ? (
-                      <>
-                        {/* Deposit Amount Input (64px height, 32px font) */}
-                        <div className="mb-6">
-                          <div className="flex justify-between items-center mb-2">
-                            <label className="portal-label">Deposit Capital ({depositAsset})</label>
-                            <div className="flex items-center gap-2">
-                              <span className="text-xs font-mono text-[var(--text-dim)]">
-                                Balance: {userFdxBalance !== null ? Number(userFdxBalance).toFixed(2) : '--'} {depositAsset}
-                              </span>
-                              {isAdmin && (
-                                <button
-                                  type="button"
-                                  onClick={handleMintTokens}
-                                  disabled={isMinting}
-                                  className="px-2 py-0.5 text-[10px] font-bold rounded bg-cyan-500/20 text-cyan-300 hover:bg-cyan-500/30 border border-cyan-500/40 transition disabled:opacity-50 cursor-pointer"
-                                  title="Mint test tokens directly to your wallet"
-                                >
-                                  {isMinting ? 'Minting...' : '+ Mint Test Tokens'}
-                                </button>
-                              )}
-                            </div>
-                          </div>
-                          <div className="h-16 px-4 rounded-2xl bg-[var(--surface-2)] border border-[var(--border)] flex items-center justify-between gap-3 focus-within:border-cyan-400/60 transition">
-                            <input
-                              type="number"
-                              min="0"
-                              step="any"
-                              value={supplyAmount}
-                              onChange={(e) => {
-                                const val = e.target.value;
-                                if (val === '' || (!val.includes('-') && Number(val) >= 0)) {
-                                  setSupplyAmount(val);
+                      {/* Section 2: Key Facts Strip */}
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-[12px]">
+                        <div className="h-[76px] px-[16px] py-[14px] rounded-xl bg-[var(--surface-2)] border border-[var(--border)] flex flex-col justify-between">
+                          <span className="text-[12px] uppercase text-[var(--text-muted)] font-medium tracking-wider">Supply APY</span>
+                          <span className="text-[18px] font-semibold text-cyan-300 leading-none">7.80%</span>
+                        </div>
+                        <div className="h-[76px] px-[16px] py-[14px] rounded-xl bg-[var(--surface-2)] border border-[var(--border)] flex flex-col justify-between">
+                          <span className="text-[12px] uppercase text-[var(--text-muted)] font-medium tracking-wider">Pool Util.</span>
+                          <span className="text-[18px] font-semibold text-white leading-none">{Number(livePool.utilizationRate || 0).toFixed(1)}%</span>
+                        </div>
+                        <div className="h-[76px] px-[16px] py-[14px] rounded-xl bg-[var(--surface-2)] border border-[var(--border)] flex flex-col justify-between">
+                          <span className="text-[12px] uppercase text-[var(--text-muted)] font-medium tracking-wider">Your Supplied</span>
+                          <span className="text-[18px] font-semibold text-white leading-none">{userLenderBalance.toFixed(0)} FDX</span>
+                        </div>
+                        <div className="h-[76px] px-[16px] py-[14px] rounded-xl bg-[var(--surface-2)] border border-[var(--border)] flex flex-col justify-between">
+                          <span className="text-[12px] uppercase text-[var(--text-muted)] font-medium tracking-wider">Vault Cap</span>
+                          <span className="text-[18px] font-semibold text-white leading-none">50k FDX</span>
+                        </div>
+                      </div>
+
+                      {/* Section 3: Amount Input */}
+                      <div className="flex flex-col">
+                        <div className="flex justify-between items-center text-[13px] mb-[10px]">
+                          <label className="text-[13px] font-medium text-[var(--text)]">
+                            {supplyMode === 'deposit' ? `Deposit Capital (${depositAsset})` : `Withdraw Capital (${depositAsset})`}
+                          </label>
+                          <span className="text-[13px] text-[var(--text-muted)]">
+                            {supplyMode === 'deposit'
+                              ? `Balance: ${userFdxBalance !== null ? Number(userFdxBalance).toFixed(2) : '--'} ${depositAsset}`
+                              : `Available: ${userLenderBalance.toFixed(2)} ${depositAsset}`}
+                          </span>
+                        </div>
+                        <div className="h-[80px] px-[20px] rounded-2xl bg-[var(--surface-2)] border border-[var(--border)] flex items-center justify-between gap-3 focus-within:border-cyan-400/60 transition">
+                          <input
+                            type="number"
+                            min="0"
+                            step="any"
+                            value={supplyMode === 'deposit' ? supplyAmount : withdrawAmount}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              if (val === '' || (!val.includes('-') && Number(val) >= 0)) {
+                                if (supplyMode === 'deposit') setSupplyAmount(val);
+                                else setWithdrawAmount(val);
+                              }
+                            }}
+                            className="bg-transparent text-[32px] font-semibold text-white outline-none w-full min-w-0"
+                            placeholder="0"
+                          />
+                          <div className="flex items-center gap-[12px] shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (supplyMode === 'deposit') {
+                                  setSupplyAmount(Math.floor(userFdxBalance || 100).toString());
+                                } else {
+                                  setWithdrawAmount(userLenderBalance.toString());
                                 }
                               }}
-                              className="bg-transparent font-mono text-[32px] font-extrabold text-white outline-none w-full min-w-0"
-                              placeholder="0.00"
-                            />
-                            <div className="flex items-center gap-2 shrink-0">
-                              <button
-                                type="button"
-                                onClick={() => setSupplyAmount(Math.floor(userFdxBalance || 100).toString())}
-                                className="px-2.5 py-1 text-xs font-bold text-cyan-400 bg-cyan-500/10 hover:bg-cyan-500/20 rounded-lg border border-cyan-500/30 uppercase cursor-pointer transition"
-                              >
-                                Max
-                              </button>
-                              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[var(--surface)] border border-[var(--border)] font-bold text-white text-sm">
-                                <span className="w-2 h-2 rounded-full bg-cyan-400" />
-                                <span>{depositAsset}</span>
-                              </div>
+                              className="h-[36px] px-3 text-xs font-bold text-cyan-400 bg-cyan-500/10 hover:bg-cyan-500/20 rounded-lg border border-cyan-500/30 uppercase cursor-pointer transition flex items-center justify-center"
+                            >
+                              Max
+                            </button>
+                            <div className="h-[36px] flex items-center gap-2 px-3 rounded-xl bg-[var(--surface)] border border-[var(--border)] font-semibold text-white text-sm">
+                              <span className="w-2 h-2 rounded-full bg-cyan-400" />
+                              <span>{depositAsset}</span>
                             </div>
                           </div>
                         </div>
-                      </>
-                    ) : (
-                      <>
-                        {/* Withdraw Input */}
-                        <div className="mb-6">
-                          <div className="flex justify-between items-center mb-2">
-                            <label className="portal-label">Withdraw Capital ({depositAsset})</label>
-                            <span className="text-xs font-mono text-[var(--text-dim)]">
-                              Available: {userLenderBalance.toFixed(2)} {depositAsset}
+
+                        {/* Mint test tokens button under input (admin-only) */}
+                        {isAdmin && (
+                          <div className="mt-2 flex justify-end">
+                            <button
+                              type="button"
+                              onClick={handleMintTokens}
+                              disabled={isMinting}
+                              className="text-[12px] font-semibold text-cyan-400 hover:text-cyan-300 transition cursor-pointer disabled:opacity-50"
+                            >
+                              {isMinting ? 'Minting test tokens...' : '+ Mint Test Tokens (Admin)'}
+                            </button>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Section 4: Mode & Pool Funding Progress */}
+                      <div className="flex flex-col gap-4">
+                        <div className="h-[48px] grid grid-cols-2 p-1 rounded-xl bg-[var(--surface-2)] border border-[var(--border)]">
+                          <button
+                            type="button"
+                            onClick={() => setSupplyMode('deposit')}
+                            className={`h-full text-xs font-bold rounded-lg transition cursor-pointer flex items-center justify-center ${
+                              supplyMode === 'deposit'
+                                ? 'bg-cyan-500 text-black shadow'
+                                : 'text-[var(--text-muted)] hover:text-white'
+                            }`}
+                          >
+                            Deposit Capital
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setSupplyMode('withdraw')}
+                            className={`h-full text-xs font-bold rounded-lg transition cursor-pointer flex items-center justify-center ${
+                              supplyMode === 'withdraw'
+                                ? 'bg-cyan-500 text-black shadow'
+                                : 'text-[var(--text-muted)] hover:text-white'
+                            }`}
+                          >
+                            Withdraw Capital
+                          </button>
+                        </div>
+
+                        <div>
+                          <div className="flex justify-between items-center text-[13px] mb-[10px]">
+                            <span className="text-[var(--text-muted)]">Pool Funding Progress</span>
+                            <span className="font-semibold text-white">
+                              {((Number(livePool.totalDeposits || 0) / 50000) * 100).toFixed(1)}% ({Number(livePool.totalDeposits || 0).toLocaleString()} / 50,000 FDX)
                             </span>
                           </div>
-                          <div className="h-16 px-4 rounded-2xl bg-[var(--surface-2)] border border-[var(--border)] flex items-center justify-between gap-3 focus-within:border-cyan-400/60 transition">
-                            <input
-                              type="number"
-                              min="0"
-                              step="any"
-                              value={withdrawAmount}
-                              onChange={(e) => {
-                                const val = e.target.value;
-                                if (val === '' || (!val.includes('-') && Number(val) >= 0)) {
-                                  setWithdrawAmount(val);
-                                }
-                              }}
-                              className="bg-transparent font-mono text-[32px] font-extrabold text-white outline-none w-full min-w-0"
-                              placeholder="0.00"
+                          <div className="w-full h-[8px] bg-[var(--surface-2)] rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-gradient-to-r from-emerald-400 to-cyan-400 rounded-full transition-all duration-500"
+                              style={{ width: `${Math.min(100, Math.max(2, (Number(livePool.totalDeposits || 0) / 50000) * 100))}%` }}
                             />
-                            <div className="flex items-center gap-2 shrink-0">
-                              <button
-                                type="button"
-                                onClick={() => setWithdrawAmount(userLenderBalance.toString())}
-                                className="px-2.5 py-1 text-xs font-bold text-cyan-400 bg-cyan-500/10 hover:bg-cyan-500/20 rounded-lg border border-cyan-500/30 uppercase cursor-pointer transition"
-                              >
-                                Max
-                              </button>
-                              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[var(--surface)] border border-[var(--border)] font-bold text-white text-sm">
-                                <span className="w-2 h-2 rounded-full bg-cyan-400" />
-                                <span>{depositAsset}</span>
-                              </div>
-                            </div>
                           </div>
                         </div>
-                      </>
-                    )}
+                      </div>
 
-                    {/* Summary Panel (20px padding, 14px row spacing) */}
-                    <div className="p-5 rounded-2xl bg-[var(--surface-2)] border border-[var(--border)] flex flex-col gap-3.5 text-xs text-[var(--text-muted)]">
-                      <div className="flex justify-between items-center">
-                        <span>Interest Curve</span>
-                        <span className="font-semibold text-white">Algorithmic continuous utilization model</span>
+                      {/* Section 5: Summary Panel */}
+                      <div className="bg-[var(--surface-2)] border border-[var(--border)] rounded-[14px] px-[20px] py-[8px] flex flex-col text-[14px]">
+                        <div className="h-[48px] flex justify-between items-center border-b border-[var(--border)]/60">
+                          <span className="text-[var(--text-muted)]">Interest Curve</span>
+                          <span className="font-semibold text-white">Algorithmic continuous utilization model</span>
+                        </div>
+                        <div className="h-[48px] flex justify-between items-center border-b border-[var(--border)]/60">
+                          <span className="text-[var(--text-muted)]">Withdrawal Liquidity</span>
+                          <span className="font-semibold text-white">Instant on unborrowed pool balance</span>
+                        </div>
+                        <div className="h-[48px] flex justify-between items-center border-b border-[var(--border)]/60">
+                          <span className="text-[var(--text-muted)]">Target Network</span>
+                          <span className="h-[28px] px-3 rounded-full text-xs font-semibold bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 flex items-center justify-center">
+                            {activeNetConfig?.name || 'Active Chain'} ({currentChainId})
+                          </span>
+                        </div>
+                        <div className="h-[48px] flex justify-between items-center">
+                          <span className="text-[var(--text-muted)]">Est. Annual Yield</span>
+                          <span className="font-semibold text-cyan-300">
+                            +{((Number(supplyMode === 'deposit' ? supplyAmount : userLenderBalance) || 0) * 0.078).toFixed(2)} FDX/yr
+                          </span>
+                        </div>
                       </div>
-                      <div className="flex justify-between items-center">
-                        <span>Withdrawal Liquidity</span>
-                        <span className="font-semibold text-white">Instant on unborrowed pool balance</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span>Target Network</span>
-                        <span className="portal-badge portal-badge-cyan text-[11px]">{activeNetConfig?.name || 'Active Chain'} ({currentChainId})</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span>Est. Annual Yield</span>
-                        <span className="font-mono font-bold text-cyan-300">
-                          +{((Number(supplyMode === 'deposit' ? supplyAmount : userLenderBalance) || 0) * 0.078).toFixed(2)} FDX/yr
+
+                      {/* Section 6: Vault Safety Note (Rhythm & height matching borrow chips) */}
+                      <div className="flex items-center justify-center">
+                        <span className="px-4 py-1.5 rounded-lg bg-[var(--surface-2)] border border-[var(--border)] text-[13px] text-[var(--text-muted)] text-center font-normal">
+                          Vault principal backed by algorithmic credit reserves &amp; on-chain telemetry
                         </span>
                       </div>
-                    </div>
-                  </div>
 
-                  {/* Primary Action Button (Aligned at bottom, 56px height) */}
-                  <div className="mt-6 pt-2">
-                    {supplyMode === 'deposit' ? (
-                      <button
-                        onClick={handleExecuteSupply}
-                        disabled={supplyTxStatus === 'awaiting-wallet' || supplyTxStatus === 'pending' || Number(supplyAmount) <= 0}
-                        className="portal-btn-cyan w-full h-14 text-base font-bold disabled:opacity-60 disabled:cursor-not-allowed"
-                      >
-                        {supplyTxStatus === 'awaiting-wallet' && 'Confirm in Wallet...'}
-                        {supplyTxStatus === 'pending' && 'Depositing on-chain...'}
-                        {supplyTxStatus === 'confirmed' && 'Deposited Successfully!'}
-                        {supplyTxStatus === 'failed' && 'Deposit Failed (Retry)'}
-                        {supplyTxStatus === 'ready' && `Deposit & Earn ${supplyAsset} Yield`}
-                      </button>
-                    ) : (
-                      <button
-                        onClick={handleExecuteWithdraw}
-                        disabled={isWithdrawing || withdrawTxStatus === 'awaiting-wallet' || userLenderBalance <= 0 || Number(withdrawAmount) <= 0}
-                        className="portal-btn-secondary w-full h-14 text-base font-bold border-cyan-500/40 text-cyan-300 hover:bg-cyan-500/10 disabled:opacity-50"
-                      >
-                        {isWithdrawing ? 'Withdrawing on-chain...' : `Withdraw Capital (${withdrawAmount || '0'} FDX)`}
-                      </button>
-                    )}
-                  </div>
-                </div>
+                      {/* Section 7: Primary Action Button pinned to bottom */}
+                      <div className="mt-auto flex flex-col gap-2">
+                        {isSupplyDisabled && supplyDisabledReason && (
+                          <div className="text-center text-[13px] text-[var(--text-muted)]">
+                            {supplyDisabledReason}
+                          </div>
+                        )}
+                        {supplyMode === 'deposit' ? (
+                          <button
+                            onClick={handleExecuteSupply}
+                            disabled={isSupplyDisabled}
+                            className="portal-btn-cyan w-full h-[56px] rounded-[16px] text-[17px] font-semibold disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer transition flex items-center justify-center"
+                          >
+                            {supplyTxStatus === 'awaiting-wallet' && 'Confirm in Wallet...'}
+                            {supplyTxStatus === 'pending' && 'Depositing on-chain...'}
+                            {supplyTxStatus === 'confirmed' && 'Deposited Successfully!'}
+                            {supplyTxStatus === 'failed' && 'Deposit Failed (Retry)'}
+                            {supplyTxStatus === 'ready' && `Deposit & Earn ${supplyAsset} Yield`}
+                          </button>
+                        ) : (
+                          <button
+                            onClick={handleExecuteWithdraw}
+                            disabled={isSupplyDisabled}
+                            className="portal-btn-secondary w-full h-[56px] rounded-[16px] text-[17px] font-semibold border-cyan-500/40 text-cyan-300 hover:bg-cyan-500/10 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer transition flex items-center justify-center"
+                          >
+                            {isWithdrawing ? 'Withdrawing on-chain...' : `Withdraw Capital (${withdrawAmount || '0'} FDX)`}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
 
               {/* Row 3: Active Positions Table */}
@@ -3174,17 +3215,17 @@ export default function FundryxAppPortal({
                 </div>
               </div>
 
-              {/* Centered Swap Container: Max-Width 560px */}
-              <div className="max-w-[560px] mx-auto w-full flex flex-col gap-6">
+              {/* Two-Column Swap Workspace filling max-w-[1280px] */}
+              <div className="w-full max-w-[1280px] mx-auto flex flex-col gap-8">
 
-                {/* Centered Segmented Tabs: 44px High */}
-                <div className="grid grid-cols-3 p-1 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] h-11 w-full">
+                {/* Full-Width Segmented Tabs: 52px High */}
+                <div className="grid grid-cols-3 p-1 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] h-[52px] w-full">
                   <button
                     type="button"
                     onClick={() => setSwapSubTab('same-chain')}
-                    className={`text-xs font-bold rounded-lg transition cursor-pointer flex items-center justify-center ${
+                    className={`h-full text-sm font-semibold rounded-lg transition cursor-pointer flex items-center justify-center ${
                       swapSubTab === 'same-chain'
-                        ? 'bg-purple-600 text-white shadow'
+                        ? 'bg-purple-600 text-white shadow-md'
                         : 'text-[var(--text-muted)] hover:text-white'
                     }`}
                   >
@@ -3193,21 +3234,21 @@ export default function FundryxAppPortal({
                   <button
                     type="button"
                     onClick={() => setSwapSubTab('cross-chain')}
-                    className={`text-xs font-bold rounded-lg transition cursor-pointer flex items-center justify-center gap-1.5 ${
+                    className={`h-full text-sm font-semibold rounded-lg transition cursor-pointer flex items-center justify-center gap-2 ${
                       swapSubTab === 'cross-chain'
-                        ? 'bg-purple-600 text-white shadow'
+                        ? 'bg-purple-600 text-white shadow-md'
                         : 'text-[var(--text-muted)] hover:text-white'
                     }`}
                   >
                     <span>Cross-Chain</span>
-                    <span className="px-1.5 py-0.5 rounded text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/30">Staging</span>
+                    <span className="px-2 py-0.5 rounded text-[11px] font-mono bg-amber-500/20 text-amber-300 border border-amber-500/30">Staging</span>
                   </button>
                   <button
                     type="button"
                     onClick={() => setSwapSubTab('pool')}
-                    className={`text-xs font-bold rounded-lg transition cursor-pointer flex items-center justify-center ${
+                    className={`h-full text-sm font-semibold rounded-lg transition cursor-pointer flex items-center justify-center ${
                       swapSubTab === 'pool'
-                        ? 'bg-purple-600 text-white shadow'
+                        ? 'bg-purple-600 text-white shadow-md'
                         : 'text-[var(--text-muted)] hover:text-white'
                     }`}
                   >
@@ -3215,312 +3256,346 @@ export default function FundryxAppPortal({
                   </button>
                 </div>
 
-                {swapSubTab === 'same-chain' && (
-                  <div className="flex flex-col gap-6 w-full">
-                    {/* Main Swap Card: Max-Width 560px, 32px Padding, Violet Gradient Border */}
-                    <div className="portal-card portal-card-gradient-violet p-8 max-w-[560px] w-full">
-                      {/* Card Header: Trade Assets on Left, 36px Slippage Pills on Right */}
-                      <div className="flex justify-between items-center mb-6">
-                        <div className="flex flex-col">
-                          <span className="font-bold text-white text-lg">Trade Assets</span>
-                          <span className="text-xs text-[var(--text-dim)] font-mono">Constant Product (x · y = k)</span>
+                {swapSubTab === 'same-chain' && (() => {
+                  const numIn = Number(swapAmount) || 0;
+                  const resIn = swapFrom === 'FDX' ? pairReserves.fdx : (pairReserves.wrapped || pairReserves.wpol || 0);
+                  const resOut = swapFrom === 'FDX' ? (pairReserves.wrapped || pairReserves.wpol || 0) : pairReserves.fdx;
+                  const hasReserves = resIn > 0 && resOut > 0;
+
+                  const estOut = (hasReserves && numIn > 0)
+                    ? ((numIn * 997 * resOut) / (resIn * 1000 + numIn * 997))
+                    : 0;
+
+                  const minOut = estOut > 0 ? (estOut * (10000 - slippageBps) / 10000) : 0;
+                  const priceImpact = (hasReserves && numIn > 0) ? ((numIn / (resIn + numIn)) * 100) : 0;
+
+                  return (
+                    <div className="grid grid-cols-1 min-[1100px]:grid-cols-12 gap-8 items-start w-full">
+                      {/* LEFT Column (about 60%): Swap Card */}
+                      <div className="min-[1100px]:col-span-7 portal-card portal-card-gradient-violet p-[32px] rounded-[20px] flex flex-col gap-[20px] w-full">
+                        {/* Header Row: Trade Assets & Slippage Pills */}
+                        <div className="flex justify-between items-center gap-4">
+                          <div className="flex flex-col gap-[6px]">
+                            <span className="text-[22px] font-semibold text-white leading-tight">Trade Assets</span>
+                            <span className="text-[13px] text-[var(--text-muted)] leading-none">Constant Product (x · y = k)</span>
+                          </div>
+
+                          <div className="flex items-center gap-1.5 p-1 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] shrink-0">
+                            {[
+                              { label: '0.1%', bps: 10 },
+                              { label: '0.5%', bps: 50 },
+                              { label: '1.0%', bps: 100 },
+                            ].map((s) => (
+                              <button
+                                key={s.bps}
+                                type="button"
+                                onClick={() => setSlippageBps(s.bps)}
+                                className={`h-[36px] px-3 min-w-[46px] rounded-lg text-xs font-semibold transition cursor-pointer flex items-center justify-center ${
+                                  slippageBps === s.bps
+                                    ? 'bg-purple-600 text-white shadow-sm'
+                                    : 'text-[var(--text-muted)] hover:text-white hover:bg-[var(--surface)]'
+                                }`}
+                              >
+                                {s.label}
+                              </button>
+                            ))}
+                          </div>
                         </div>
 
-                        {/* Slippage Selector as three equal 36px pills */}
-                        <div className="flex items-center gap-1.5 p-1 rounded-xl bg-[var(--surface-2)] border border-[var(--border)]">
-                          {[
-                            { label: '0.1%', bps: 10 },
-                            { label: '0.5%', bps: 50 },
-                            { label: '1.0%', bps: 100 }
-                          ].map((s) => (
-                            <button
-                              key={s.bps}
-                              type="button"
-                              onClick={() => setSlippageBps(s.bps)}
-                              className={`h-9 px-3 min-w-[42px] rounded-lg text-xs font-mono font-bold transition cursor-pointer flex items-center justify-center ${
-                                slippageBps === s.bps
-                                  ? 'bg-purple-500 text-white shadow'
-                                  : 'text-[var(--text-muted)] hover:text-white hover:bg-[var(--surface)]'
-                              }`}
-                            >
-                              {s.label}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* You Pay Container: 20px padding, 28px number, 32px pct chips */}
-                      <div className="p-5 rounded-2xl bg-[var(--surface-2)] border border-[var(--border)] focus-within:border-purple-500/60 transition">
-                        <div className="flex justify-between items-center mb-2">
-                          <span className="portal-label">You Pay</span>
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs font-mono text-[var(--text-dim)]">
+                        {/* "You Pay" Box: padding 20px, radius 16px */}
+                        <div className="p-[20px] rounded-[16px] bg-[var(--surface-2)] border border-[var(--border)] focus-within:border-purple-500/60 transition">
+                          {/* Row 1: label & balance */}
+                          <div className="flex justify-between items-center text-[13px] text-[var(--text-muted)]">
+                            <span className="font-medium text-[var(--text)]">You Pay</span>
+                            <span>
                               Balance: {swapFrom === 'FDX'
                                 ? (userFdxBalance !== null ? Number(userFdxBalance).toFixed(2) : '--')
                                 : (userWrappedBalance !== null ? Number(userWrappedBalance).toFixed(4) : '0.0000')} {swapFrom}
                             </span>
-                            {swapFrom === 'FDX' && isAdmin && (
-                              <button
-                                type="button"
-                                onClick={handleMintTokens}
-                                disabled={isMinting}
-                                className="px-2 py-0.5 text-[10px] font-bold rounded bg-purple-500/20 text-purple-300 hover:bg-purple-500/30 border border-purple-500/40 transition cursor-pointer disabled:opacity-50"
-                                title="Mint 10,000 FDX test tokens"
-                              >
-                                {isMinting ? 'Minting...' : '+ Mint 10k'}
-                              </button>
-                            )}
                           </div>
-                        </div>
 
-                        <div className="flex justify-between items-center gap-4 mb-3">
-                          <input
-                            type="number"
-                            value={swapAmount}
-                            onChange={(e) => setSwapAmount(e.target.value)}
-                            className="bg-transparent font-mono text-[28px] font-bold text-white outline-none w-full min-w-0"
-                            placeholder="0.00"
-                          />
-                          <div className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-[var(--surface)] border border-[var(--border)] font-bold text-white text-sm shrink-0">
-                            <span className="w-2.5 h-2.5 rounded-full bg-purple-400" />
-                            <span>{swapFrom}</span>
-                          </div>
-                        </div>
-
-                        {/* Quick Percent Buttons (At least 32px tall) */}
-                        <div className="flex justify-end gap-1.5 pt-1 border-t border-[var(--border)]/60">
-                          {[25, 50, 75, 100].map((pct) => (
-                            <button
-                              key={pct}
-                              type="button"
-                              onClick={() => {
-                                const bal = swapFrom === 'FDX'
-                                  ? (userFdxBalance || 100)
-                                  : (Number(userWrappedBalance) > 0 ? userWrappedBalance : (userPolBalance || 5));
-                                setSwapAmount((Number(bal) * (pct / 100)).toFixed(pct === 100 ? 2 : 2));
-                              }}
-                              className="h-8 px-3 rounded-lg text-xs font-mono font-semibold text-[var(--text-muted)] hover:text-white bg-[var(--surface)] border border-[var(--border)] hover:border-purple-500/40 transition cursor-pointer flex items-center justify-center"
-                            >
-                              {pct === 100 ? 'MAX' : `${pct}%`}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Centered Circular Swap-Arrow Button */}
-                      <div className="flex justify-center -my-3.5 relative z-10">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const prevFrom = swapFrom;
-                            setSwapFrom(swapTo);
-                            setSwapTo(prevFrom);
-                          }}
-                          className="w-10 h-10 rounded-full bg-[var(--surface-3)] border border-purple-500/40 text-purple-300 hover:text-white hover:scale-110 transition shadow-lg flex items-center justify-center cursor-pointer"
-                          title="Invert swap pair"
-                        >
-                          <ArrowLeftRight size={16} />
-                        </button>
-                      </div>
-
-                      {/* You Receive Container: 20px padding, 28px number */}
-                      <div className="p-5 rounded-2xl bg-[var(--surface-2)] border border-[var(--border)]">
-                        <div className="flex justify-between items-center mb-2">
-                          <span className="portal-label">You Receive (Estimated)</span>
-                          <span className="text-xs font-mono text-[var(--text-dim)]">
-                            Balance: {swapTo === 'FDX'
-                              ? (userFdxBalance !== null ? Number(userFdxBalance).toFixed(2) : '--')
-                              : (userWrappedBalance !== null ? Number(userWrappedBalance).toFixed(4) : '0.0000')} {swapTo}
-                          </span>
-                        </div>
-
-                        <div className="flex justify-between items-center gap-4">
-                          <span className="font-mono text-[28px] font-bold text-emerald-400 truncate">
-                            {(() => {
-                              const numIn = Number(swapAmount) || 0;
-                              const resIn = swapFrom === 'FDX' ? pairReserves.fdx : (pairReserves.wrapped || pairReserves.wpol);
-                              const resOut = swapFrom === 'FDX' ? (pairReserves.wrapped || pairReserves.wpol) : pairReserves.fdx;
-                              if (!resIn || !resOut || numIn <= 0) return '0.0000';
-                              const estOut = (numIn * 997 * resOut) / (resIn * 1000 + numIn * 997);
-                              return estOut.toFixed(4);
-                            })()}
-                          </span>
-                          <div className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-[var(--surface)] border border-[var(--border)] font-bold text-white text-sm shrink-0">
-                            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
-                            <span>{swapTo}</span>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Rate & Protection Info Box: 14px row spacing */}
-                      <div className="p-5 rounded-2xl bg-[var(--surface-2)] border border-[var(--border)] flex flex-col gap-3.5 text-xs text-[var(--text-muted)] my-6">
-                        <div className="flex justify-between items-center">
-                          <span>Exchange Rate</span>
-                          <span className="font-mono text-white font-semibold">
-                            {pairReserves.fdx > 0 && (pairReserves.wrapped > 0 || pairReserves.wpol > 0)
-                              ? (swapFrom === 'FDX'
-                                ? `1 FDX = ${((pairReserves.wrapped || pairReserves.wpol) / pairReserves.fdx).toFixed(4)} ${activeWrappedSymbol}`
-                                : `1 ${activeWrappedSymbol} = ${(pairReserves.fdx / (pairReserves.wrapped || pairReserves.wpol)).toFixed(4)} FDX`)
-                              : 'Pool Initializing'}
-                          </span>
-                        </div>
-                        <div className="flex justify-between items-center">
-                          <span>Minimum Received ({((10000 - slippageBps) / 100).toFixed(1)}%)</span>
-                          <span className="font-mono text-white">
-                            {(() => {
-                              const numIn = Number(swapAmount) || 0;
-                              const resIn = swapFrom === 'FDX' ? pairReserves.fdx : (pairReserves.wrapped || pairReserves.wpol);
-                              const resOut = swapFrom === 'FDX' ? (pairReserves.wrapped || pairReserves.wpol) : pairReserves.fdx;
-                              if (!resIn || !resOut || numIn <= 0) return '0.0000';
-                              const estOut = (numIn * 997 * resOut) / (resIn * 1000 + numIn * 997);
-                              return (estOut * (10000 - slippageBps) / 10000).toFixed(4);
-                            })()} {swapTo}
-                          </span>
-                        </div>
-                        <div className="flex justify-between items-center">
-                          <span>Price Impact</span>
-                          <span className="font-mono text-emerald-400">
-                            {(() => {
-                              const numIn = Number(swapAmount) || 0;
-                              const resIn = swapFrom === 'FDX' ? pairReserves.fdx : (pairReserves.wrapped || pairReserves.wpol);
-                              if (!resIn || numIn <= 0) return '< 0.01%';
-                              const impact = (numIn / (resIn + numIn)) * 100;
-                              return `${impact.toFixed(2)}%`;
-                            })()}
-                          </span>
-                        </div>
-                        <div className="flex justify-between items-center">
-                          <span>Execution Route</span>
-                          <span className="font-mono text-[var(--text-dim)] truncate max-w-[200px]" title={activeRouterAddress}>
-                            MockSwapRouter ({activeRouterAddress ? `${activeRouterAddress.slice(0, 6)}...${activeRouterAddress.slice(-4)}` : 'Not Deployed'})
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Router Deployment Notice If Missing */}
-                      {!isRouterDeployed && (
-                        <div className="p-4 mb-6 rounded-2xl bg-purple-500/10 border border-purple-500/30 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
-                          <div>
-                            <span className="font-bold text-white block">MockSwapRouter Not Deployed on {activeNetConfig?.name}</span>
-                            <span className="text-[var(--text-muted)]">Deploy the constant-product AMM contract with 1 click to activate same-chain trading.</span>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={handleDeployRouter}
-                            disabled={isDeployingRouter || !wallet.signer}
-                            className="px-3.5 py-2 rounded-lg bg-purple-500 hover:bg-purple-400 text-black font-bold text-xs shrink-0 cursor-pointer transition disabled:opacity-50"
-                          >
-                            {isDeployingRouter ? 'Deploying...' : `Deploy Router (1-Click)`}
-                          </button>
-                        </div>
-                      )}
-
-                      {/* Zero Pool Liquidity Alert: Proper amber alert box with icon and action button inside */}
-                      {isRouterDeployed && (pairReserves.fdx === 0 || (!pairReserves.wrapped && !pairReserves.wpol)) && (
-                        <div className="p-4 mb-6 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between gap-4 text-xs">
-                          <div className="flex items-center gap-3 min-w-0">
-                            <AlertTriangle size={20} className="text-amber-400 shrink-0" />
-                            <div className="flex flex-col gap-0.5 min-w-0">
-                              <span className="font-bold text-amber-300">AMM Pool Has Zero Liquidity</span>
-                              <span className="text-[var(--text-muted)] text-[11px] truncate">Supply 10 FDX + 10 {activeWrappedSymbol} to initialize pool</span>
+                          {/* Row 2: amount & token chip */}
+                          <div className="flex justify-between items-center gap-4 mt-[12px]">
+                            <input
+                              type="number"
+                              value={swapAmount}
+                              onChange={(e) => setSwapAmount(e.target.value)}
+                              className="bg-transparent text-[32px] font-semibold text-white outline-none w-full min-w-0"
+                              placeholder="0.00"
+                            />
+                            <div className="h-[40px] flex items-center gap-2 px-3.5 rounded-xl bg-[var(--surface)] border border-[var(--border)] font-semibold text-white text-sm shrink-0">
+                              <span className="w-2.5 h-2.5 rounded-full bg-purple-400" />
+                              <span>{swapFrom}</span>
                             </div>
                           </div>
+
+                          {/* Row 3: quick pct pills */}
+                          <div className="flex justify-end gap-[8px] mt-[12px] pt-3 border-t border-[var(--border)]/60">
+                            {[25, 50, 75, 100].map((pct) => (
+                              <button
+                                key={pct}
+                                type="button"
+                                onClick={() => {
+                                  const bal = swapFrom === 'FDX'
+                                    ? (userFdxBalance || 100)
+                                    : (Number(userWrappedBalance) > 0 ? userWrappedBalance : (userPolBalance || 5));
+                                  setSwapAmount((Number(bal) * (pct / 100)).toFixed(pct === 100 ? 2 : 2));
+                                }}
+                                className="h-[34px] px-3.5 rounded-lg text-xs font-semibold text-[var(--text-muted)] hover:text-white bg-[var(--surface)] border border-[var(--border)] hover:border-purple-500/40 transition cursor-pointer flex items-center justify-center"
+                              >
+                                {pct === 100 ? 'MAX' : `${pct}%`}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Mint test tokens button outside the box */}
+                        {swapFrom === 'FDX' && isAdmin && (
+                          <div className="flex justify-end -mt-2">
+                            <button
+                              type="button"
+                              onClick={handleMintTokens}
+                              disabled={isMinting}
+                              className="text-[12px] font-semibold text-purple-400 hover:text-purple-300 transition cursor-pointer disabled:opacity-50"
+                              title="Mint 10,000 FDX test tokens"
+                            >
+                              {isMinting ? 'Minting test tokens...' : '+ Mint 10k FDX (Admin)'}
+                            </button>
+                          </div>
+                        )}
+
+                        {/* Swap Arrow Button: 44px circle overlapping by 22px */}
+                        <div className="flex justify-center -my-[22px] relative z-10">
                           <button
                             type="button"
-                            onClick={handleSeedLiquidity}
-                            disabled={isSeeding || !wallet.signer}
-                            className="px-3.5 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs shrink-0 cursor-pointer transition disabled:opacity-50"
+                            onClick={() => {
+                              const prevFrom = swapFrom;
+                              setSwapFrom(swapTo);
+                              setSwapTo(prevFrom);
+                            }}
+                            className="w-[44px] h-[44px] rounded-full bg-[var(--surface-3)] ring-4 ring-[#0d1512] border border-purple-500/40 text-purple-300 hover:text-white hover:scale-105 transition shadow-lg flex items-center justify-center cursor-pointer"
+                            title="Invert swap pair"
                           >
-                            {isSeeding ? 'Seeding...' : 'Seed Pool (1-Click)'}
+                            <ArrowLeftRight size={18} />
                           </button>
                         </div>
-                      )}
 
-                      {/* Swap Action Button: Real Full-Width 56px Button */}
-                      {!wallet.address ? (
-                        <button
-                          onClick={onConnect}
-                          className="portal-btn-primary w-full h-14 text-base font-bold"
-                        >
-                          Connect Web3 Wallet to Swap
-                        </button>
-                      ) : !isChainSupported ? (
-                        <button
-                          onClick={() => onSwitchNetwork?.(10143)}
-                          className="portal-btn-amber w-full h-14 text-base font-bold"
-                        >
-                          Switch to Supported Network to Swap
-                        </button>
-                      ) : !isRouterDeployed ? (
-                        <button
-                          onClick={handleDeployRouter}
-                          disabled={isDeployingRouter}
-                          className="portal-btn-purple w-full h-14 text-base font-bold cursor-pointer"
-                        >
-                          {isDeployingRouter ? 'Deploying MockSwapRouter...' : `Deploy MockSwapRouter to ${activeNetConfig?.shortName || 'Chain'} (1-Click)`}
-                        </button>
-                      ) : isRouterDeployed && (pairReserves.fdx === 0 || (!pairReserves.wrapped && !pairReserves.wpol)) ? (
-                        <button
-                          onClick={handleSeedLiquidity}
-                          disabled={isSeeding}
-                          className="portal-btn-amber w-full h-14 text-base font-bold cursor-pointer"
-                        >
-                          {isSeeding ? 'Seeding AMM Pool...' : `Initialize AMM Pool Liquidity (Seed 10 FDX + 10 ${activeWrappedSymbol})`}
-                        </button>
-                      ) : (
-                        <button
-                          onClick={handleExecuteSwap}
-                          disabled={swapTxStatus === 'awaiting-wallet' || swapTxStatus === 'pending' || Number(swapAmount) <= 0}
-                          className="portal-btn-purple w-full h-14 text-base font-bold disabled:opacity-50 cursor-pointer"
-                        >
-                          {swapTxStatus === 'awaiting-wallet' && 'Confirm in Wallet...'}
-                          {swapTxStatus === 'pending' && `Swapping on ${activeNetConfig?.shortName || activeNetConfig?.name || 'Chain'}...`}
-                          {swapTxStatus === 'confirmed' && 'Swap Confirmed!'}
-                          {swapTxStatus === 'failed' && 'Swap Failed (Retry)'}
-                          {swapTxStatus === 'ready' && `Swap ${swapFrom} for ${swapTo}`}
-                        </button>
-                      )}
-                    </div>
+                        {/* "You Receive" Box: identical structure and height to You Pay */}
+                        <div className="p-[20px] rounded-[16px] bg-[var(--surface-2)] border border-[var(--border)]">
+                          <div className="flex justify-between items-center text-[13px] text-[var(--text-muted)]">
+                            <span className="font-medium text-[var(--text)]">You Receive (Estimated)</span>
+                            <span>
+                              Balance: {swapTo === 'FDX'
+                                ? (userFdxBalance !== null ? Number(userFdxBalance).toFixed(2) : '--')
+                                : (userWrappedBalance !== null ? Number(userWrappedBalance).toFixed(4) : '0.0000')} {swapTo}
+                            </span>
+                          </div>
 
-                    {/* Expandable "How this swap works" Accordion (Centered at same 560px width below card) */}
-                    <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] overflow-hidden w-full">
-                      <button
-                        type="button"
-                        onClick={() => setIsHowSwapWorksOpen(!isHowSwapWorksOpen)}
-                        className="w-full p-4 flex justify-between items-center text-left text-sm font-semibold text-white hover:bg-[var(--surface)] transition cursor-pointer"
-                      >
-                        <div className="flex items-center gap-2">
-                          <Info size={16} className="text-purple-400" />
-                          <span>How this swap works</span>
-                        </div>
-                        <span className="text-xs text-[var(--text-dim)] font-mono">
-                          {isHowSwapWorksOpen ? 'Collapse ▲' : 'Learn More ▼'}
-                        </span>
-                      </button>
+                          <div className="flex justify-between items-center gap-4 mt-[12px]">
+                            <span className="text-[32px] font-semibold text-emerald-400 truncate">
+                              {estOut > 0 ? estOut.toFixed(4) : '0.0000'}
+                            </span>
+                            <div className="h-[40px] flex items-center gap-2 px-3.5 rounded-xl bg-[var(--surface)] border border-[var(--border)] font-semibold text-white text-sm shrink-0">
+                              <span className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
+                              <span>{swapTo}</span>
+                            </div>
+                          </div>
 
-                      {isHowSwapWorksOpen && (
-                        <div className="p-4 pt-2 border-t border-[var(--border)] flex flex-col gap-3 text-xs text-[var(--text-muted)] leading-relaxed animate-fade-in">
-                          <div>
-                            <strong className="text-white block mb-0.5">1. Architecture &amp; Execution Route</strong>
-                            Swaps execute atomically via the deployed <code className="text-purple-300">MockSwapRouter</code> contract on {activeNetConfig?.name || 'Active Chain'} (Chain ID {currentChainId}). No off-chain intermediaries or centralized order book matching is involved.
-                          </div>
-                          <div>
-                            <strong className="text-white block mb-0.5">2. Constant-Product AMM Pricing (x · y = k)</strong>
-                            The exchange rate is derived algorithmically from current pool reserves ({pairReserves.fdx.toFixed(2)} FDX / {(pairReserves.wrapped || pairReserves.wpol).toFixed(4)} {activeWrappedSymbol}). Each swap deposits tokens into one side and dispenses from the other according to the constant-product formula.
-                          </div>
-                          <div>
-                            <strong className="text-white block mb-0.5">3. Strict Slippage Protection</strong>
-                            Your transaction specifies a minimum output based on your selected slippage tolerance ({((10000 - slippageBps) / 100).toFixed(1)}%). If pool reserves shift before inclusion, the contract reverts immediately, preserving your full principal.
-                          </div>
-                          <div>
-                            <strong className="text-white block mb-0.5">4. Fee Model</strong>
-                            A 0.30% protocol LP fee is retained in the reserves to reward liquidity providers who supply capital to the pool.
+                          <div className="mt-[12px] pt-3 border-t border-[var(--border)]/60 text-[12px] text-[var(--text-dim)] flex justify-between items-center">
+                            <span>Algorithmic constant product output</span>
+                            <span className="text-emerald-400/90 font-medium">Min: {minOut.toFixed(4)} {swapTo}</span>
                           </div>
                         </div>
-                      )}
+
+                        {/* Details Panel: surface-2, padding 8px 20px, rows 44px high with dividers */}
+                        <div className="bg-[var(--surface-2)] border border-[var(--border)] rounded-[14px] px-[20px] py-[8px] flex flex-col text-[14px]">
+                          <div className="h-[44px] flex justify-between items-center border-b border-[var(--border)]/60">
+                            <span className="text-[var(--text-muted)]">Exchange Rate</span>
+                            <span className="font-semibold text-white">
+                              {hasReserves
+                                ? (swapFrom === 'FDX'
+                                  ? `1 FDX = ${(resOut / resIn).toFixed(4)} ${activeWrappedSymbol}`
+                                  : `1 ${activeWrappedSymbol} = ${(resOut / resIn).toFixed(4)} FDX`)
+                                : 'Pool Initializing'}
+                            </span>
+                          </div>
+                          <div className="h-[44px] flex justify-between items-center border-b border-[var(--border)]/60">
+                            <span className="text-[var(--text-muted)]">Minimum Received ({((10000 - slippageBps) / 100).toFixed(1)}%)</span>
+                            <span className="font-semibold text-white">{minOut.toFixed(4)} {swapTo}</span>
+                          </div>
+                          <div className="h-[44px] flex justify-between items-center border-b border-[var(--border)]/60">
+                            <span className="text-[var(--text-muted)]">Price Impact</span>
+                            <span className="font-semibold text-emerald-400">
+                              {hasReserves && numIn > 0 ? `${priceImpact.toFixed(2)}%` : '< 0.01%'}
+                            </span>
+                          </div>
+                          <div className="h-[44px] flex justify-between items-center">
+                            <span className="text-[var(--text-muted)]">Execution Route</span>
+                            <span className="font-semibold text-[var(--text-dim)] truncate max-w-[240px]" title={activeRouterAddress}>
+                              MockSwapRouter ({activeRouterAddress ? `${activeRouterAddress.slice(0, 6)}...${activeRouterAddress.slice(-4)}` : 'Not Deployed'})
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Warning Alert (amber): real box with padding 16px, icon, text left, button right at 40px high */}
+                        {isRouterDeployed && (pairReserves.fdx === 0 || (!pairReserves.wrapped && !pairReserves.wpol)) && (
+                          <div className="p-[16px] rounded-[16px] bg-amber-500/10 border border-amber-500/30 flex items-center justify-between gap-4">
+                            <div className="flex items-center gap-3 min-w-0">
+                              <AlertTriangle size={22} className="text-amber-400 shrink-0" />
+                              <div className="flex flex-col gap-0.5 min-w-0">
+                                <span className="text-[14px] font-semibold text-amber-300">AMM Pool Has Zero Liquidity</span>
+                                <span className="text-[12px] text-[var(--text-muted)] truncate">Supply 10 FDX + 10 {activeWrappedSymbol} to initialize pool</span>
+                              </div>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={handleSeedLiquidity}
+                              disabled={isSeeding || !wallet.signer}
+                              className="h-[40px] px-[16px] rounded-lg bg-amber-500 hover:bg-amber-400 text-black font-semibold text-xs shrink-0 cursor-pointer transition disabled:opacity-50 flex items-center justify-center"
+                            >
+                              {isSeeding ? 'Seeding...' : 'Seed Pool (1-Click)'}
+                            </button>
+                          </div>
+                        )}
+
+                        {/* Primary Action Button: 56px high at bottom */}
+                        {!wallet.address ? (
+                          <button
+                            onClick={onConnect}
+                            className="portal-btn-primary w-full h-[56px] rounded-[16px] text-[17px] font-semibold cursor-pointer transition flex items-center justify-center"
+                          >
+                            Connect Web3 Wallet to Swap
+                          </button>
+                        ) : !isChainSupported ? (
+                          <button
+                            onClick={() => onSwitchNetwork?.(10143)}
+                            className="portal-btn-amber w-full h-[56px] rounded-[16px] text-[17px] font-semibold cursor-pointer transition flex items-center justify-center"
+                          >
+                            Switch to Supported Network to Swap
+                          </button>
+                        ) : !isRouterDeployed ? (
+                          <button
+                            onClick={handleDeployRouter}
+                            disabled={isDeployingRouter}
+                            className="portal-btn-purple w-full h-[56px] rounded-[16px] text-[17px] font-semibold cursor-pointer transition flex items-center justify-center"
+                          >
+                            {isDeployingRouter ? 'Deploying MockSwapRouter...' : `Deploy MockSwapRouter to ${activeNetConfig?.shortName || 'Chain'} (1-Click)`}
+                          </button>
+                        ) : isRouterDeployed && (pairReserves.fdx === 0 || (!pairReserves.wrapped && !pairReserves.wpol)) ? (
+                          <button
+                            onClick={handleSeedLiquidity}
+                            disabled={isSeeding}
+                            className="portal-btn-amber w-full h-[56px] rounded-[16px] text-[17px] font-semibold cursor-pointer transition flex items-center justify-center"
+                          >
+                            {isSeeding ? 'Seeding AMM Pool...' : `Initialize AMM Pool Liquidity (Seed 10 FDX + 10 ${activeWrappedSymbol})`}
+                          </button>
+                        ) : (
+                          <button
+                            onClick={handleExecuteSwap}
+                            disabled={swapTxStatus === 'awaiting-wallet' || swapTxStatus === 'pending' || Number(swapAmount) <= 0}
+                            className="portal-btn-purple w-full h-[56px] rounded-[16px] text-[17px] font-semibold disabled:opacity-50 cursor-pointer transition flex items-center justify-center"
+                          >
+                            {swapTxStatus === 'awaiting-wallet' && 'Confirm in Wallet...'}
+                            {swapTxStatus === 'pending' && `Swapping on ${activeNetConfig?.shortName || activeNetConfig?.name || 'Chain'}...`}
+                            {swapTxStatus === 'confirmed' && 'Swap Confirmed!'}
+                            {swapTxStatus === 'failed' && 'Swap Failed (Retry)'}
+                            {swapTxStatus === 'ready' && `Swap ${swapFrom} for ${swapTo}`}
+                          </button>
+                        )}
+                      </div>
+
+                      {/* RIGHT Column (about 40%): Two Stacked Cards */}
+                      <div className="min-[1100px]:col-span-5 flex flex-col gap-6 w-full">
+                        {/* Card 1: Pool Overview */}
+                        <div className="portal-card p-[32px] rounded-[20px] flex flex-col gap-[20px] w-full">
+                          <div className="flex items-center justify-between pb-3 border-b border-[var(--border)]">
+                            <span className="text-[18px] font-semibold text-white">Pool Overview</span>
+                            <span className="h-[28px] px-3 rounded-full text-xs font-semibold bg-purple-500/15 text-purple-300 border border-purple-500/30 flex items-center justify-center">
+                              0.30% Fee Tier
+                            </span>
+                          </div>
+
+                          <div className="flex flex-col gap-3 text-[14px]">
+                            <div className="flex justify-between items-center py-1 border-b border-[var(--border)]/40">
+                              <span className="text-[var(--text-muted)]">Pool Reserves</span>
+                              <span className="font-semibold text-white text-right">
+                                {pairReserves.fdx.toLocaleString()} FDX / {(pairReserves.wrapped || pairReserves.wpol || 0).toLocaleString()} {activeWrappedSymbol}
+                              </span>
+                            </div>
+
+                            <div className="flex justify-between items-center py-1 border-b border-[var(--border)]/40">
+                              <span className="text-[var(--text-muted)]">Current Rate</span>
+                              <span className="font-semibold text-white text-right">
+                                {hasReserves
+                                  ? `1 FDX = ${(resOut / resIn).toFixed(4)} ${activeWrappedSymbol}`
+                                  : 'Pool Initializing'}
+                              </span>
+                            </div>
+
+                            <div className="flex justify-between items-center py-1 border-b border-[var(--border)]/40">
+                              <span className="text-[var(--text-muted)]">Fee Tier</span>
+                              <span className="font-semibold text-purple-300">0.30% (LP Reward Pool)</span>
+                            </div>
+
+                            <div className="flex justify-between items-center py-1 border-b border-[var(--border)]/40">
+                              <span className="text-[var(--text-muted)]">Network</span>
+                              <span className="font-semibold text-white">
+                                {activeNetConfig?.name || 'Active Chain'} ({currentChainId})
+                              </span>
+                            </div>
+
+                            <div className="flex justify-between items-center py-1">
+                              <span className="text-[var(--text-muted)]">Execution Route</span>
+                              <span className="font-semibold text-[var(--text-dim)] truncate max-w-[180px]" title={activeRouterAddress}>
+                                {activeRouterAddress ? `${activeRouterAddress.slice(0, 6)}...${activeRouterAddress.slice(-4)}` : 'Not Deployed'}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Card 2: How this swap works (3 numbered steps replacing collapsed row) */}
+                        <div className="portal-card p-[32px] rounded-[20px] flex flex-col gap-[20px] w-full">
+                          <div className="flex items-center gap-2 pb-3 border-b border-[var(--border)]">
+                            <Info size={18} className="text-purple-400" />
+                            <span className="text-[18px] font-semibold text-white">How this swap works</span>
+                          </div>
+
+                          <div className="flex flex-col gap-4 text-[13px] text-[var(--text-muted)] leading-relaxed">
+                            <div className="flex items-start gap-3">
+                              <span className="w-6 h-6 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/40 font-bold text-xs flex items-center justify-center shrink-0 mt-0.5">
+                                1
+                              </span>
+                              <div>
+                                <strong className="text-white block font-medium">Enter amount &amp; slippage</strong>
+                                Select your tokens and input amount. Quick percent pills let you instantly allocate balances.
+                              </div>
+                            </div>
+
+                            <div className="flex items-start gap-3">
+                              <span className="w-6 h-6 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/40 font-bold text-xs flex items-center justify-center shrink-0 mt-0.5">
+                                2
+                              </span>
+                              <div>
+                                <strong className="text-white block font-medium">Review price &amp; slippage</strong>
+                                The constant-product formula (x · y = k) calculates real-time pricing and minimum output.
+                              </div>
+                            </div>
+
+                            <div className="flex items-start gap-3">
+                              <span className="w-6 h-6 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/40 font-bold text-xs flex items-center justify-center shrink-0 mt-0.5">
+                                3
+                              </span>
+                              <div>
+                                <strong className="text-white block font-medium">Confirm on-chain</strong>
+                                Atomic execution guarantees funds never leave your custody if slippage conditions fail.
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                )}
+                  );
+                })()}
               </div>
 
               {swapSubTab === 'cross-chain' && (() => {

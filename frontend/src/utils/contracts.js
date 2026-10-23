@@ -1505,10 +1505,12 @@ export async function executeBorrow(signer, amount, policyVersion) {
             if (grantTx?.wait) await grantTx.wait();
           } else {
             console.warn('LendingPool lacks LENDING_POOL_ROLE on this network.');
+            throw new Error('Protocol LendingPool contract lacks authorized execution role in AccessManager on this network. Please switch to Polygon Amoy or have admin grant LENDING_POOL_ROLE.');
           }
         }
       }
     } catch (roleErr) {
+      if (roleErr.message?.includes('lacks authorized execution role')) throw roleErr;
       console.warn('AccessManager role check skipped:', roleErr.message);
     }
   }
@@ -2856,8 +2858,11 @@ export function parseRevertReason(err) {
     '0xd28d3eb5': 'Swap slippage limit exceeded. Increase slippage tolerance.',
     '0x1f2a2005': 'Amount must be greater than zero.',
     '0x6331980a': 'Cannot swap token for itself.',
-    '0x6a40c667': 'Borrow amount exceeds credit limit.',
+    '0x6a40c667': 'Borrow amount exceeds on-chain credit cap.',
     '0x9c42c7de': 'Credit policy version mismatch. Refresh and try again.',
+    '0x82b42900': 'Protocol permission error: LendingPool contract lacks authorized execution role in AccessManager.',
+    '0x24ea4996': 'AccessManager: caller lacks required execution role.',
+    '0x2c5211c6': 'Insufficient vault pool liquidity for this borrow amount.',
   };
 
   const errData = (err.data || err.error?.data || '').toLowerCase();
@@ -2873,8 +2878,8 @@ export function parseRevertReason(err) {
 
   // ABI-decoded custom errors from our contracts
   const knownErrors = {
-    'CreditCapExceeded': 'Borrow amount exceeds your credit cap.',
-    'InsufficientLiquidity': 'Pool has zero or insufficient liquidity for this amount.',
+    'CreditCapExceeded': 'Borrow amount exceeds your on-chain credit cap.',
+    'InsufficientLiquidity': 'Vault pool has zero or insufficient liquidity for this borrow amount. Deposit into the vault first.',
     'PolicyVersionMismatch': 'Credit policy was updated. Refresh and try again.',
     'ZeroAmount': 'Amount must be greater than zero.',
     'LoanNotFound': 'Loan not found.',
@@ -2882,6 +2887,9 @@ export function parseRevertReason(err) {
     'RepaymentExceedsDebt': 'Repayment amount exceeds outstanding debt.',
     'NotBorrower': 'Only the original borrower can repay this loan.',
     'WithdrawExceedsBalance': 'Withdrawal exceeds your deposited balance.',
+    'Unauthorized': 'Protocol permission error: LendingPool contract lacks authorized execution role in AccessManager on this network.',
+    'AccessManagerUnauthorizedAccount': 'Account lacks authorized execution role in AccessManager.',
+    'BorrowingPaused': 'Borrowing is currently paused on this network by protocol risk controller.',
   };
 
   const msg = err.message || String(err);
