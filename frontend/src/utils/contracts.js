@@ -782,6 +782,7 @@ export const ERC20_ABI = [
   'function transferFrom(address from, address to, uint256 amount) returns (bool)',
   'function mint(address to, uint256 amount) external',
   'function burn(uint256 amount) external',
+  'function owner() view returns (address)',
 ];
 
 export const LENDING_POOL_ABI = [
@@ -3024,8 +3025,13 @@ export async function executeSeedLiquidity(signer, amountFdx = 10, amountNative 
   // 1. Verify FDX balance / minting capability BEFORE touching native gas
   let fdxBal = await fdx.balanceOf(address).catch(() => 0n);
   if (fdxBal < fdxWei) {
-    const owner = await fdx.owner().catch(() => null);
-    const canMint = owner && owner.toLowerCase() === address.toLowerCase();
+    let owner = null;
+    try {
+      if (typeof fdx.owner === 'function') {
+        owner = await fdx.owner().catch(() => null);
+      }
+    } catch { }
+    const canMint = Boolean(owner && owner.toLowerCase() === address.toLowerCase());
     if (canMint) {
       const mintAmount = fdxWei - fdxBal;
       const mintTx = await fdx.mint(address, mintAmount, overrides).catch((err) => {
@@ -3034,8 +3040,9 @@ export async function executeSeedLiquidity(signer, amountFdx = 10, amountNative 
       if (mintTx) await mintTx.wait();
       fdxBal = await fdx.balanceOf(address).catch(() => fdxWei);
     } else {
+      const ownerHint = owner ? ` Deployer (${owner.slice(0, 6)}...${owner.slice(-4)}) must mint initial FDX or seed pool.` : '';
       throw new Error(
-        `Insufficient FDX balance. You have ${Number(ethers.formatEther(fdxBal)).toFixed(2)} FDX, but need ${amountFdx} FDX to seed the pool. Acquire FDX before adding liquidity.`
+        `Insufficient FDX balance. You have ${Number(ethers.formatEther(fdxBal)).toFixed(2)} FDX, but need ${amountFdx} FDX to seed the pool.${ownerHint}`
       );
     }
   }
