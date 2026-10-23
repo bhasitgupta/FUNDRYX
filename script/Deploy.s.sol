@@ -15,8 +15,11 @@ import {RiskAttestationRegistry} from "../contracts/monitoring/RiskAttestationRe
 /// @notice Deployment script for Fundryx M1 (Lending) on Polygon Amoy
 contract DeployFundryx is Script {
     function run() external {
-        // Validate chain
-        require(block.chainid == 80002, "Must deploy on Polygon Amoy (chainId 80002)");
+        // Validate chain: Polygon Amoy (80002), Monad Testnet (10143), Monad Mainnet (143)
+        require(
+            block.chainid == 80002 || block.chainid == 10143 || block.chainid == 143,
+            "Must deploy on supported chain (Polygon Amoy 80002, Monad Testnet 10143, Monad Mainnet 143)"
+        );
 
         uint256 deployerKey = vm.envUint("DEPLOYER_PRIVATE_KEY");
         address deployer = vm.addr(deployerKey);

@@ -17,6 +17,7 @@ depth = 64
 
 [rpc_endpoints]
 polygon_amoy = "${POLYGON_AMOY_RPC_URL}"
+monad_testnet = "https://testnet-rpc.monad.xyz/"
 
 [etherscan]
 polygon_amoy = { key = "${POLYGONSCAN_API_KEY}", url = "https://api-amoy.polygonscan.com/api" }
