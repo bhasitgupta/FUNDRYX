@@ -2549,27 +2549,84 @@ export async function executeCrossChainSwap(signerOrOpts, quoteArg, onStateUpdat
 }
 
 // ─────────────────────────────────────────────────────────────
-// ADMIN ACCESS GATE & ON-CHAIN VERIFICATION
+// ADMIN ACCESS GATE & ON-CHAIN VERIFICATION (DYNAMIC CONTRACT CHECK)
 // ─────────────────────────────────────────────────────────────
-export const ADMIN_WALLETS = [
-  '0xc90A124b741d48a486950F668BfD62D4B5cF96b4'.toLowerCase(),
-  (getEnvVar('VITE_POLYGON_ACCESS_MANAGER', '0x230829f5EC30A1936fDECE13F1179381daaf69e8')).toLowerCase(),
-  (getEnvVar('VITE_MONAD_ACCESS_MANAGER', '0x8748fa4147c9fE78572D14F3C827d2E8ad4B9138')).toLowerCase(),
-];
+export const ADMIN_WALLETS = [];
 
+export async function checkIsAdminWallet(address, targetChainId = null) {
+  if (!address || typeof address !== 'string') return false;
+  const userAddr = address.trim().toLowerCase();
 
-export async function checkIsAdminWallet(address) {
-  if (!address) return false;
-  const lower = address.toLowerCase();
-  if (ADMIN_WALLETS.includes(lower)) return true;
-  try {
-    const provider = getReadProvider();
-    const am = new ethers.Contract(CONTRACT_ADDRESSES.AccessManager, ACCESS_MANAGER_ABI, provider);
-    const adminRole = await am.ADMIN_ROLE();
-    return await am.hasRole(adminRole, address);
-  } catch {
-    return false;
+  const chainId = getActiveChainId(targetChainId);
+  const candidateChains = [chainId, 80002, 10143, 43113].filter((c, i, a) => a.indexOf(c) === i);
+
+  for (const cid of candidateChains) {
+    const chainNet = SUPPORTED_NETWORKS[cid];
+    if (!chainNet?.contracts) continue;
+    try {
+      const p = getReadProvider(cid);
+
+      // 1. Check FundryxToken owner
+      if (chainNet.contracts.FundryxToken) {
+        try {
+          const token = new ethers.Contract(
+            chainNet.contracts.FundryxToken,
+            ['function owner() view returns (address)'],
+            p
+          );
+          const owner = await token.owner();
+          if (owner && owner.toLowerCase() === userAddr) return true;
+        } catch (_) {}
+      }
+
+      // 2. Check LendingPool owner
+      if (chainNet.contracts.LendingPool) {
+        try {
+          const pool = new ethers.Contract(
+            chainNet.contracts.LendingPool,
+            ['function owner() view returns (address)'],
+            p
+          );
+          const owner = await pool.owner();
+          if (owner && owner.toLowerCase() === userAddr) return true;
+        } catch (_) {}
+      }
+
+      // 3. Check AccessManager hasRole / owner
+      if (chainNet.contracts.AccessManager) {
+        try {
+          const am = new ethers.Contract(
+            chainNet.contracts.AccessManager,
+            [
+              'function hasRole(bytes32 role, address account) view returns (bool)',
+              'function owner() view returns (address)',
+              'function ADMIN_ROLE() view returns (bytes32)',
+              'function DEFAULT_ADMIN_ROLE() view returns (bytes32)'
+            ],
+            p
+          );
+
+          try {
+            const amOwner = await am.owner();
+            if (amOwner && amOwner.toLowerCase() === userAddr) return true;
+          } catch (_) {}
+
+          try {
+            const hasZero = await am.hasRole(ethers.ZeroHash, address);
+            if (hasZero) return true;
+          } catch (_) {}
+
+          try {
+            const adminRole = await am.ADMIN_ROLE();
+            const hasAdmin = await am.hasRole(adminRole, address);
+            if (hasAdmin) return true;
+          } catch (_) {}
+        } catch (_) {}
+      }
+    } catch (_) {}
   }
+
+  return false;
 }
 
 export async function verifyTxHashOnChain(txHash, targetChainId = null) {

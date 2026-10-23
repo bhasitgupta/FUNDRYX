@@ -178,7 +178,8 @@ export default function BranchedMenu({
               data-active={leafActive ? '' : undefined}
               onClick={() => (kids ? toggle(i) : select(leafValue, item))}
             >
-              {item.label}
+              <span className="branched-menu__head-dot" aria-hidden="true" />
+              <span>{item.label}</span>
             </button>
             {kids ? (
               <div className="branched-menu__body">
@@ -201,24 +202,33 @@ export default function BranchedMenu({
                         />
                       ))}
                     </svg>
-                    {kids.map(kid => (
-                      <button
-                        key={kid.value}
-                        type="button"
-                        className="branched-menu__item"
-                        aria-current={kid.value === active ? 'true' : undefined}
-                        data-active={kid.value === active ? '' : undefined}
-                        tabIndex={isOpen ? 0 : -1}
-                        onClick={() => select(kid.value, kid)}
-                      >
-                        {kid.icon ? (
-                          <span className="branched-menu__icon" aria-hidden="true">
-                            {renderIcon(kid.icon)}
-                          </span>
-                        ) : null}
-                        <span className="branched-menu__label">{kid.label}</span>
-                      </button>
-                    ))}
+                    {kids.map(kid => {
+                      const isActive = kid.value === active;
+                      const itemAccent = kid.accent || accentColor;
+                      return (
+                        <button
+                          key={kid.value}
+                          type="button"
+                          className="branched-menu__item"
+                          aria-current={isActive ? 'true' : undefined}
+                          data-active={isActive ? '' : undefined}
+                          style={{ '--item-accent': itemAccent }}
+                          tabIndex={isOpen ? 0 : -1}
+                          onClick={() => select(kid.value, kid)}
+                        >
+                          {kid.icon ? (
+                            <span
+                              className="branched-menu__icon"
+                              style={{ color: isActive ? itemAccent : undefined }}
+                              aria-hidden="true"
+                            >
+                              {renderIcon(kid.icon)}
+                            </span>
+                          ) : null}
+                          <span className="branched-menu__label">{kid.label}</span>
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               </div>

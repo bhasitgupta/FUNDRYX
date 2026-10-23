@@ -55,7 +55,7 @@ export default function NetworkSelector({
         type="button"
         onClick={() => setIsOpen(!isOpen)}
         disabled={isSwitching}
-        className="h-10 px-3 rounded-[10px] bg-[var(--surface-2)] hover:bg-[var(--surface-hover)] border border-[var(--border)] flex items-center gap-2 text-xs font-medium text-white transition cursor-pointer disabled:opacity-50"
+        className="h-10 px-3.5 rounded-[10px] bg-[var(--surface-2)] hover:bg-[var(--surface-hover)] border border-[var(--border)] flex items-center gap-2 text-xs font-medium text-white transition cursor-pointer disabled:opacity-50"
         title={
           isDeployed
             ? `Connected to ${activeNet.name} — Protocol contracts live`
