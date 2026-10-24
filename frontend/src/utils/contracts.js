@@ -3050,7 +3050,7 @@ export async function claimDestinationBridgeTransfer(signer, {
 
   if (effectiveDestToken === '0x0000000000000000000000000000000000000000') {
     const routerNativeBal = await signer.provider.getBalance(routerAddress).catch(() => 0n);
-    if (routerNativeBal < amountOutUnits && fdxConfig?.address) {
+    if (routerNativeBal <= amountOutUnits && fdxConfig?.address) {
       effectiveDestToken = fdxConfig.address;
     }
   }
@@ -3063,7 +3063,7 @@ export async function claimDestinationBridgeTransfer(signer, {
         [
           'function balanceOf(address) view returns (uint256)',
           'function owner() view returns (address)',
-          'function mint(address, uint256) returns (bool)',
+          'function mint(address, uint256)',
           'function transfer(address, uint256) returns (bool)',
         ],
         signer

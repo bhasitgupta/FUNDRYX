@@ -1407,7 +1407,7 @@ export default function FundryxAppPortal({
 
       if (isNativeDest && routerAddr) {
         const rBal = await prov.getBalance(routerAddr);
-        if (rBal < claimAmountUnits) {
+        if (rBal <= claimAmountUnits) {
           // Seamless fallback: If router lacks native gas tokens, settle in FDX protocol tokens on destination
           const fdxConfig = getTokenConfig(destCId, 'FDX');
           if (fdxConfig?.address) {
@@ -1417,20 +1417,35 @@ export default function FundryxAppPortal({
         }
       }
 
-      // If claiming ERC20 asset, ensure router has liquidity (auto-seed from caller if needed on testnet)
+      // If claiming ERC20 asset, ensure router has liquidity (mint if owner or auto-seed if needed on testnet)
       if (claimTokenAddress && claimTokenAddress !== '0x0000000000000000000000000000000000000000' && routerAddr) {
         try {
           const erc20 = new ethers.Contract(
             claimTokenAddress,
-            ['function balanceOf(address) view returns (uint256)', 'function transfer(address, uint256) returns (bool)'],
+            [
+              'function balanceOf(address) view returns (uint256)',
+              'function owner() view returns (address)',
+              'function mint(address, uint256)',
+              'function transfer(address, uint256) returns (bool)',
+            ],
             wallet.signer
           );
           const rTokenBal = await erc20.balanceOf(routerAddr);
           if (rTokenBal < claimAmountUnits) {
-            const userBal = await erc20.balanceOf(wallet.address);
-            if (userBal >= claimAmountUnits) {
-              const seedTx = await erc20.transfer(routerAddr, claimAmountUnits * 2n);
+            const tokenOwner = await erc20.owner().catch(() => null);
+            if (tokenOwner && wallet.address.toLowerCase() === tokenOwner.toLowerCase()) {
+              setTxNotification({
+                type: 'info',
+                message: 'Admin: Minting 5,000 FDX liquidity to destination router...',
+              });
+              const seedTx = await erc20.mint(routerAddr, ethers.parseEther('5000'));
               await seedTx.wait();
+            } else {
+              const userBal = await erc20.balanceOf(wallet.address);
+              if (userBal >= claimAmountUnits) {
+                const seedTx = await erc20.transfer(routerAddr, claimAmountUnits * 2n);
+                await seedTx.wait();
+              }
             }
           }
         } catch (seedErr) {
@@ -4334,6 +4349,40 @@ export default function FundryxAppPortal({
                               <strong>Error:</strong> {crossLifecycle.error}
                             </div>
                             <div className="flex items-center gap-2 shrink-0">
+                              <button
+                                type="button"
+                                onClick={async () => {
+                                  try {
+                                    const fdx = getTokenConfig(activeDestChain, 'FDX');
+                                    const routerAddr = getCrossChainRouterAddress(activeDestChain);
+                                    if (fdx?.address && routerAddr) {
+                                      setTxNotification({
+                                        type: 'info',
+                                        message: 'Admin: Minting 5,000 FDX to Router...',
+                                      });
+                                      const tokenContract = new ethers.Contract(
+                                        fdx.address,
+                                        ['function mint(address, uint256)'],
+                                        wallet.signer
+                                      );
+                                      const tx = await tokenContract.mint(routerAddr, ethers.parseEther('5000'));
+                                      await tx.wait();
+                                      setTxNotification({
+                                        type: 'success',
+                                        message: 'Router successfully funded with 5,000 FDX! You can now click Claim.',
+                                      });
+                                    }
+                                  } catch (e) {
+                                    setTxNotification({
+                                      type: 'danger',
+                                      message: `Funding failed: ${e.message}`,
+                                    });
+                                  }
+                                }}
+                                className="px-3 py-1 rounded bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border border-amber-500/40 text-[11px] font-bold uppercase tracking-wider shrink-0 cursor-pointer"
+                              >
+                                ⚡ Fund Router (5,000 FDX)
+                              </button>
                               <button
                                 type="button"
                                 onClick={() => handleClaimDestinationTransfer(activePendingTransfer)}
