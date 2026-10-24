@@ -4333,25 +4333,34 @@ export default function FundryxAppPortal({
                             <div>
                               <strong>Error:</strong> {crossLifecycle.error}
                             </div>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                clearActiveCrossChainTransfers();
-                                setCrossLifecycle({
-                                  status: 'IDLE',
-                                  step: 0,
-                                  totalSteps: 7,
-                                  sourceTxHash: null,
-                                  destTxHash: null,
-                                  lifiExplorerUrl: null,
-                                  error: null,
-                                  transferId: null,
-                                });
-                              }}
-                              className="px-3 py-1 rounded bg-rose-500/20 hover:bg-rose-500/30 text-rose-200 border border-rose-500/40 text-[11px] font-bold uppercase tracking-wider shrink-0 cursor-pointer self-start sm:self-auto"
-                            >
-                              Clear Error & Reset
-                            </button>
+                            <div className="flex items-center gap-2 shrink-0">
+                              <button
+                                type="button"
+                                onClick={() => handleClaimDestinationTransfer(activePendingTransfer)}
+                                className="px-3 py-1 rounded bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-200 border border-emerald-500/40 text-[11px] font-bold uppercase tracking-wider shrink-0 cursor-pointer"
+                              >
+                                ⚡ Auto-Fund &amp; Settle Claim
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  clearActiveCrossChainTransfers();
+                                  setCrossLifecycle({
+                                    status: 'IDLE',
+                                    step: 0,
+                                    totalSteps: 7,
+                                    sourceTxHash: null,
+                                    destTxHash: null,
+                                    lifiExplorerUrl: null,
+                                    error: null,
+                                    transferId: null,
+                                  });
+                                }}
+                                className="px-3 py-1 rounded bg-rose-500/20 hover:bg-rose-500/30 text-rose-200 border border-rose-500/40 text-[11px] font-bold uppercase tracking-wider shrink-0 cursor-pointer"
+                              >
+                                Clear Error &amp; Reset
+                              </button>
+                            </div>
                           </div>
                         )}
                       </div>

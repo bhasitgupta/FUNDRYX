@@ -3044,11 +3044,55 @@ export async function claimDestinationBridgeTransfer(signer, {
   const router = new ethers.Contract(routerAddress, CROSS_CHAIN_ROUTER_ABI, signer);
   const sig = sentinelSignature && sentinelSignature.startsWith('0x') && sentinelSignature.length > 2 ? sentinelSignature : '0x';
 
+  // 1. Resolve token: if native gas token (0x0) and router native reserves are insufficient, fallback to FDX
+  let effectiveDestToken = destTokenAddress || '0x0000000000000000000000000000000000000000';
+  const fdxConfig = getTokenRegistry(destChainId)?.find((t) => t.symbol === 'FDX');
+
+  if (effectiveDestToken === '0x0000000000000000000000000000000000000000') {
+    const routerNativeBal = await signer.provider.getBalance(routerAddress).catch(() => 0n);
+    if (routerNativeBal < amountOutUnits && fdxConfig?.address) {
+      effectiveDestToken = fdxConfig.address;
+    }
+  }
+
+  // 2. For ERC-20 claims, ensure router has liquidity (auto-seed if caller is token owner)
+  if (effectiveDestToken && effectiveDestToken !== '0x0000000000000000000000000000000000000000') {
+    try {
+      const tokenContract = new ethers.Contract(
+        effectiveDestToken,
+        [
+          'function balanceOf(address) view returns (uint256)',
+          'function owner() view returns (address)',
+          'function mint(address, uint256) returns (bool)',
+          'function transfer(address, uint256) returns (bool)',
+        ],
+        signer
+      );
+      const rBal = await tokenContract.balanceOf(routerAddress).catch(() => 0n);
+      if (rBal < amountOutUnits) {
+        const callerAddr = await signer.getAddress();
+        const tokenOwner = await tokenContract.owner().catch(() => null);
+        if (tokenOwner && callerAddr.toLowerCase() === tokenOwner.toLowerCase()) {
+          const mintTx = await tokenContract.mint(routerAddress, ethers.parseEther('5000'));
+          await mintTx.wait();
+        } else {
+          const userBal = await tokenContract.balanceOf(callerAddr).catch(() => 0n);
+          if (userBal >= amountOutUnits) {
+            const seedTx = await tokenContract.transfer(routerAddress, amountOutUnits * 2n);
+            await seedTx.wait();
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('[claimDestinationBridgeTransfer] Router liquidity seed preflight skipped:', e);
+    }
+  }
+
   const tx = await router.executeDestinationTransfer(
     transferId,
     sourceChainId,
     sourceTokenAddress || '0x0000000000000000000000000000000000000000',
-    destTokenAddress || '0x0000000000000000000000000000000000000000',
+    effectiveDestToken,
     recipient,
     amountOutUnits,
     sig
