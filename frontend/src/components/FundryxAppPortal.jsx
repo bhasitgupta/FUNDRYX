@@ -246,30 +246,15 @@ export default function FundryxAppPortal({
     }
   }, [wallet?.chainId, crossLifecycle.status]);
 
-  // Restore pending cross-chain transfer from persistent storage on connect/mount
+  // Track unclaimed cross-chain transfers without overriding user's active route selection
+  const [unclaimedTransfer, setUnclaimedTransfer] = useState(null);
   useEffect(() => {
     const activeTransfers = getActiveCrossChainTransfers();
     const pending = activeTransfers.find(
       (t) => t.status !== 'COMPLETED' && (!wallet?.address || !t.recipient || t.recipient.toLowerCase() === wallet.address.toLowerCase())
     );
-    if (pending && crossLifecycle.status === 'IDLE') {
-      setCrossLifecycle({
-        status: 'DESTINATION_PENDING',
-        step: 6,
-        totalSteps: 7,
-        sourceTxHash: pending.sourceTxHash || null,
-        destTxHash: null,
-        lifiExplorerUrl: null,
-        error: null,
-        transferId: pending.transferId,
-      });
-      setCrossSourceChain(pending.sourceChainId);
-      setCrossDestChain(pending.destChainId);
-      setCrossSourceToken(pending.sourceToken || 'FDX');
-      setCrossDestToken(pending.destToken || 'FDX');
-      setCrossAmount(pending.amount?.toString() || '10');
-    }
-  }, [wallet?.address]);
+    setUnclaimedTransfer(pending || null);
+  }, [wallet?.address, crossLifecycle.status]);
 
   // Live balance query for selected source asset on source chain
   useEffect(() => {
@@ -3933,14 +3918,8 @@ export default function FundryxAppPortal({
               </div>
 
               {swapSubTab === 'cross-chain' && (() => {
-                const quote = crossQuote;
-                const activePendingTransfer = getActiveCrossChainTransfers().find(
-                  (t) => t.status !== 'COMPLETED' && (!wallet?.address || !t.recipient || t.recipient.toLowerCase() === wallet.address.toLowerCase())
-                );
-                const isClaimStage = crossLifecycle.status === 'DESTINATION_PENDING' || Boolean(activePendingTransfer);
-
-                const activeDestChain = activePendingTransfer?.destChainId || crossDestChain;
-                const activeSourceChain = activePendingTransfer?.sourceChainId || crossSourceChain;
+                const activeDestChain = crossDestChain;
+                const activeSourceChain = crossSourceChain;
                 const sourceNetwork = SUPPORTED_NETWORKS[activeSourceChain] || { name: `Chain ${activeSourceChain}` };
                 const destNetwork = SUPPORTED_NETWORKS[activeDestChain] || { name: `Chain ${activeDestChain}` };
                 const sourceTokens = getTokenRegistry(activeSourceChain).filter(
@@ -3949,6 +3928,15 @@ export default function FundryxAppPortal({
                 const destTokens = getTokenRegistry(activeDestChain).filter(
                   (t) => networkMode === 'mainnet' || t.supportedOperations?.includes('cross_chain')
                 );
+
+                const activePendingTransfer = getActiveCrossChainTransfers().find(
+                  (t) => t.status !== 'COMPLETED' &&
+                         Number(t.destChainId) === Number(activeDestChain) &&
+                         Number(t.sourceChainId) === Number(activeSourceChain) &&
+                         (!wallet?.address || !t.recipient || t.recipient.toLowerCase() === wallet.address.toLowerCase())
+                );
+                const isClaimStage = (crossLifecycle.status === 'DESTINATION_PENDING' || crossLifecycle.status === 'SOURCE_CONFIRMED') &&
+                                     (Boolean(crossLifecycle.transferId) || Boolean(activePendingTransfer));
 
                 const currentModeChains = networkMode === 'mainnet'
                   ? [137, 143, 8453, 43114]
@@ -3968,6 +3956,48 @@ export default function FundryxAppPortal({
 
                 return (
                   <div className="portal-card p-6 flex flex-col gap-6">
+                    {unclaimedTransfer && Number(unclaimedTransfer.destChainId) !== Number(activeDestChain) && (
+                      <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-200 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div className="flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse shrink-0" />
+                          <span>
+                            Unclaimed transfer waiting on <strong>{SUPPORTED_NETWORKS[unclaimedTransfer.destChainId]?.name || `Chain ${unclaimedTransfer.destChainId}`}</strong>: {unclaimedTransfer.amount} {unclaimedTransfer.destToken}.
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setCrossSourceChain(unclaimedTransfer.sourceChainId);
+                              setCrossDestChain(unclaimedTransfer.destChainId);
+                              setCrossLifecycle({
+                                status: 'DESTINATION_PENDING',
+                                step: 6,
+                                totalSteps: 7,
+                                sourceTxHash: unclaimedTransfer.sourceTxHash || null,
+                                destTxHash: null,
+                                lifiExplorerUrl: null,
+                                error: null,
+                                transferId: unclaimedTransfer.transferId,
+                              });
+                            }}
+                            className="px-3 py-1 rounded bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border border-amber-500/40 text-[11px] font-bold uppercase tracking-wider cursor-pointer"
+                          >
+                            Switch &amp; Claim
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              clearActiveCrossChainTransfers();
+                              setUnclaimedTransfer(null);
+                            }}
+                            className="px-2.5 py-1 rounded hover:bg-white/10 text-white/50 hover:text-white text-[11px] cursor-pointer"
+                          >
+                            Dismiss
+                          </button>
+                        </div>
+                      </div>
+                    )}
                     {/* Header Badge, Title & Route Matrix Trigger */}
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-[var(--border)]">
                       <div>
@@ -4046,6 +4076,18 @@ export default function FundryxAppPortal({
                             onChange={(e) => {
                               const newChain = Number(e.target.value);
                               setCrossSourceChain(newChain);
+                              if (crossLifecycle.status !== 'IDLE' && crossLifecycle.status !== 'COMPLETED') {
+                                setCrossLifecycle({
+                                  status: 'IDLE',
+                                  step: 0,
+                                  totalSteps: 7,
+                                  sourceTxHash: null,
+                                  destTxHash: null,
+                                  lifiExplorerUrl: null,
+                                  error: null,
+                                  transferId: null,
+                                });
+                              }
                               const avail = getTokenRegistry(newChain).filter(
                                 (t) => networkMode === 'mainnet' || t.supportedOperations?.includes('cross_chain')
                               );
@@ -4112,6 +4154,18 @@ export default function FundryxAppPortal({
                             onChange={(e) => {
                               const newChain = Number(e.target.value);
                               setCrossDestChain(newChain);
+                              if (crossLifecycle.status !== 'IDLE' && crossLifecycle.status !== 'COMPLETED') {
+                                setCrossLifecycle({
+                                  status: 'IDLE',
+                                  step: 0,
+                                  totalSteps: 7,
+                                  sourceTxHash: null,
+                                  destTxHash: null,
+                                  lifiExplorerUrl: null,
+                                  error: null,
+                                  transferId: null,
+                                });
+                              }
                               const avail = getTokenRegistry(newChain).filter(
                                 (t) => networkMode === 'mainnet' || t.supportedOperations?.includes('cross_chain')
                               );
