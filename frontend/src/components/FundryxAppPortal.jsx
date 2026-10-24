@@ -158,6 +158,7 @@ export default function FundryxAppPortal({
 
   // Active chain & currency resolution
   const currentChainId = wallet?.chainId ? Number(wallet.chainId) : 80002;
+  const activeNetConfig = SUPPORTED_NETWORKS[currentChainId] || currentNetwork || {};
   const activeWrappedSymbol = (activeNetConfig?.wrappedNative?.symbol || (currentChainId === 10143 ? 'MON' : 'POL')).replace(/^W(MON|POL)$/, '$1');
   const activeWrappedAddress = activeNetConfig?.wrappedNative?.address || (currentChainId === 10143 ? '0xFb8bf4c1CC7a94c73D209a149eA2AbEa852BC541' : '0x360ad4f9a9A8EFe9A8DCB5f461c4Cc1047E1Dcf9');
   const activeNativeSymbol = activeNetConfig?.nativeToken || activeNetConfig?.nativeCurrency?.symbol || (currentChainId === 10143 ? 'MON' : 'POL');
@@ -212,7 +213,8 @@ export default function FundryxAppPortal({
   useEffect(() => {
     if (wallet?.chainId) {
       const cId = Number(wallet.chainId);
-      const wrapSym = (net?.wrappedNative?.symbol || (cId === 10143 ? 'MON' : 'POL')).replace(/^W(MON|POL)$/, '$1');
+      const chainConfig = SUPPORTED_NETWORKS[cId] || activeNetConfig;
+      const wrapSym = (chainConfig?.wrappedNative?.symbol || (cId === 10143 ? 'MON' : 'POL')).replace(/^W(MON|POL)$/, '$1');
 
       setSwapFrom('FDX');
       setSwapTo(wrapSym);
