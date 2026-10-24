@@ -1293,9 +1293,10 @@ export default function FundryxAppPortal({
         });
       } else {
         setTxNotification({
-          type: 'info',
-          message: `Source transaction broadcast on ${crossQuote.sourceChainName}! Switch to ${crossQuote.destChainName} to claim tokens.`,
+          type: 'success',
+          message: `Source transaction confirmed on ${crossQuote.sourceChainName}! Click 'Switch to ${crossQuote.destChainName}' below to claim your tokens.`,
           txHash: res.sourceTxHash,
+          chainId: crossQuote.sourceChainId,
         });
       }
     } catch (err) {
@@ -4104,8 +4105,14 @@ export default function FundryxAppPortal({
                           <span className="text-xs uppercase font-bold text-[var(--accent-1)]">
                             Cross-Chain Lifecycle (Step {crossLifecycle.step} / {crossLifecycle.totalSteps})
                           </span>
-                          <span className="text-xs font-mono font-bold text-white bg-[var(--surface-2)] px-2 py-0.5 rounded border border-[var(--border)]">
-                            {crossLifecycle.status}
+                          <span className={`text-xs font-mono font-bold px-2.5 py-1 rounded border ${
+                            crossLifecycle.status === 'DESTINATION_PENDING'
+                              ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
+                              : 'bg-[var(--surface-2)] text-white border-[var(--border)]'
+                          }`}>
+                            {crossLifecycle.status === 'DESTINATION_PENDING'
+                              ? 'Ready to Claim'
+                              : crossLifecycle.status.replace(/_/g, ' ')}
                           </span>
                         </div>
 
@@ -4161,7 +4168,11 @@ export default function FundryxAppPortal({
                               </a>
                             ) : (
                               <span className="text-[var(--text-muted)]">
-                                {crossLifecycle.status === 'COMPLETED' ? 'Settled on destination' : 'Awaiting bridge relayer attestation...'}
+                                {crossLifecycle.status === 'COMPLETED'
+                                  ? 'Settled on destination'
+                                  : crossLifecycle.status === 'DESTINATION_PENDING'
+                                    ? 'Source confirmed · Ready to claim below'
+                                    : 'Awaiting bridge relayer attestation...'}
                               </span>
                             )}
                           </div>
@@ -4181,17 +4192,21 @@ export default function FundryxAppPortal({
                         <button
                           type="button"
                           onClick={() => onSwitchNetwork?.(crossDestChain)}
-                          className="h-12 w-full font-bold text-xs uppercase tracking-wider rounded-xl transition cursor-pointer bg-cyan-500 hover:bg-cyan-400 text-black shadow-lg shadow-cyan-500/20"
+                          className="h-14 w-full font-bold text-sm tracking-wide rounded-xl transition cursor-pointer flex items-center justify-center gap-2 shadow-lg hover:brightness-110 active:scale-[0.99]"
+                          style={{ color: '#041014', backgroundColor: '#2EE6A6' }}
                         >
-                          Switch Wallet to {destNetwork.name} ({crossDestChain}) to Claim Tokens
+                          <ArrowLeftRight size={18} />
+                          <span>Switch Wallet to {destNetwork.name} ({crossDestChain}) to Claim Tokens</span>
                         </button>
                       ) : (
                         <button
                           type="button"
                           onClick={handleClaimDestinationTransfer}
-                          className="h-12 w-full font-bold text-xs uppercase tracking-wider rounded-xl transition cursor-pointer bg-emerald-500 hover:bg-emerald-400 text-black shadow-lg shadow-emerald-500/20"
+                          className="h-14 w-full font-bold text-sm tracking-wide rounded-xl transition cursor-pointer flex items-center justify-center gap-2 shadow-lg hover:brightness-110 active:scale-[0.99]"
+                          style={{ color: '#041014', backgroundColor: '#2EE6A6' }}
                         >
-                          Claim {crossQuote?.destEstimatedOutput || crossAmount} {crossDestToken} on {destNetwork.name}
+                          <CheckCircle size={18} />
+                          <span>Claim {crossQuote?.destEstimatedOutput || crossAmount} {crossDestToken} on {destNetwork.name}</span>
                         </button>
                       )
                     ) : isWalletMismatched ? (
