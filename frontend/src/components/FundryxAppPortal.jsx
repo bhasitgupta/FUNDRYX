@@ -43,6 +43,7 @@ import {
   AlertTriangle,
   RefreshCw,
   Loader2,
+  X,
 } from 'lucide-react';
 import {
   isSupabaseConfigured,
@@ -101,6 +102,7 @@ import {
   getCompatibleDestinationToken,
   getActiveCrossChainTransfers,
   updateCrossChainTransfer,
+  clearActiveCrossChainTransfers,
 } from '../utils/crossChainRegistry';
 import NetworkSelector from './NetworkSelector';
 
@@ -1389,6 +1391,20 @@ export default function FundryxAppPortal({
       }
       setCrossLifecycle((prev) => ({ ...prev, status: 'AWAITING_SIGNATURE' }));
       const claimAmountUnits = crossQuote?.minAmountOutUnits || ethers.parseEther((activeTransfer?.amount || 1.995).toString());
+
+      const destTokenConfig = getTokenConfig(destCId, dstSym);
+      const isNativeDest = !destTokenConfig?.address || destTokenConfig?.address === '0x0000000000000000000000000000000000000000';
+      if (isNativeDest) {
+        const prov = wallet.signer.provider;
+        const routerAddr = getCrossChainRouterAddress(destCId);
+        const rBal = await prov.getBalance(routerAddr);
+        if (rBal < claimAmountUnits) {
+          throw new Error(
+            `Destination router on ${destNet.name} holds ${ethers.formatEther(rBal)} ${dstSym} (needs ${ethers.formatEther(claimAmountUnits)} ${dstSym}). Testnet routers cannot dispense native gas tokens without pre-funded reserves. Click 'Clear / Reset This Transfer' below to clear this transfer.`
+          );
+        }
+      }
+
       const claimRes = await claimDestinationBridgeTransfer(wallet.signer, {
         transferId: tId,
         sourceChainId: srcCId,
@@ -4270,8 +4286,29 @@ export default function FundryxAppPortal({
                         </div>
 
                         {crossLifecycle.error && (
-                          <div className="p-2.5 rounded bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs">
-                            <strong>Error:</strong> {crossLifecycle.error}
+                          <div className="p-3 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                            <div>
+                              <strong>Error:</strong> {crossLifecycle.error}
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                clearActiveCrossChainTransfers();
+                                setCrossLifecycle({
+                                  status: 'IDLE',
+                                  step: 0,
+                                  totalSteps: 7,
+                                  sourceTxHash: null,
+                                  destTxHash: null,
+                                  lifiExplorerUrl: null,
+                                  error: null,
+                                  transferId: null,
+                                });
+                              }}
+                              className="px-3 py-1 rounded bg-rose-500/20 hover:bg-rose-500/30 text-rose-200 border border-rose-500/40 text-[11px] font-bold uppercase tracking-wider shrink-0 cursor-pointer self-start sm:self-auto"
+                            >
+                              Clear Error & Reset
+                            </button>
                           </div>
                         )}
                       </div>
@@ -4314,6 +4351,32 @@ export default function FundryxAppPortal({
                               ? `Step 7/7: Claim ${activePendingTransfer?.amount || crossQuote?.destEstimatedOutput || crossAmount} ${activePendingTransfer?.destToken || crossDestToken} on ${destNetwork.name}`
                               : `Step 7/7: Claim Tokens (Switch Wallet to ${destNetwork.name} First)`}
                           </span>
+                        </button>
+
+                        {/* Clear / Reset Button: Always available so user is never trapped */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            clearActiveCrossChainTransfers();
+                            setCrossLifecycle({
+                              status: 'IDLE',
+                              step: 0,
+                              totalSteps: 7,
+                              sourceTxHash: null,
+                              destTxHash: null,
+                              lifiExplorerUrl: null,
+                              error: null,
+                              transferId: null,
+                            });
+                            setTxNotification({
+                              type: 'info',
+                              message: 'Cleared pending cross-chain transfer. You can now start a new swap.',
+                            });
+                          }}
+                          className="h-11 w-full rounded-xl text-xs font-semibold tracking-wider uppercase transition cursor-pointer flex items-center justify-center gap-1.5 border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 shadow-sm"
+                        >
+                          <X size={15} />
+                          <span>Clear / Reset This Transfer</span>
                         </button>
                       </div>
                     ) : crossLifecycle.status === 'COMPLETED' ? (

@@ -346,3 +346,11 @@ export function getActiveCrossChainTransfers() {
     return [];
   }
 }
+
+export function clearActiveCrossChainTransfers() {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.removeItem(STORAGE_KEY);
+  } catch { }
+}
+

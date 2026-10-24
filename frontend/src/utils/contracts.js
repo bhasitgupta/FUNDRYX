@@ -3383,6 +3383,7 @@ export function parseRevertReason(err) {
     '0x4407d56a': 'Unsupported token pair on router. Update router contract with auto-pair support.',
     '0xd08a735e': 'Destination chain is not enabled on router.',
     '0x90b98a11': 'Cross-chain transfer has already been executed.',
+    '0x6eb0fd28': 'Destination router has zero liquidity reserves to pay out this asset. Click "Clear / Reset Transfer" to switch asset to FDX.',
   };
 
   const errData = (err.data || err.error?.data || '').toLowerCase();
