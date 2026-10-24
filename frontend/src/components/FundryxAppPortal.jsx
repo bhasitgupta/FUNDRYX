@@ -156,6 +156,7 @@ export default function FundryxAppPortal({
   const activeWrappedAddress = activeNetConfig?.wrappedNative?.address || (currentChainId === 10143 ? '0xFb8bf4c1CC7a94c73D209a149eA2AbEa852BC541' : '0x360ad4f9a9A8EFe9A8DCB5f461c4Cc1047E1Dcf9');
   const activeNativeSymbol = activeNetConfig?.nativeToken || activeNetConfig?.nativeCurrency?.symbol || (currentChainId === 10143 ? 'MON' : 'POL');
   const isChainSupported = Boolean(SUPPORTED_NETWORKS[currentChainId]);
+  const isLendingChain = Boolean(activeNetConfig?.contractsDeployed && activeNetConfig?.contracts?.LendingPool);
   const activeRouterAddress = getRouterAddress(currentChainId);
 
   // Swap state & transaction lifecycle
@@ -691,7 +692,7 @@ export default function FundryxAppPortal({
       return;
     }
 
-    if (wallet?.chainId && Number(wallet.chainId) !== 80002) {
+    if (wallet?.chainId && !isLendingChain) {
       if (onSwitchNetwork) {
         try {
           await onSwitchNetwork(80002);
@@ -701,7 +702,7 @@ export default function FundryxAppPortal({
       setBorrowTxStatus('failed');
       setTxNotification({
         type: 'danger',
-        message: 'Uncollateralized lending pool is active on Polygon Amoy (80002). Please switch your wallet to Polygon Amoy.',
+        message: 'Uncollateralized lending pool is active on Polygon Amoy, Monad Testnet, and Avalanche Fuji. Please switch your wallet to a supported network.',
       });
       return;
     }
@@ -883,7 +884,7 @@ export default function FundryxAppPortal({
       return;
     }
 
-    if (wallet?.chainId && Number(wallet.chainId) !== 80002) {
+    if (wallet?.chainId && !isLendingChain) {
       if (onSwitchNetwork) {
         try {
           await onSwitchNetwork(80002);
@@ -893,7 +894,7 @@ export default function FundryxAppPortal({
       setSupplyTxStatus('failed');
       setTxNotification({
         type: 'danger',
-        message: 'Yield vault liquidity deposits are active on Polygon Amoy (80002). Please switch your wallet to Polygon Amoy.',
+        message: 'Yield vault liquidity deposits are active on Polygon Amoy, Monad Testnet, and Avalanche Fuji. Please switch your wallet to a supported network.',
       });
       return;
     }
@@ -2275,11 +2276,11 @@ export default function FundryxAppPortal({
                 <p className="portal-page-sub">Uncollateralized institutional lending and yield vaults.</p>
               </div>
 
-              {wallet?.chainId && Number(wallet.chainId) !== 80002 && (
+              {wallet?.chainId && !isLendingChain && (
                 <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-amber-200">
                   <div className="flex items-center gap-2">
                     <span className="font-bold">⚠ Protocol Network Notice:</span>
-                    <span>Institutional lending and yield vaults are live on Polygon Amoy (80002). Your wallet is connected to {currentNetwork?.name || `Chain ${wallet.chainId}`}.</span>
+                    <span>Institutional lending and yield vaults are live on Polygon Amoy (80002), Monad Testnet (10143), and Avalanche Fuji (43113). Your wallet is connected to {currentNetwork?.name || `Chain ${wallet.chainId}`}.</span>
                   </div>
                   <button
                     type="button"
@@ -2491,13 +2492,13 @@ export default function FundryxAppPortal({
                             {borrowDisabledReason}
                           </div>
                         )}
-                        {wallet?.chainId && Number(wallet.chainId) !== 80002 ? (
+                        {wallet?.chainId && !isLendingChain ? (
                           <button
                             type="button"
                             onClick={() => onSwitchNetwork?.(80002)}
                             className="w-full h-[56px] rounded-[16px] text-[16px] font-semibold transition flex items-center justify-center cursor-pointer bg-amber-500 hover:bg-amber-400 text-black shadow-lg"
                           >
-                            Switch Wallet to Polygon Amoy (80002) to Borrow
+                            Switch Wallet to Supported Network to Borrow
                           </button>
                         ) : (
                           <button
@@ -2738,13 +2739,13 @@ export default function FundryxAppPortal({
                             {supplyDisabledReason}
                           </div>
                         )}
-                        {wallet?.chainId && Number(wallet.chainId) !== 80002 ? (
+                        {wallet?.chainId && !isLendingChain ? (
                           <button
                             type="button"
                             onClick={() => onSwitchNetwork?.(80002)}
                             className="w-full h-[56px] rounded-[16px] text-[16px] font-semibold transition flex items-center justify-center cursor-pointer bg-amber-500 hover:bg-amber-400 text-black shadow-lg"
                           >
-                            Switch Wallet to Polygon Amoy (80002) to {supplyMode === 'deposit' ? 'Deposit' : 'Withdraw'}
+                            Switch Wallet to Supported Network to {supplyMode === 'deposit' ? 'Deposit' : 'Withdraw'}
                           </button>
                         ) : supplyMode === 'deposit' ? (
                           <button

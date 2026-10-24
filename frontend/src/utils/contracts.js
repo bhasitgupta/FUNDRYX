@@ -1470,13 +1470,8 @@ export async function executeBorrow(signer, amount, policyVersion) {
   const currentChainId = Number(network.chainId);
   const netConfig = SUPPORTED_NETWORKS[currentChainId];
 
-  // Multi-chain protocol check: Uncollateralized institutional lending is active on Polygon Amoy (80002)
-  if (currentChainId !== 80002) {
-    throw new Error('Uncollateralized lending pool is currently active on Polygon Amoy (80002). Please switch your wallet network to Polygon Amoy to borrow.');
-  }
-
   if (!netConfig || !netConfig.contractsDeployed || !netConfig.contracts?.LendingPool) {
-    throw new Error(`Unsupported network (chain ${currentChainId}). Connect to Polygon Amoy (80002) to borrow.`);
+    throw new Error(`Unsupported network (chain ${currentChainId}). Connect to a supported network (Polygon Amoy, Monad Testnet, or Avalanche Fuji) to borrow.`);
   }
 
   const chainContracts = getContractAddresses(currentChainId);
@@ -1532,7 +1527,7 @@ export async function executeBorrow(signer, amount, policyVersion) {
             if (grantTx?.wait) await grantTx.wait();
           } else {
             console.warn('LendingPool lacks LENDING_POOL_ROLE on this network.');
-            throw new Error('Uncollateralized lending pool is currently active on Polygon Amoy (80002). Please switch your wallet network to Polygon Amoy.');
+            throw new Error(`Uncollateralized lending pool requires LENDING_POOL_ROLE on ${netConfig?.name || `chain ${currentChainId}`}.`);
           }
         }
       }
@@ -1584,13 +1579,8 @@ export async function executeDeposit(signer, amount, tokenSymbol = 'FDX') {
   const currentChainId = Number(network.chainId);
   const netConfig = SUPPORTED_NETWORKS[currentChainId];
 
-  // Canonical vault check: Liquidity vaults are active on Polygon Amoy (80002)
-  if (currentChainId !== 80002) {
-    throw new Error('Yield vault liquidity deposits are currently active on Polygon Amoy (80002). Please switch your wallet network to Polygon Amoy to deposit.');
-  }
-
   if (!netConfig || !netConfig.contractsDeployed || !netConfig.contracts?.LendingPool) {
-    throw new Error(`Unsupported network (chain ${currentChainId}). Connect to Polygon Amoy (80002) to deposit.`);
+    throw new Error(`Unsupported network (chain ${currentChainId}). Connect to a supported network (Polygon Amoy, Monad Testnet, or Avalanche Fuji) to deposit.`);
   }
 
   if (tokenSymbol !== 'FDX') {
