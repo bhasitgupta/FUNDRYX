@@ -3020,6 +3020,8 @@ export async function claimDestinationBridgeTransfer(signer, {
     }
   }
 
+  const overrides = await getNetworkFeeOverrides(signer.provider, destChainId);
+
   // 2. For ERC-20 claims, ensure router has liquidity (auto-seed if caller is token owner)
   if (effectiveDestToken && effectiveDestToken !== '0x0000000000000000000000000000000000000000') {
     try {
@@ -3038,12 +3040,12 @@ export async function claimDestinationBridgeTransfer(signer, {
         const callerAddr = await signer.getAddress();
         const tokenOwner = await tokenContract.owner().catch(() => null);
         if (tokenOwner && callerAddr.toLowerCase() === tokenOwner.toLowerCase()) {
-          const mintTx = await tokenContract.mint(routerAddress, ethers.parseEther('5000'));
+          const mintTx = await tokenContract.mint(routerAddress, ethers.parseEther('5000'), overrides);
           await mintTx.wait();
         } else {
           const userBal = await tokenContract.balanceOf(callerAddr).catch(() => 0n);
           if (userBal >= amountOutUnits) {
-            const seedTx = await tokenContract.transfer(routerAddress, amountOutUnits * 2n);
+            const seedTx = await tokenContract.transfer(routerAddress, amountOutUnits * 2n, overrides);
             await seedTx.wait();
           }
         }
@@ -3060,7 +3062,8 @@ export async function claimDestinationBridgeTransfer(signer, {
     effectiveDestToken,
     recipient,
     amountOutUnits,
-    sig
+    sig,
+    overrides
   );
 
   const receipt = await tx.wait();

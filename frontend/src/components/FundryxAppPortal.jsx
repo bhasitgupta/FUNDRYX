@@ -1396,6 +1396,7 @@ export default function FundryxAppPortal({
       // If claiming ERC20 asset, ensure router has liquidity (mint if owner or auto-seed if needed on testnet)
       if (claimTokenAddress && claimTokenAddress !== '0x0000000000000000000000000000000000000000' && routerAddr) {
         try {
+          const feeOverrides = await getNetworkFeeOverrides(wallet.signer.provider, destCId);
           const erc20 = new ethers.Contract(
             claimTokenAddress,
             [
@@ -1414,12 +1415,12 @@ export default function FundryxAppPortal({
                 type: 'info',
                 message: 'Admin: Minting 5,000 FDX liquidity to destination router...',
               });
-              const seedTx = await erc20.mint(routerAddr, ethers.parseEther('5000'));
+              const seedTx = await erc20.mint(routerAddr, ethers.parseEther('5000'), feeOverrides);
               await seedTx.wait();
             } else {
               const userBal = await erc20.balanceOf(wallet.address);
               if (userBal >= claimAmountUnits) {
-                const seedTx = await erc20.transfer(routerAddr, claimAmountUnits * 2n);
+                const seedTx = await erc20.transfer(routerAddr, claimAmountUnits * 2n, feeOverrides);
                 await seedTx.wait();
               }
             }
@@ -4438,7 +4439,8 @@ export default function FundryxAppPortal({
                                         ['function mint(address, uint256)'],
                                         wallet.signer
                                       );
-                                      const tx = await tokenContract.mint(routerAddr, ethers.parseEther('5000'));
+                                      const feeOverrides = await getNetworkFeeOverrides(wallet.signer.provider, activeDestChain);
+                                      const tx = await tokenContract.mint(routerAddr, ethers.parseEther('5000'), feeOverrides);
                                       await tx.wait();
                                       setTxNotification({
                                         type: 'success',
