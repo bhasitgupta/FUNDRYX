@@ -4434,45 +4434,10 @@ export default function FundryxAppPortal({
                             <div className="flex items-center gap-2 shrink-0">
                               <button
                                 type="button"
-                                onClick={async () => {
-                                  try {
-                                    const fdx = getTokenConfig(activeDestChain, 'FDX');
-                                    const routerAddr = getCrossChainRouterAddress(activeDestChain);
-                                    if (fdx?.address && routerAddr) {
-                                      setTxNotification({
-                                        type: 'info',
-                                        message: 'Admin: Minting 5,000 FDX to Router...',
-                                      });
-                                      const tokenContract = new ethers.Contract(
-                                        fdx.address,
-                                        ['function mint(address, uint256)'],
-                                        wallet.signer
-                                      );
-                                      const feeOverrides = await getNetworkFeeOverrides(wallet.signer.provider, activeDestChain);
-                                      const tx = await tokenContract.mint(routerAddr, ethers.parseEther('5000'), feeOverrides);
-                                      await tx.wait();
-                                      setTxNotification({
-                                        type: 'success',
-                                        message: 'Router successfully funded with 5,000 FDX! You can now click Claim.',
-                                      });
-                                    }
-                                  } catch (e) {
-                                    setTxNotification({
-                                      type: 'danger',
-                                      message: `Funding failed: ${e.message}`,
-                                    });
-                                  }
-                                }}
-                                className="px-3 py-1 rounded bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border border-amber-500/40 text-[11px] font-bold uppercase tracking-wider shrink-0 cursor-pointer"
-                              >
-                                ⚡ Fund Router (5,000 FDX)
-                              </button>
-                              <button
-                                type="button"
                                 onClick={() => handleClaimDestinationTransfer(activePendingTransfer)}
                                 className="px-3 py-1 rounded bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-200 border border-emerald-500/40 text-[11px] font-bold uppercase tracking-wider shrink-0 cursor-pointer"
                               >
-                                ⚡ Auto-Fund &amp; Settle Claim
+                                Retry Claim
                               </button>
                               <button
                                 type="button"
@@ -4491,7 +4456,7 @@ export default function FundryxAppPortal({
                                 }}
                                 className="px-3 py-1 rounded bg-rose-500/20 hover:bg-rose-500/30 text-rose-200 border border-rose-500/40 text-[11px] font-bold uppercase tracking-wider shrink-0 cursor-pointer"
                               >
-                                Clear Error &amp; Reset
+                                Clear &amp; Reset
                               </button>
                             </div>
                           </div>
