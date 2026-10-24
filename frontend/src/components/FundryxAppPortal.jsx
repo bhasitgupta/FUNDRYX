@@ -1456,7 +1456,15 @@ export default function FundryxAppPortal({
         txHash: claimRes.destTxHash,
         chainId: destCId,
       });
-      refreshAll();
+      // Refresh balances so UI shows received tokens immediately
+      try {
+        const destProv = getReadProvider(destCId);
+        const updatedBal = await getUserTokenBalance(destProv, wallet.address, destCId, finalClaimSym);
+        setCrossSourceBalance(updatedBal);
+      } catch (_) { /* silent */ }
+      if (wallet?.address && wallet?.provider && wallet?.chainId) {
+        fetchWalletData(wallet.address, wallet.provider, wallet.chainId).catch(() => null);
+      }
 
       setTimeout(() => {
         setCrossLifecycle({
