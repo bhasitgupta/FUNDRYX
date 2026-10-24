@@ -105,6 +105,7 @@ import {
   getActiveCrossChainTransfers,
   updateCrossChainTransfer,
   clearActiveCrossChainTransfers,
+  isCrossChainTransferCompleted,
 } from '../utils/crossChainRegistry';
 import NetworkSelector from './NetworkSelector';
 
@@ -242,7 +243,7 @@ export default function FundryxAppPortal({
   useEffect(() => {
     const activeTransfers = getActiveCrossChainTransfers();
     const pending = activeTransfers.find(
-      (t) => t.status !== 'COMPLETED' && (!wallet?.address || !t.recipient || t.recipient.toLowerCase() === wallet.address.toLowerCase())
+      (t) => !isCrossChainTransferCompleted(t) && (!wallet?.address || !t.recipient || t.recipient.toLowerCase() === wallet.address.toLowerCase())
     );
     setUnclaimedTransfer(pending || null);
   }, [wallet?.address, crossLifecycle.status]);
@@ -1323,7 +1324,7 @@ export default function FundryxAppPortal({
       if (isNetSwitch) {
         const transfers = getActiveCrossChainTransfers();
         const latest = transfers[0];
-        if (latest && latest.status !== 'COMPLETED') {
+        if (latest && !isCrossChainTransferCompleted(latest)) {
           setCrossLifecycle((prev) => ({
             ...prev,
             status: 'DESTINATION_PENDING',
@@ -1356,7 +1357,7 @@ export default function FundryxAppPortal({
 
   const handleClaimDestinationTransfer = async (targetTransfer = null) => {
     const activeList = getActiveCrossChainTransfers();
-    const activeTransfer = targetTransfer || activeList.find((t) => t.status !== 'COMPLETED') || null;
+    const activeTransfer = targetTransfer || activeList.find((t) => !isCrossChainTransferCompleted(t)) || null;
     const tId = activeTransfer?.transferId || crossLifecycle.transferId;
     if (!tId) return;
 
@@ -1371,7 +1372,7 @@ export default function FundryxAppPortal({
         await onSwitchNetwork?.(destCId);
         return;
       }
-      setCrossLifecycle((prev) => ({ ...prev, status: 'AWAITING_SIGNATURE' }));
+      setCrossLifecycle((prev) => ({ ...prev, status: 'AWAITING_SIGNATURE', error: null }));
       const claimAmountUnits = crossQuote?.minAmountOutUnits || ethers.parseEther((activeTransfer?.amount || 1.995).toString());
 
       const destTokenConfig = getTokenConfig(destCId, dstSym);
@@ -1394,90 +1395,125 @@ export default function FundryxAppPortal({
         }
       }
 
-      // If claiming ERC20 asset, ensure router has liquidity (mint if owner or auto-seed if needed on testnet)
-      if (claimTokenAddress && claimTokenAddress !== '0x0000000000000000000000000000000000000000' && routerAddr) {
-        try {
-          const feeOverrides = await getNetworkFeeOverrides(wallet.signer.provider, destCId);
-          const erc20 = new ethers.Contract(
-            claimTokenAddress,
-            [
-              'function balanceOf(address) view returns (uint256)',
-              'function owner() view returns (address)',
-              'function mint(address, uint256)',
-              'function transfer(address, uint256) returns (bool)',
-            ],
-            wallet.signer
-          );
-          const rTokenBal = await erc20.balanceOf(routerAddr);
-          if (rTokenBal < claimAmountUnits) {
-            const tokenOwner = await erc20.owner().catch(() => null);
-            if (tokenOwner && wallet.address.toLowerCase() === tokenOwner.toLowerCase()) {
-              setTxNotification({
-                type: 'info',
-                message: 'Admin: Minting 5,000 FDX liquidity to destination router...',
-              });
-              const seedTx = await erc20.mint(routerAddr, ethers.parseEther('5000'), feeOverrides);
-              await seedTx.wait();
-            } else {
-              const userBal = await erc20.balanceOf(wallet.address);
-              if (userBal >= claimAmountUnits) {
-                const seedTx = await erc20.transfer(routerAddr, claimAmountUnits * 2n, feeOverrides);
-                await seedTx.wait();
-              }
-            }
-          }
-        } catch (seedErr) {
-          console.warn('[CrossChain] Router liquidity seed check skipped:', seedErr);
-        }
-      }
+      let destTxHash = null;
 
-      const claimRes = await claimDestinationBridgeTransfer(wallet.signer, {
-        transferId: tId,
-        sourceChainId: srcCId,
-        destChainId: destCId,
-        sourceTokenAddress: getTokenConfig(srcCId, srcSym)?.address,
-        destTokenAddress: claimTokenAddress,
-        recipient: wallet.address,
-        amountOutUnits: claimAmountUnits,
-      });
+      // Check ERC20 settlement requirements
+      if (claimTokenAddress && claimTokenAddress !== '0x0000000000000000000000000000000000000000' && routerAddr) {
+        const feeOverrides = await getNetworkFeeOverrides(wallet.signer.provider, destCId);
+        const erc20 = new ethers.Contract(
+          claimTokenAddress,
+          [
+            'function balanceOf(address) view returns (uint256)',
+            'function owner() view returns (address)',
+            'function mint(address, uint256)',
+            'function transfer(address, uint256) returns (bool)',
+          ],
+          wallet.signer
+        );
+        const rTokenBal = await erc20.balanceOf(routerAddr).catch(() => 0n);
+
+        if (rTokenBal >= claimAmountUnits) {
+          // Router has required liquidity: execute single standard destination transfer
+          const claimRes = await claimDestinationBridgeTransfer(wallet.signer, {
+            transferId: tId,
+            sourceChainId: srcCId,
+            destChainId: destCId,
+            sourceTokenAddress: getTokenConfig(srcCId, srcSym)?.address,
+            destTokenAddress: claimTokenAddress,
+            recipient: wallet.address,
+            amountOutUnits: claimAmountUnits,
+          });
+          destTxHash = claimRes.destTxHash;
+        } else {
+          // Router lacks liquidity: mint directly to recipient in ONE transaction if token owner
+          const tokenOwner = await erc20.owner().catch(() => null);
+          if (tokenOwner && wallet.address.toLowerCase() === tokenOwner.toLowerCase()) {
+            setTxNotification({
+              type: 'info',
+              message: `Auto-settling destination bridge: minting ${activeTransfer?.amount || 'claimed'} ${finalClaimSym} to your wallet...`,
+            });
+            const directTx = await erc20.mint(wallet.address, claimAmountUnits, feeOverrides);
+            const receipt = await directTx.wait();
+            destTxHash = receipt.hash;
+          } else {
+            // Standard claim execution via router fallback
+            const claimRes = await claimDestinationBridgeTransfer(wallet.signer, {
+              transferId: tId,
+              sourceChainId: srcCId,
+              destChainId: destCId,
+              sourceTokenAddress: getTokenConfig(srcCId, srcSym)?.address,
+              destTokenAddress: claimTokenAddress,
+              recipient: wallet.address,
+              amountOutUnits: claimAmountUnits,
+            });
+            destTxHash = claimRes.destTxHash;
+          }
+        }
+      } else {
+        const claimRes = await claimDestinationBridgeTransfer(wallet.signer, {
+          transferId: tId,
+          sourceChainId: srcCId,
+          destChainId: destCId,
+          sourceTokenAddress: getTokenConfig(srcCId, srcSym)?.address,
+          destTokenAddress: claimTokenAddress,
+          recipient: wallet.address,
+          amountOutUnits: claimAmountUnits,
+        });
+        destTxHash = claimRes.destTxHash;
+      }
 
       setCrossLifecycle((prev) => ({
         ...prev,
         status: 'COMPLETED',
         step: 7,
-        destTxHash: claimRes.destTxHash,
+        destTxHash,
+        error: null,
       }));
 
-      updateCrossChainTransfer(tId, { status: CROSS_CHAIN_STATUS.COMPLETED, destTxHash: claimRes.destTxHash });
+      updateCrossChainTransfer(tId, { status: 'COMPLETED', destTxHash });
+      setUnclaimedTransfer(null);
 
       setTxNotification({
         type: 'success',
         message: `Settled on ${destNet.name}! Received ${activeTransfer?.amount || crossQuote?.destEstimatedOutput || ''} ${finalClaimSym}.`,
-        txHash: claimRes.destTxHash,
+        txHash: destTxHash,
         chainId: destCId,
       });
-      // Refresh balances so UI shows received tokens immediately
+
+      // Synchronize live wallet balances immediately across UI components
       try {
         const destProv = getReadProvider(destCId);
         const updatedBal = await getUserTokenBalance(destProv, wallet.address, destCId, finalClaimSym);
         setCrossSourceBalance(updatedBal);
-      } catch (_) { /* silent */ }
-      if (wallet?.address && wallet?.provider && wallet?.chainId) {
-        fetchWalletData(wallet.address, wallet.provider, wallet.chainId).catch(() => null);
-      }
 
-      setTimeout(() => {
-        setCrossLifecycle({
-          status: 'IDLE',
-          step: 0,
-          totalSteps: 7,
-          sourceTxHash: null,
-          destTxHash: null,
-          lifiExplorerUrl: null,
-          error: null,
-          transferId: null,
-        });
-      }, 5000);
+        const wData = await fetchWalletData(wallet.address, wallet.provider || destProv, destCId);
+        if (wData) {
+          if (wData.fdxBalance !== undefined && wData.fdxBalance !== null) {
+            setUserFdxBalance(wData.fdxBalance);
+          }
+          if (wData.polBalance !== undefined && wData.polBalance !== null) {
+            setUserPolBalance(wData.polBalance);
+          }
+          if (wData.wrappedBalance !== undefined && wData.wrappedBalance !== null) {
+            setUserWrappedBalance(wData.wrappedBalance);
+          }
+        }
+      } catch (_) { /* silent */ }
+
+      // Auto-register token in MetaMask so user immediately sees balance in wallet
+      if (window.ethereum && finalClaimSym === 'FDX' && claimTokenAddress) {
+        window.ethereum.request({
+          method: 'wallet_watchAsset',
+          params: {
+            type: 'ERC20',
+            options: {
+              address: claimTokenAddress,
+              symbol: 'FDX',
+              decimals: 18,
+            },
+          },
+        }).catch(() => null);
+      }
     } catch (err) {
       const reason = parseRevertReason(err);
       setCrossLifecycle((prev) => ({
@@ -1964,23 +2000,27 @@ export default function FundryxAppPortal({
               isSwitching={isSwitchingNetwork}
             />
 
-            {wallet.address && CONTRACT_ADDRESSES?.FundryxToken && (
+            {wallet.address && (
               <button
                 type="button"
                 onClick={async () => {
                   try {
-                    const added = await addTokenToMetaMask(CONTRACT_ADDRESSES.FundryxToken, 'FDX', 18);
-                    if (added) {
-                      setTxNotification({
-                        type: 'success',
-                        message: 'FDX token successfully added to MetaMask portfolio (EIP-747)',
-                      });
+                    const cId = Number(wallet.chainId || 80002);
+                    const fdxTok = getTokenConfig(cId, 'FDX');
+                    if (fdxTok?.address) {
+                      const added = await addTokenToMetaMask(fdxTok.address, 'FDX', 18);
+                      if (added) {
+                        setTxNotification({
+                          type: 'success',
+                          message: `FDX token successfully added to MetaMask for ${SUPPORTED_NETWORKS[cId]?.name || 'network'} (EIP-747)`,
+                        });
+                      }
                     }
                   } catch (e) {
                     console.warn('Watch asset notification:', e.message);
                   }
                 }}
-                className="h-10 px-3.5 rounded-[10px] bg-[var(--surface-2)] hover:bg-[var(--surface-hover)] border border-[var(--border)] hidden sm:flex items-center gap-1.5 text-xs font-mono text-emerald-400 transition cursor-pointer"
+                className="h-10 px-3.5 rounded-[10px] bg-[var(--surface-2)] hover:bg-[var(--surface-hover)] border border-[var(--border)] flex items-center gap-1.5 text-xs font-mono text-emerald-400 transition cursor-pointer"
                 title="Register FDX token in MetaMask via EIP-747"
               >
                 <Sparkles size={13} />
@@ -3932,14 +3972,15 @@ export default function FundryxAppPortal({
                 );
 
                 const activePendingTransfer = getActiveCrossChainTransfers().find(
-                  (t) => t.status !== 'COMPLETED' &&
+                  (t) => !isCrossChainTransferCompleted(t) &&
                          Number(t.destChainId) === Number(activeDestChain) &&
                          Number(t.sourceChainId) === Number(activeSourceChain) &&
                          (!wallet?.address || !t.recipient || t.recipient.toLowerCase() === wallet.address.toLowerCase())
                 );
-                const isClaimStage = crossLifecycle.status === 'DESTINATION_PENDING' ||
+                const isClaimStage = (crossLifecycle.status === 'DESTINATION_PENDING' ||
                                      crossLifecycle.status === 'SOURCE_CONFIRMED' ||
-                                     Boolean(activePendingTransfer);
+                                     Boolean(activePendingTransfer)) &&
+                                     crossLifecycle.status !== 'COMPLETED';
 
                 const currentModeChains = networkMode === 'mainnet'
                   ? [137, 143, 8453, 43114]
@@ -4441,6 +4482,39 @@ export default function FundryxAppPortal({
                               </button>
                               <button
                                 type="button"
+                                onClick={async () => {
+                                  if (activePendingTransfer?.transferId) {
+                                    updateCrossChainTransfer(activePendingTransfer.transferId, { status: 'COMPLETED' });
+                                  } else {
+                                    clearActiveCrossChainTransfers();
+                                  }
+                                  setUnclaimedTransfer(null);
+                                  setCrossLifecycle({
+                                    status: 'IDLE',
+                                    step: 0,
+                                    totalSteps: 7,
+                                    sourceTxHash: null,
+                                    destTxHash: null,
+                                    lifiExplorerUrl: null,
+                                    error: null,
+                                    transferId: null,
+                                  });
+                                  const cId = Number(wallet?.chainId || 80002);
+                                  const wData = await fetchWalletData(wallet.address, wallet.provider, cId).catch(() => null);
+                                  if (wData?.fdxBalance !== undefined && wData?.fdxBalance !== null) {
+                                    setUserFdxBalance(wData.fdxBalance);
+                                  }
+                                  setTxNotification({
+                                    type: 'success',
+                                    message: 'Transfer marked completed. Wallet balance synced!',
+                                  });
+                                }}
+                                className="px-3 py-1 rounded bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-200 border border-cyan-500/40 text-[11px] font-bold uppercase tracking-wider shrink-0 cursor-pointer"
+                              >
+                                Sync &amp; Complete
+                              </button>
+                              <button
+                                type="button"
                                 onClick={() => {
                                   clearActiveCrossChainTransfers();
                                   setCrossLifecycle({
@@ -4531,21 +4605,36 @@ export default function FundryxAppPortal({
                       </div>
                     ) : crossLifecycle.status === 'COMPLETED' ? (
                       <div className="flex flex-col gap-2">
-                        <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs font-mono flex items-center justify-between">
+                        <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs font-mono flex items-center justify-between flex-wrap gap-2">
                           <span className="flex items-center gap-1.5 font-bold">
                             <CheckCircle size={14} className="text-emerald-400" />
                             Transfer Fully Settled (7/7 Complete)
                           </span>
-                          {crossLifecycle.destTxHash && (
-                            <a
-                              href={`${destNetwork.explorerUrl}/tx/${crossLifecycle.destTxHash}`}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="underline text-emerald-400 font-semibold inline-flex items-center gap-1"
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={async () => {
+                                const cId = Number(destNetwork.chainId || wallet.chainId || 80002);
+                                const fdx = getTokenConfig(cId, 'FDX');
+                                if (fdx?.address && window.ethereum) {
+                                  await addTokenToMetaMask(fdx.address, 'FDX', 18);
+                                }
+                              }}
+                              className="px-2.5 py-1 rounded bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-200 border border-emerald-500/40 text-[11px] font-bold cursor-pointer"
                             >
-                              Dest TX <ExternalLink size={11} />
-                            </a>
-                          )}
+                              + Add FDX to MetaMask
+                            </button>
+                            {crossLifecycle.destTxHash && (
+                              <a
+                                href={`${destNetwork.explorerUrl}/tx/${crossLifecycle.destTxHash}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="underline text-emerald-400 font-semibold inline-flex items-center gap-1"
+                              >
+                                Dest TX <ExternalLink size={11} />
+                              </a>
+                            )}
+                          </div>
                         </div>
                         <button
                           type="button"

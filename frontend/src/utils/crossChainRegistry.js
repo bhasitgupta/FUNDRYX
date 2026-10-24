@@ -328,11 +328,25 @@ export function saveCrossChainTransfer(transfer) {
   } catch { }
 }
 
+export function isCrossChainTransferCompleted(t) {
+  if (!t || !t.status) return false;
+  const s = String(t.status).trim().toUpperCase();
+  return s === 'COMPLETED' || s === 'SETTLED' || s === 'SUCCESS';
+}
+
 export function updateCrossChainTransfer(transferId, updates) {
   if (typeof window === 'undefined' || !transferId) return;
   try {
     const existing = getActiveCrossChainTransfers();
-    const updated = existing.map((t) => (t.transferId === transferId ? { ...t, ...updates } : t));
+    const updated = existing.map((t) => {
+      const isMatch = t.transferId === transferId ||
+        (t.transferId && transferId && String(t.transferId).toLowerCase() === String(transferId).toLowerCase());
+      if (isMatch) {
+        const statusVal = updates.status && String(updates.status).toUpperCase() === 'COMPLETED' ? 'COMPLETED' : updates.status;
+        return { ...t, ...updates, status: statusVal || t.status };
+      }
+      return t;
+    });
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
   } catch { }
 }

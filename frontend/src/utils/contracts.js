@@ -22,7 +22,10 @@ import {
   saveCrossChainTransfer,
   updateCrossChainTransfer,
   getActiveCrossChainTransfers,
+  isCrossChainTransferCompleted,
 } from './crossChainRegistry.js';
+
+export { isCrossChainTransferCompleted };
 
 // ─────────────────────────────────────────────────────────────
 // SECURE ENVIRONMENT VARIABLE RETRIEVER
@@ -3068,14 +3071,14 @@ export async function claimDestinationBridgeTransfer(signer, {
 
   const receipt = await tx.wait();
   updateCrossChainTransfer(transferId, {
-    status: CROSS_CHAIN_STATUS.COMPLETED,
+    status: 'COMPLETED',
     destTxHash: receipt.hash,
   });
 
   return {
     receipt,
     destTxHash: receipt.hash,
-    status: CROSS_CHAIN_STATUS.COMPLETED,
+    status: 'COMPLETED',
   };
 }
 
