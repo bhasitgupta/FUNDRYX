@@ -2960,60 +2960,25 @@ export async function executeCrossChainSwap(signerOrOpts, quoteArg, onStateUpdat
   });
 
   updateCrossChainTransfer(transferId, {
-    status: CROSS_CHAIN_STATUS.BRIDGE_PENDING,
+    status: CROSS_CHAIN_STATUS.DESTINATION_PENDING,
   });
 
-  // Poll destination settlement
-  const settlement = await pollDestinationSettlement({
-    destChainId: quote.destChainId,
+  onStateUpdate?.({
+    status: CROSS_CHAIN_STATUS.DESTINATION_PENDING,
+    step: 6,
+    totalSteps: 7,
+    sourceTxHash: receipt.hash,
+    destTxHash: null,
     transferId,
-    recipient: address,
-    destToken: destTokenAddress,
-    expectedAmount: quote.destEstimatedOutput,
-    maxAttempts: 1,
-    intervalMs: 300,
   });
 
-  if (settlement.status === 'COMPLETED') {
-    updateCrossChainTransfer(transferId, {
-      status: CROSS_CHAIN_STATUS.COMPLETED,
-      destTxHash: settlement.destTxHash,
-    });
-
-    onStateUpdate?.({
-      status: CROSS_CHAIN_STATUS.COMPLETED,
-      step: 7,
-      totalSteps: 7,
-      sourceTxHash: receipt.hash,
-      destTxHash: settlement.destTxHash,
-      transferId,
-    });
-
-    return {
-      sourceTxHash: receipt.hash,
-      destTxHash: settlement.destTxHash,
-      transferId,
-      status: CROSS_CHAIN_STATUS.COMPLETED,
-      quote,
-    };
-  } else {
-    onStateUpdate?.({
-      status: CROSS_CHAIN_STATUS.DESTINATION_PENDING,
-      step: 6,
-      totalSteps: 7,
-      sourceTxHash: receipt.hash,
-      destTxHash: null,
-      transferId,
-    });
-
-    return {
-      sourceTxHash: receipt.hash,
-      destTxHash: null,
-      transferId,
-      status: CROSS_CHAIN_STATUS.DESTINATION_PENDING,
-      quote,
-    };
-  }
+  return {
+    sourceTxHash: receipt.hash,
+    destTxHash: null,
+    transferId,
+    status: CROSS_CHAIN_STATUS.DESTINATION_PENDING,
+    quote,
+  };
 }
 
 /**

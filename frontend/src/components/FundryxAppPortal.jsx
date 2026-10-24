@@ -1288,6 +1288,7 @@ export default function FundryxAppPortal({
           sourceTxHash: progress.sourceTxHash || prev.sourceTxHash,
           destTxHash: progress.destTxHash || prev.destTxHash,
           lifiExplorerUrl: progress.lifiExplorerUrl || prev.lifiExplorerUrl,
+          transferId: progress.transferId || prev.transferId,
         }));
       });
 
@@ -3926,8 +3927,9 @@ export default function FundryxAppPortal({
                          Number(t.sourceChainId) === Number(activeSourceChain) &&
                          (!wallet?.address || !t.recipient || t.recipient.toLowerCase() === wallet.address.toLowerCase())
                 );
-                const isClaimStage = (crossLifecycle.status === 'DESTINATION_PENDING' || crossLifecycle.status === 'SOURCE_CONFIRMED' || crossLifecycle.status === 'BRIDGE_PENDING') &&
-                                     (Boolean(crossLifecycle.transferId) || Boolean(activePendingTransfer));
+                const isClaimStage = crossLifecycle.status === 'DESTINATION_PENDING' ||
+                                     crossLifecycle.status === 'SOURCE_CONFIRMED' ||
+                                     Boolean(activePendingTransfer);
 
                 const currentModeChains = networkMode === 'mainnet'
                   ? [137, 143, 8453, 43114]
@@ -4619,6 +4621,7 @@ export default function FundryxAppPortal({
                         {!isFetchingQuote && (crossLifecycle.status === 'SOURCE_SUBMITTED' || crossLifecycle.status === 'SOURCE_PENDING') && 'Broadcasting Source TX...'}
                         {!isFetchingQuote && crossLifecycle.status === 'SOURCE_CONFIRMED' && 'Source Confirmed · Bridge In Flight...'}
                         {!isFetchingQuote && crossLifecycle.status === 'BRIDGE_PENDING' && 'Bridge Relayer In Flight...'}
+                        {!isFetchingQuote && crossLifecycle.status === 'DESTINATION_PENDING' && `Source Confirmed · Ready to Claim on ${destNetwork.name}`}
                         {!isFetchingQuote && crossLifecycle.status === 'COMPLETED' && 'Transfer Completed · Bridge Next'}
                         {!isFetchingQuote && (crossLifecycle.status === 'IDLE' || crossLifecycle.status === 'FAILED' || crossLifecycle.status === 'REJECTED') && (
                           !amountValidation.isValid && crossAmount && Number(crossAmount) > 0
