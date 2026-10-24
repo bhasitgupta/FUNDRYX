@@ -1470,6 +1470,12 @@ export default function FundryxAppPortal({
         error: null,
       }));
 
+      // Update source chain to current wallet network so there is no mismatch banner
+      if (wallet?.chainId) {
+        setCrossSourceChain(Number(wallet.chainId));
+        setCrossDestChain((prev) => (prev === Number(wallet.chainId) ? (Number(wallet.chainId) === 10143 ? 43113 : 10143) : prev));
+      }
+
       updateCrossChainTransfer(tId, { status: 'COMPLETED', destTxHash });
       setUnclaimedTransfer(null);
 
@@ -1499,21 +1505,6 @@ export default function FundryxAppPortal({
           }
         }
       } catch (_) { /* silent */ }
-
-      // Auto-register token in MetaMask so user immediately sees balance in wallet
-      if (window.ethereum && finalClaimSym === 'FDX' && claimTokenAddress) {
-        window.ethereum.request({
-          method: 'wallet_watchAsset',
-          params: {
-            type: 'ERC20',
-            options: {
-              address: claimTokenAddress,
-              symbol: 'FDX',
-              decimals: 18,
-            },
-          },
-        }).catch(() => null);
-      }
     } catch (err) {
       const reason = parseRevertReason(err);
       setCrossLifecycle((prev) => ({
@@ -3986,9 +3977,14 @@ export default function FundryxAppPortal({
                   ? [137, 143, 8453, 43114]
                   : [80002, 10143, 84532, 43113];
 
-                const isWalletMismatched = !isClaimStage && Boolean(
-                  wallet?.address && wallet?.chainId && Number(wallet.chainId) !== Number(crossSourceChain)
-                );
+                const isWalletMismatched = !isClaimStage &&
+                  crossLifecycle.status !== 'COMPLETED' &&
+                  crossLifecycle.status !== 'DESTINATION_PENDING' &&
+                  crossLifecycle.status !== 'SOURCE_CONFIRMED' &&
+                  crossLifecycle.status !== 'BRIDGE_PENDING' &&
+                  Boolean(
+                    wallet?.address && wallet?.chainId && Number(wallet.chainId) !== Number(crossSourceChain)
+                  );
 
                 const routeMatrixData = getRouteMatrix(networkMode);
                 const amountValidation = validateTransferAmount(
@@ -4639,6 +4635,9 @@ export default function FundryxAppPortal({
                         <button
                           type="button"
                           onClick={() => {
+                            const cId = Number(wallet?.chainId || 80002);
+                            setCrossSourceChain(cId);
+                            setCrossDestChain(cId === 10143 ? 43113 : 10143);
                             setCrossLifecycle({
                               status: 'IDLE',
                               step: 0,
