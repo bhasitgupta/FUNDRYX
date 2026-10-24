@@ -186,6 +186,15 @@ export default function FundryxAppPortal({
   // Synchronize swap currency and bridge network whenever wallet chain changes
   useEffect(() => {
     if (wallet?.chainId) {
+      const activeTransfers = getActiveCrossChainTransfers();
+      const pending = activeTransfers.find(
+        (t) => t.status !== 'COMPLETED' && (!wallet?.address || !t.recipient || t.recipient.toLowerCase() === wallet.address.toLowerCase())
+      );
+      if (pending || crossLifecycle.status === 'DESTINATION_PENDING') {
+        // Active bridge awaiting claim: do not flip source/destination
+        return;
+      }
+
       const cId = Number(wallet.chainId);
       const net = SUPPORTED_NETWORKS[cId] || SUPPORTED_NETWORKS[80002];
       const wrapSym = net?.wrappedNative?.symbol || (cId === 10143 ? 'WMON' : 'WPOL');
@@ -208,7 +217,8 @@ export default function FundryxAppPortal({
 
       loadPairReserves(cId);
     }
-  }, [wallet?.chainId]);
+  }, [wallet?.chainId, crossLifecycle.status]);
+
   const [crossLifecycle, setCrossLifecycle] = useState({
     status: 'IDLE',
     step: 0,
@@ -219,6 +229,31 @@ export default function FundryxAppPortal({
     error: null,
     transferId: null,
   });
+
+  // Restore pending cross-chain transfer from persistent storage on connect/mount
+  useEffect(() => {
+    const activeTransfers = getActiveCrossChainTransfers();
+    const pending = activeTransfers.find(
+      (t) => t.status !== 'COMPLETED' && (!wallet?.address || !t.recipient || t.recipient.toLowerCase() === wallet.address.toLowerCase())
+    );
+    if (pending && crossLifecycle.status === 'IDLE') {
+      setCrossLifecycle({
+        status: 'DESTINATION_PENDING',
+        step: 6,
+        totalSteps: 7,
+        sourceTxHash: pending.sourceTxHash || null,
+        destTxHash: null,
+        lifiExplorerUrl: null,
+        error: null,
+        transferId: pending.transferId,
+      });
+      setCrossSourceChain(pending.sourceChainId);
+      setCrossDestChain(pending.destChainId);
+      setCrossSourceToken(pending.sourceToken || 'FDX');
+      setCrossDestToken(pending.destToken || 'FDX');
+      setCrossAmount(pending.amount?.toString() || '10');
+    }
+  }, [wallet?.address]);
 
   const [crossSourceBalance, setCrossSourceBalance] = useState({
     raw: 0n,
@@ -3837,16 +3872,23 @@ export default function FundryxAppPortal({
 
               {swapSubTab === 'cross-chain' && (() => {
                 const quote = crossQuote;
-                const sourceNetwork = SUPPORTED_NETWORKS[crossSourceChain] || { name: `Chain ${crossSourceChain}` };
-                const destNetwork = SUPPORTED_NETWORKS[crossDestChain] || { name: `Chain ${crossDestChain}` };
-                const sourceTokens = getTokenRegistry(crossSourceChain);
-                const destTokens = getTokenRegistry(crossDestChain);
+                const activePendingTransfer = getActiveCrossChainTransfers().find(
+                  (t) => t.status !== 'COMPLETED' && (!wallet?.address || !t.recipient || t.recipient.toLowerCase() === wallet.address.toLowerCase())
+                );
+                const isClaimStage = crossLifecycle.status === 'DESTINATION_PENDING' || Boolean(activePendingTransfer);
+
+                const activeDestChain = activePendingTransfer?.destChainId || crossDestChain;
+                const activeSourceChain = activePendingTransfer?.sourceChainId || crossSourceChain;
+                const sourceNetwork = SUPPORTED_NETWORKS[activeSourceChain] || { name: `Chain ${activeSourceChain}` };
+                const destNetwork = SUPPORTED_NETWORKS[activeDestChain] || { name: `Chain ${activeDestChain}` };
+                const sourceTokens = getTokenRegistry(activeSourceChain);
+                const destTokens = getTokenRegistry(activeDestChain);
 
                 const currentModeChains = networkMode === 'mainnet'
                   ? [137, 143, 8453, 43114]
                   : [80002, 10143, 84532, 43113];
 
-                const isWalletMismatched = Boolean(
+                const isWalletMismatched = !isClaimStage && Boolean(
                   wallet?.address && wallet?.chainId && Number(wallet.chainId) !== Number(crossSourceChain)
                 );
 
@@ -4150,18 +4192,18 @@ export default function FundryxAppPortal({
                     ) : null}
 
                     {/* Transaction Lifecycle Status Panel */}
-                    {crossLifecycle.status !== 'IDLE' && (
+                    {(crossLifecycle.status !== 'IDLE' || isClaimStage) && (
                       <div className="p-4 rounded-xl bg-[var(--surface-1)] border border-[var(--accent-1)]/40 flex flex-col gap-3 animate-fade-in">
                         <div className="flex justify-between items-center">
                           <span className="text-xs uppercase font-bold text-[var(--accent-1)]">
-                            Cross-Chain Lifecycle (Step {crossLifecycle.step} / {crossLifecycle.totalSteps})
+                            Cross-Chain Lifecycle (Step {isClaimStage ? 6 : crossLifecycle.step} / {crossLifecycle.totalSteps || 7})
                           </span>
                           <span className={`text-xs font-mono font-bold px-2.5 py-1 rounded border ${
-                            crossLifecycle.status === 'DESTINATION_PENDING'
+                            isClaimStage || crossLifecycle.status === 'DESTINATION_PENDING'
                               ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
                               : 'bg-[var(--surface-2)] text-white border-[var(--border)]'
                           }`}>
-                            {crossLifecycle.status === 'DESTINATION_PENDING'
+                            {isClaimStage || crossLifecycle.status === 'DESTINATION_PENDING'
                               ? 'Ready to Claim'
                               : crossLifecycle.status.replace(/_/g, ' ')}
                           </span>
@@ -4173,7 +4215,7 @@ export default function FundryxAppPortal({
                               crossLifecycle.status === 'FAILED' ? 'bg-rose-500' : 'bg-gradient-to-r from-[var(--primary)] to-[var(--accent-1)]'
                             }`}
                             style={{
-                              width: `${(crossLifecycle.step / crossLifecycle.totalSteps) * 100}%`,
+                              width: `${((isClaimStage ? 6 : crossLifecycle.step) / (crossLifecycle.totalSteps || 7)) * 100}%`,
                             }}
                           />
                         </div>
@@ -4181,14 +4223,14 @@ export default function FundryxAppPortal({
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-mono">
                           <div>
                             <span className="text-[var(--text-dim)] block">Source Chain TX ({sourceNetwork.name}):</span>
-                            {crossLifecycle.sourceTxHash ? (
+                            {crossLifecycle.sourceTxHash || activePendingTransfer?.sourceTxHash ? (
                               <a
-                                href={`${sourceNetwork.explorerUrl}/tx/${crossLifecycle.sourceTxHash}`}
+                                href={`${sourceNetwork.explorerUrl}/tx/${crossLifecycle.sourceTxHash || activePendingTransfer?.sourceTxHash}`}
                                 target="_blank"
                                 rel="noreferrer"
                                 className="text-[var(--accent-1)] hover:underline inline-flex items-center gap-1"
                               >
-                                <span>{crossLifecycle.sourceTxHash.slice(0, 10)}...{crossLifecycle.sourceTxHash.slice(-8)}</span>
+                                <span>{(crossLifecycle.sourceTxHash || activePendingTransfer?.sourceTxHash).slice(0, 10)}...{(crossLifecycle.sourceTxHash || activePendingTransfer?.sourceTxHash).slice(-8)}</span>
                                 <ExternalLink size={11} />
                               </a>
                             ) : (
@@ -4221,7 +4263,7 @@ export default function FundryxAppPortal({
                               <span className="text-[var(--text-muted)]">
                                 {crossLifecycle.status === 'COMPLETED'
                                   ? 'Settled on destination'
-                                  : crossLifecycle.status === 'DESTINATION_PENDING'
+                                  : isClaimStage || crossLifecycle.status === 'DESTINATION_PENDING'
                                     ? 'Source confirmed · Ready to claim below'
                                     : 'Awaiting bridge relayer attestation...'}
                               </span>
@@ -4238,40 +4280,40 @@ export default function FundryxAppPortal({
                     )}
 
                     {/* Action Button */}
-                    {crossLifecycle.status === 'DESTINATION_PENDING' ? (
+                    {isClaimStage ? (
                       <div className="flex flex-col gap-3">
-                        {wallet.chainId !== crossDestChain && (
+                        {Number(wallet.chainId) !== Number(activeDestChain) && (
                           <button
                             type="button"
-                            onClick={() => onSwitchNetwork?.(crossDestChain)}
+                            onClick={() => onSwitchNetwork?.(activeDestChain)}
                             className="h-14 w-full font-bold text-sm tracking-wide rounded-xl transition cursor-pointer flex items-center justify-center gap-2 shadow-lg hover:brightness-110 active:scale-[0.99]"
                             style={{ color: '#041014', backgroundColor: '#2EE6A6' }}
                           >
                             <ArrowLeftRight size={18} />
-                            <span>Switch Wallet to {destNetwork.name} ({crossDestChain})</span>
+                            <span>Switch Wallet to {destNetwork.name} ({activeDestChain})</span>
                           </button>
                         )}
 
                         {/* Claim button below switch for 7th and last step */}
                         <button
                           type="button"
-                          onClick={() => handleClaimDestinationTransfer()}
-                          disabled={wallet.chainId !== crossDestChain}
+                          onClick={() => handleClaimDestinationTransfer(activePendingTransfer)}
+                          disabled={Number(wallet.chainId) !== Number(activeDestChain)}
                           className={`h-14 w-full font-bold text-sm tracking-wide rounded-xl transition cursor-pointer flex items-center justify-center gap-2 shadow-lg ${
-                            wallet.chainId === crossDestChain
+                            Number(wallet.chainId) === Number(activeDestChain)
                               ? 'hover:brightness-110 active:scale-[0.99]'
                               : 'opacity-50 cursor-not-allowed border border-white/10'
                           }`}
                           style={
-                            wallet.chainId === crossDestChain
+                            Number(wallet.chainId) === Number(activeDestChain)
                               ? { color: '#041014', backgroundColor: '#2EE6A6' }
                               : { color: 'var(--text-muted)', backgroundColor: 'var(--surface-2)' }
                           }
                         >
                           <CheckCircle size={18} />
                           <span>
-                            {wallet.chainId === crossDestChain
-                              ? `Step 7/7: Claim ${crossQuote?.destEstimatedOutput || crossAmount} ${crossDestToken} on ${destNetwork.name}`
+                            {Number(wallet.chainId) === Number(activeDestChain)
+                              ? `Step 7/7: Claim ${activePendingTransfer?.amount || crossQuote?.destEstimatedOutput || crossAmount} ${activePendingTransfer?.destToken || crossDestToken} on ${destNetwork.name}`
                               : `Step 7/7: Claim Tokens (Switch Wallet to ${destNetwork.name} First)`}
                           </span>
                         </button>
