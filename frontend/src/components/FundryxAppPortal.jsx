@@ -182,6 +182,26 @@ export default function FundryxAppPortal({
   const [crossQuote, setCrossQuote] = useState(null);
   const [isFetchingQuote, setIsFetchingQuote] = useState(false);
   const [showRouteMatrixModal, setShowRouteMatrixModal] = useState(false);
+  const [crossLifecycle, setCrossLifecycle] = useState({
+    status: 'IDLE',
+    step: 0,
+    totalSteps: 7,
+    sourceTxHash: null,
+    destTxHash: null,
+    lifiExplorerUrl: null,
+    error: null,
+    transferId: null,
+  });
+  const [crossSourceBalance, setCrossSourceBalance] = useState({
+    raw: 0n,
+    formatted: '0.00',
+    decimals: 18,
+    symbol: 'FDX',
+  });
+  const [isFetchingCrossBalance, setIsFetchingCrossBalance] = useState(false);
+  const [isHowSwapWorksOpen, setIsHowSwapWorksOpen] = useState(false);
+  const [isHowBridgeWorksOpen, setIsHowBridgeWorksOpen] = useState(false);
+  const [marketView, setMarketView] = useState('amm'); // 'amm' | 'orderbook'
 
   // Synchronize swap currency and bridge network whenever wallet chain changes
   useEffect(() => {
@@ -219,17 +239,6 @@ export default function FundryxAppPortal({
     }
   }, [wallet?.chainId, crossLifecycle.status]);
 
-  const [crossLifecycle, setCrossLifecycle] = useState({
-    status: 'IDLE',
-    step: 0,
-    totalSteps: 7,
-    sourceTxHash: null,
-    destTxHash: null,
-    lifiExplorerUrl: null,
-    error: null,
-    transferId: null,
-  });
-
   // Restore pending cross-chain transfer from persistent storage on connect/mount
   useEffect(() => {
     const activeTransfers = getActiveCrossChainTransfers();
@@ -254,14 +263,6 @@ export default function FundryxAppPortal({
       setCrossAmount(pending.amount?.toString() || '10');
     }
   }, [wallet?.address]);
-
-  const [crossSourceBalance, setCrossSourceBalance] = useState({
-    raw: 0n,
-    formatted: '0.00',
-    decimals: 18,
-    symbol: 'FDX',
-  });
-  const [isFetchingCrossBalance, setIsFetchingCrossBalance] = useState(false);
 
   // Live balance query for selected source asset on source chain
   useEffect(() => {
@@ -295,9 +296,6 @@ export default function FundryxAppPortal({
       isCancelled = true;
     };
   }, [wallet?.address, wallet?.chainId, crossSourceChain, crossSourceToken, crossLifecycle.status]);
-  const [isHowSwapWorksOpen, setIsHowSwapWorksOpen] = useState(false);
-  const [isHowBridgeWorksOpen, setIsHowBridgeWorksOpen] = useState(false);
-  const [marketView, setMarketView] = useState('amm'); // 'amm' | 'orderbook'
 
   // Debounced live quote discovery for Cross-Chain Bridge
   useEffect(() => {
