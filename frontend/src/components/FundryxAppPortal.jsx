@@ -1373,6 +1373,8 @@ export default function FundryxAppPortal({
         destTxHash: claimRes.destTxHash,
       }));
 
+      updateCrossChainTransfer(tId, { status: CROSS_CHAIN_STATUS.COMPLETED, destTxHash: claimRes.destTxHash });
+
       setTxNotification({
         type: 'success',
         message: `Settled on ${destNet.name}! Received ${activeTransfer?.amount || crossQuote?.destEstimatedOutput || ''} ${dstSym}.`,
@@ -1380,6 +1382,19 @@ export default function FundryxAppPortal({
         chainId: destCId,
       });
       refreshAll();
+
+      setTimeout(() => {
+        setCrossLifecycle({
+          status: 'IDLE',
+          step: 0,
+          totalSteps: 7,
+          sourceTxHash: null,
+          destTxHash: null,
+          lifiExplorerUrl: null,
+          error: null,
+          transferId: null,
+        });
+      }, 5000);
     } catch (err) {
       const reason = parseRevertReason(err);
       setCrossLifecycle((prev) => ({
@@ -3884,63 +3899,6 @@ export default function FundryxAppPortal({
                       </div>
                     </div>
 
-                    {/* Persistent Pending Bridge Claim Card */}
-                    {(() => {
-                      const allTransfers = getActiveCrossChainTransfers();
-                      const pending = allTransfers.find(
-                        (t) => t.status !== 'COMPLETED' && (!wallet?.address || !t.recipient || t.recipient.toLowerCase() === wallet.address.toLowerCase())
-                      );
-                      if (!pending) return null;
-                      const pDestNet = SUPPORTED_NETWORKS[pending.destChainId] || { name: `Chain ${pending.destChainId}` };
-                      const pSrcNet = SUPPORTED_NETWORKS[pending.sourceChainId] || { name: `Chain ${pending.sourceChainId}` };
-                      const isReadyOnDest = Number(wallet?.chainId) === Number(pending.destChainId);
-
-                      return (
-                        <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/40 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 animate-fade-in shadow-lg">
-                          <div className="flex flex-col gap-1">
-                            <div className="flex items-center gap-2">
-                              <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
-                              <span className="font-bold text-sm text-emerald-300">Pending Bridge Transfer Ready to Claim!</span>
-                            </div>
-                            <div className="text-xs text-[var(--text-muted)] font-mono">
-                              {pending.amount} {pending.sourceToken} from {pSrcNet.name} &rarr; {pDestNet.name}
-                              {pending.sourceTxHash && (
-                                <a
-                                  href={`${pSrcNet.explorerUrl}/tx/${pending.sourceTxHash}`}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  className="ml-2 text-emerald-400 underline inline-flex items-center gap-1"
-                                >
-                                  Source TX <ExternalLink size={10} />
-                                </a>
-                              )}
-                            </div>
-                          </div>
-                          {isReadyOnDest ? (
-                            <button
-                              type="button"
-                              onClick={() => handleClaimDestinationTransfer(pending)}
-                              className="px-5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider transition cursor-pointer shadow-lg hover:brightness-110 active:scale-[0.98] shrink-0 flex items-center gap-1.5"
-                              style={{ color: '#041014', backgroundColor: '#2EE6A6' }}
-                            >
-                              <CheckCircle size={15} />
-                              <span>Claim {pending.amount} {pending.destToken} on {pDestNet.name}</span>
-                            </button>
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={() => onSwitchNetwork?.(pending.destChainId)}
-                              className="px-5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider transition cursor-pointer shadow-lg hover:brightness-110 active:scale-[0.98] shrink-0 flex items-center gap-1.5"
-                              style={{ color: '#041014', backgroundColor: '#2EE6A6' }}
-                            >
-                              <ArrowLeftRight size={15} />
-                              <span>Switch to {pDestNet.name} to Claim</span>
-                            </button>
-                          )}
-                        </div>
-                      );
-                    })()}
-
                     {/* Wallet Network Mismatch Alert Banner */}
                     {isWalletMismatched && (
                       <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs animate-fade-in">
@@ -4281,27 +4239,80 @@ export default function FundryxAppPortal({
 
                     {/* Action Button */}
                     {crossLifecycle.status === 'DESTINATION_PENDING' ? (
-                      wallet.chainId !== crossDestChain ? (
+                      <div className="flex flex-col gap-3">
+                        {wallet.chainId !== crossDestChain && (
+                          <button
+                            type="button"
+                            onClick={() => onSwitchNetwork?.(crossDestChain)}
+                            className="h-14 w-full font-bold text-sm tracking-wide rounded-xl transition cursor-pointer flex items-center justify-center gap-2 shadow-lg hover:brightness-110 active:scale-[0.99]"
+                            style={{ color: '#041014', backgroundColor: '#2EE6A6' }}
+                          >
+                            <ArrowLeftRight size={18} />
+                            <span>Switch Wallet to {destNetwork.name} ({crossDestChain})</span>
+                          </button>
+                        )}
+
+                        {/* Claim button below switch for 7th and last step */}
                         <button
                           type="button"
-                          onClick={() => onSwitchNetwork?.(crossDestChain)}
-                          className="h-14 w-full font-bold text-sm tracking-wide rounded-xl transition cursor-pointer flex items-center justify-center gap-2 shadow-lg hover:brightness-110 active:scale-[0.99]"
-                          style={{ color: '#041014', backgroundColor: '#2EE6A6' }}
-                        >
-                          <ArrowLeftRight size={18} />
-                          <span>Switch Wallet to {destNetwork.name} ({crossDestChain}) to Claim Tokens</span>
-                        </button>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={handleClaimDestinationTransfer}
-                          className="h-14 w-full font-bold text-sm tracking-wide rounded-xl transition cursor-pointer flex items-center justify-center gap-2 shadow-lg hover:brightness-110 active:scale-[0.99]"
-                          style={{ color: '#041014', backgroundColor: '#2EE6A6' }}
+                          onClick={() => handleClaimDestinationTransfer()}
+                          disabled={wallet.chainId !== crossDestChain}
+                          className={`h-14 w-full font-bold text-sm tracking-wide rounded-xl transition cursor-pointer flex items-center justify-center gap-2 shadow-lg ${
+                            wallet.chainId === crossDestChain
+                              ? 'hover:brightness-110 active:scale-[0.99]'
+                              : 'opacity-50 cursor-not-allowed border border-white/10'
+                          }`}
+                          style={
+                            wallet.chainId === crossDestChain
+                              ? { color: '#041014', backgroundColor: '#2EE6A6' }
+                              : { color: 'var(--text-muted)', backgroundColor: 'var(--surface-2)' }
+                          }
                         >
                           <CheckCircle size={18} />
-                          <span>Claim {crossQuote?.destEstimatedOutput || crossAmount} {crossDestToken} on {destNetwork.name}</span>
+                          <span>
+                            {wallet.chainId === crossDestChain
+                              ? `Step 7/7: Claim ${crossQuote?.destEstimatedOutput || crossAmount} ${crossDestToken} on ${destNetwork.name}`
+                              : `Step 7/7: Claim Tokens (Switch Wallet to ${destNetwork.name} First)`}
+                          </span>
                         </button>
-                      )
+                      </div>
+                    ) : crossLifecycle.status === 'COMPLETED' ? (
+                      <div className="flex flex-col gap-2">
+                        <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs font-mono flex items-center justify-between">
+                          <span className="flex items-center gap-1.5 font-bold">
+                            <CheckCircle size={14} className="text-emerald-400" />
+                            Transfer Fully Settled (7/7 Complete)
+                          </span>
+                          {crossLifecycle.destTxHash && (
+                            <a
+                              href={`${destNetwork.explorerUrl}/tx/${crossLifecycle.destTxHash}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="underline text-emerald-400 font-semibold inline-flex items-center gap-1"
+                            >
+                              Dest TX <ExternalLink size={11} />
+                            </a>
+                          )}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setCrossLifecycle({
+                              status: 'IDLE',
+                              step: 0,
+                              totalSteps: 7,
+                              sourceTxHash: null,
+                              destTxHash: null,
+                              lifiExplorerUrl: null,
+                              error: null,
+                              transferId: null,
+                            });
+                          }}
+                          className="h-12 w-full font-bold text-xs uppercase tracking-wider rounded-xl transition cursor-pointer flex items-center justify-center gap-2 border border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300"
+                        >
+                          Start New Bridge Transfer
+                        </button>
+                      </div>
                     ) : isWalletMismatched ? (
                       <button
                         type="button"
