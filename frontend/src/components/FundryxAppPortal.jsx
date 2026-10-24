@@ -3927,6 +3927,7 @@ export default function FundryxAppPortal({
                 const activeDestChain = activePendingTransfer?.destChainId || crossDestChain;
                 const activeSourceChain = activePendingTransfer?.sourceChainId || crossSourceChain;
                 const sourceNetwork = SUPPORTED_NETWORKS[activeSourceChain] || { name: `Chain ${activeSourceChain}` };
+                const destNetwork = SUPPORTED_NETWORKS[activeDestChain] || { name: `Chain ${activeDestChain}` };
                 const sourceTokens = getTokenRegistry(activeSourceChain).filter(
                   (t) => networkMode === 'mainnet' || t.supportedOperations?.includes('cross_chain')
                 );
