@@ -3936,7 +3936,7 @@ export default function FundryxAppPortal({
                          Number(t.sourceChainId) === Number(activeSourceChain) &&
                          (!wallet?.address || !t.recipient || t.recipient.toLowerCase() === wallet.address.toLowerCase())
                 );
-                const isClaimStage = (crossLifecycle.status === 'DESTINATION_PENDING' || crossLifecycle.status === 'SOURCE_CONFIRMED') &&
+                const isClaimStage = (crossLifecycle.status === 'DESTINATION_PENDING' || crossLifecycle.status === 'SOURCE_CONFIRMED' || crossLifecycle.status === 'BRIDGE_PENDING') &&
                                      (Boolean(crossLifecycle.transferId) || Boolean(activePendingTransfer));
 
                 const currentModeChains = networkMode === 'mainnet'
@@ -4325,15 +4325,41 @@ export default function FundryxAppPortal({
                           <span className="text-xs uppercase font-bold text-[var(--accent-1)]">
                             Cross-Chain Lifecycle (Step {isClaimStage ? 6 : crossLifecycle.step} / {crossLifecycle.totalSteps || 7})
                           </span>
-                          <span className={`text-xs font-mono font-bold px-2.5 py-1 rounded border ${
-                            isClaimStage || crossLifecycle.status === 'DESTINATION_PENDING'
-                              ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
-                              : 'bg-[var(--surface-2)] text-white border-[var(--border)]'
-                          }`}>
-                            {isClaimStage || crossLifecycle.status === 'DESTINATION_PENDING'
-                              ? 'Ready to Claim'
-                              : crossLifecycle.status.replace(/_/g, ' ')}
-                          </span>
+                          <div className="flex items-center gap-2">
+                            <span className={`text-xs font-mono font-bold px-2.5 py-1 rounded border ${
+                              isClaimStage || crossLifecycle.status === 'DESTINATION_PENDING' || crossLifecycle.status === 'BRIDGE_PENDING'
+                                ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
+                                : 'bg-[var(--surface-2)] text-white border-[var(--border)]'
+                            }`}>
+                              {isClaimStage || crossLifecycle.status === 'DESTINATION_PENDING' || crossLifecycle.status === 'BRIDGE_PENDING'
+                                ? 'Ready to Claim'
+                                : crossLifecycle.status.replace(/_/g, ' ')}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                clearActiveCrossChainTransfers();
+                                setCrossLifecycle({
+                                  status: 'IDLE',
+                                  step: 0,
+                                  totalSteps: 7,
+                                  sourceTxHash: null,
+                                  destTxHash: null,
+                                  lifiExplorerUrl: null,
+                                  error: null,
+                                  transferId: null,
+                                });
+                                setTxNotification({
+                                  type: 'info',
+                                  message: 'Reset cross-chain state. You can now start a new transfer.',
+                                });
+                              }}
+                              className="text-[11px] text-white/50 hover:text-rose-400 font-mono transition cursor-pointer px-2 py-0.5 rounded bg-white/5 hover:bg-rose-500/10 border border-white/10 hover:border-rose-500/30"
+                              title="Reset lifecycle and start a fresh transfer"
+                            >
+                              ✕ Reset
+                            </button>
+                          </div>
                         </div>
 
                         <div className="w-full bg-[var(--surface-2)] h-2 rounded-full overflow-hidden">
@@ -4390,7 +4416,7 @@ export default function FundryxAppPortal({
                               <span className="text-[var(--text-muted)]">
                                 {crossLifecycle.status === 'COMPLETED'
                                   ? 'Settled on destination'
-                                  : isClaimStage || crossLifecycle.status === 'DESTINATION_PENDING'
+                                  : isClaimStage || crossLifecycle.status === 'DESTINATION_PENDING' || crossLifecycle.status === 'BRIDGE_PENDING'
                                     ? 'Source confirmed · Ready to claim below'
                                     : 'Awaiting bridge relayer attestation...'}
                               </span>

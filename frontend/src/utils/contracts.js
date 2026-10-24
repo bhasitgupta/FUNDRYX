@@ -2970,8 +2970,8 @@ export async function executeCrossChainSwap(signerOrOpts, quoteArg, onStateUpdat
     recipient: address,
     destToken: destTokenAddress,
     expectedAmount: quote.destEstimatedOutput,
-    maxAttempts: 6,
-    intervalMs: 2000,
+    maxAttempts: 1,
+    intervalMs: 300,
   });
 
   if (settlement.status === 'COMPLETED') {
