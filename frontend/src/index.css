@@ -118,23 +118,25 @@ html, body {
 .portal-main-content {
   flex: 1;
   width: 100%;
-  max-width: 1280px;
+  max-width: 1360px;
   margin-left: auto;
   margin-right: auto;
   padding: 32px;
   display: flex;
   flex-direction: column;
-  gap: 40px;
+  gap: 36px;
   min-width: 0;
 }
 @media (max-width: 1024px) {
   .portal-main-content {
     padding: 24px;
+    gap: 28px;
   }
 }
 @media (max-width: 768px) {
   .portal-main-content {
     padding: 16px;
+    gap: 24px;
   }
 }
 
@@ -152,9 +154,9 @@ html, body {
   min-width: 0;
 }
 
-/* Card Rules: Exact 28px padding, 16px radius */
+/* Card Rules: Responsive padding, 16px radius, break-word protection */
 .portal-card {
-  padding: 28px;
+  padding: 24px;
   border-radius: 16px;
   background: var(--surface);
   border: 1px solid var(--border);
@@ -162,7 +164,14 @@ html, body {
   min-width: 0;
   position: relative;
   overflow: hidden;
+  word-break: break-word;
+  overflow-wrap: break-word;
   transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+@media (min-width: 1280px) {
+  .portal-card {
+    padding: 28px;
+  }
 }
 .portal-card:hover {
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.45);
@@ -324,22 +333,23 @@ html, body {
 }
 
 .portal-stat-num {
-  font-size: 32px;
+  font-size: clamp(22px, 2.2vw, 30px);
   font-weight: 700;
   color: var(--text);
   line-height: 1.15;
   font-variant-numeric: tabular-nums;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 .portal-label {
-  font-size: 12px;
-  font-weight: 500;
+  font-size: 11px;
+  font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: var(--text-muted);
-  white-space: nowrap;
-  text-overflow: ellipsis;
-  overflow: hidden;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 /* Badges - Exact 28px height, 12px side padding, never touching a border */
@@ -1313,4 +1323,18 @@ input[type="range"]::-webkit-slider-thumb:hover {
   background: rgba(69, 26, 3, 0.5);
   color: #fcd34d;
   border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+/* Dashboard robust responsive containment & anti-overflow rules */
+.portal-main-content * {
+  min-width: 0;
+}
+.portal-card,
+.portal-card * {
+  box-sizing: border-box;
+}
+.portal-card input,
+.portal-card select,
+.portal-card button {
+  max-width: 100%;
 }

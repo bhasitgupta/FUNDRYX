@@ -54,8 +54,8 @@ export const SUPPORTED_NETWORKS = {
     family: 'polygon',
     nativeToken: 'POL',
     nativeCurrency: { name: 'POL', symbol: 'POL', decimals: 18 },
-    wrappedNative: { symbol: 'WPOL', address: '0x360ad4f9a9A8EFe9A8DCB5f461c4Cc1047E1Dcf9' },
-    supportedAssets: ['FDX', 'WPOL', 'fUSD', 'USDC'],
+    wrappedNative: { symbol: 'POL', address: '0x360ad4f9a9A8EFe9A8DCB5f461c4Cc1047E1Dcf9' },
+    supportedAssets: ['FDX', 'POL', 'fUSD', 'USDC'],
     supportedOperations: ['lending', 'borrowing', 'swap', 'telemetry', 'audit', 'cross_chain_bridge'],
     rpcUrl: getEnvVar('VITE_POLYGON_AMOY_RPC', 'https://polygon-amoy-bor-rpc.publicnode.com'),
     explorerUrl: 'https://amoy.polygonscan.com',
@@ -80,11 +80,11 @@ export const SUPPORTED_NETWORKS = {
     },
     tokens: {
       FDX:    getEnvVar('VITE_POLYGON_FUNDRYX_TOKEN', '0xdA2631Aadb95AB5Ea6926e431F66fe2a66EF930E'),
+      POL:    '0x360ad4f9a9A8EFe9A8DCB5f461c4Cc1047E1Dcf9',
       WPOL:   '0x360ad4f9a9A8EFe9A8DCB5f461c4Cc1047E1Dcf9',
       WMATIC: '0x360ad4f9a9A8EFe9A8DCB5f461c4Cc1047E1Dcf9',
       fUSD:   getEnvVar('VITE_POLYGON_FUSD', '0x19a3c4BA6E1108421507a39Dc9193eFad0B9FB34'),
       USDC:   '0x41E94Eb019C0762f9Bfcf9Fb1E58725BfB0e7582',
-      POL:    '0x0000000000000000000000000000000000000000',
     },
   },
   10143: {
@@ -96,8 +96,8 @@ export const SUPPORTED_NETWORKS = {
     family: 'monad',
     nativeToken: 'MON',
     nativeCurrency: { name: 'MON', symbol: 'MON', decimals: 18 },
-    wrappedNative: { symbol: 'WMON', address: '0xFb8bf4c1CC7a94c73D209a149eA2AbEa852BC541' },
-    supportedAssets: ['MON', 'WMON', 'FDX', 'fUSD'],
+    wrappedNative: { symbol: 'MON', address: '0xFb8bf4c1CC7a94c73D209a149eA2AbEa852BC541' },
+    supportedAssets: ['MON', 'FDX', 'fUSD'],
     supportedOperations: ['lending', 'borrowing', 'swap', 'telemetry', 'risk_analysis', 'cross_chain_bridge'],
     rpcUrl: getEnvVar('VITE_MONAD_TESTNET_RPC', 'https://testnet-rpc.monad.xyz/'),
     explorerUrl: 'https://testnet.monadexplorer.com',
@@ -203,8 +203,8 @@ export const SUPPORTED_NETWORKS = {
     family: 'polygon',
     nativeToken: 'POL',
     nativeCurrency: { name: 'POL', symbol: 'POL', decimals: 18 },
-    wrappedNative: { symbol: 'WPOL', address: '0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270' },
-    supportedAssets: ['POL', 'WPOL', 'USDC', 'USDT'],
+    wrappedNative: { symbol: 'POL', address: '0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270' },
+    supportedAssets: ['POL', 'USDC', 'USDT'],
     supportedOperations: ['cross_chain_bridge', 'read_only_telemetry'],
     rpcUrl: 'https://polygon-rpc.com',
     explorerUrl: 'https://polygonscan.com',
@@ -218,6 +218,7 @@ export const SUPPORTED_NETWORKS = {
     tokens: {
       USDC: '0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359',
       USDT: '0xc2132D05D31c914a87C6611C10748AEb04B58e8F',
+      POL:  '0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270',
       WPOL: '0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270',
     },
   },
@@ -230,8 +231,8 @@ export const SUPPORTED_NETWORKS = {
     family: 'monad',
     nativeToken: 'MON',
     nativeCurrency: { name: 'MON', symbol: 'MON', decimals: 18 },
-    wrappedNative: { symbol: 'WMON', address: '0x760AfE86e5de5fa0Ee542fc7B7B713e1c5425701' },
-    supportedAssets: ['MON', 'WMON'],
+    wrappedNative: { symbol: 'MON', address: '0x760AfE86e5de5fa0Ee542fc7B7B713e1c5425701' },
+    supportedAssets: ['MON'],
     supportedOperations: ['cross_chain_bridge', 'read_only_telemetry'],
     rpcUrl: 'https://rpc.monad.xyz',
     explorerUrl: 'https://monadexplorer.com',
@@ -243,6 +244,7 @@ export const SUPPORTED_NETWORKS = {
     iconColor: '#836EF9',
     contracts: {},
     tokens: {
+      MON:  '0x760AfE86e5de5fa0Ee542fc7B7B713e1c5425701',
       WMON: '0x760AfE86e5de5fa0Ee542fc7B7B713e1c5425701',
     },
   },
@@ -382,12 +384,12 @@ export const TOKEN_REGISTRY = {
     {
       chainId: 80002,
       address: '0x360ad4f9a9A8EFe9A8DCB5f461c4Cc1047E1Dcf9',
-      name: 'Wrapped POL',
-      symbol: 'WPOL',
+      name: 'Polygon Ecosystem Token',
+      symbol: 'POL',
       decimals: 18,
       tokenType: 'wrapped-native',
       verifiedDeploymentStatus: 'VERIFIED_ON_CHAIN',
-      supportedOperations: ['swap', 'amm_pool'],
+      supportedOperations: ['swap', 'amm_pool', 'cross_chain'],
       explorerUrl: 'https://amoy.polygonscan.com/token/0x360ad4f9a9A8EFe9A8DCB5f461c4Cc1047E1Dcf9',
       canAddToWallet: true,
       logo: 'POL',
@@ -449,12 +451,12 @@ export const TOKEN_REGISTRY = {
     {
       chainId: 10143,
       address: '0xFb8bf4c1CC7a94c73D209a149eA2AbEa852BC541',
-      name: 'Wrapped MON',
-      symbol: 'WMON',
+      name: 'Monad Native Token',
+      symbol: 'MON',
       decimals: 18,
       tokenType: 'wrapped-native',
       verifiedDeploymentStatus: 'VERIFIED_ON_CHAIN',
-      supportedOperations: ['cross_chain_staging'],
+      supportedOperations: ['cross_chain_staging', 'cross_chain'],
       explorerUrl: 'https://testnet.monadexplorer.com/token/0xFb8bf4c1CC7a94c73D209a149eA2AbEa852BC541',
       canAddToWallet: true,
       logo: 'MON',
@@ -490,8 +492,8 @@ export const TOKEN_REGISTRY = {
     {
       chainId: 137,
       address: '0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270',
-      name: 'Wrapped POL',
-      symbol: 'WPOL',
+      name: 'Polygon Ecosystem Token',
+      symbol: 'POL',
       decimals: 18,
       tokenType: 'wrapped-native',
       verifiedDeploymentStatus: 'VERIFIED_ON_CHAIN',
@@ -531,8 +533,8 @@ export const TOKEN_REGISTRY = {
     {
       chainId: 143,
       address: '0x760AfE86e5de5fa0Ee542fc7B7B713e1c5425701',
-      name: 'Wrapped MON',
-      symbol: 'WMON',
+      name: 'Monad Native Token',
+      symbol: 'MON',
       decimals: 18,
       tokenType: 'wrapped-native',
       verifiedDeploymentStatus: 'VERIFIED_ON_CHAIN',
@@ -2659,10 +2661,10 @@ export async function executeCrossChainSwap(signerOrOpts, quoteArg, onStateUpdat
   if (!signer) throw new Error('Web3 signer required for transaction execution.');
   if (!quote) throw new Error('Missing cross-chain quote.');
 
-  // Enforce audit verification safeguard — NEVER bypass
+  // Enforce route verification safeguard
   if (!quote.auditVerification?.verified || !quote.canExecute) {
     throw new Error(
-      `Cross-chain execution blocked: ${quote.auditVerification?.reason || quote.unavailabilityReason || 'Audit verification unconfirmed'}`
+      `Cross-chain execution blocked: ${quote.unavailabilityReason || quote.auditVerification?.reason || 'Route unconfirmed'}`
     );
   }
 

@@ -158,8 +158,7 @@ export default function FundryxAppPortal({
 
   // Active chain & currency resolution
   const currentChainId = wallet?.chainId ? Number(wallet.chainId) : 80002;
-  const activeNetConfig = SUPPORTED_NETWORKS[currentChainId] || SUPPORTED_NETWORKS[80002];
-  const activeWrappedSymbol = activeNetConfig?.wrappedNative?.symbol || (currentChainId === 10143 ? 'WMON' : 'WPOL');
+  const activeWrappedSymbol = (activeNetConfig?.wrappedNative?.symbol || (currentChainId === 10143 ? 'MON' : 'POL')).replace(/^W(MON|POL)$/, '$1');
   const activeWrappedAddress = activeNetConfig?.wrappedNative?.address || (currentChainId === 10143 ? '0xFb8bf4c1CC7a94c73D209a149eA2AbEa852BC541' : '0x360ad4f9a9A8EFe9A8DCB5f461c4Cc1047E1Dcf9');
   const activeNativeSymbol = activeNetConfig?.nativeToken || activeNetConfig?.nativeCurrency?.symbol || (currentChainId === 10143 ? 'MON' : 'POL');
   const isChainSupported = Boolean(SUPPORTED_NETWORKS[currentChainId]);
@@ -202,6 +201,7 @@ export default function FundryxAppPortal({
     formatted: '0.00',
     decimals: 18,
     symbol: 'FDX',
+    loaded: false,
   });
   const [isFetchingCrossBalance, setIsFetchingCrossBalance] = useState(false);
   const [isHowSwapWorksOpen, setIsHowSwapWorksOpen] = useState(false);
@@ -212,8 +212,7 @@ export default function FundryxAppPortal({
   useEffect(() => {
     if (wallet?.chainId) {
       const cId = Number(wallet.chainId);
-      const net = SUPPORTED_NETWORKS[cId] || SUPPORTED_NETWORKS[80002];
-      const wrapSym = net?.wrappedNative?.symbol || (cId === 10143 ? 'WMON' : 'WPOL');
+      const wrapSym = (net?.wrappedNative?.symbol || (cId === 10143 ? 'MON' : 'POL')).replace(/^W(MON|POL)$/, '$1');
 
       setSwapFrom('FDX');
       setSwapTo(wrapSym);
@@ -253,7 +252,7 @@ export default function FundryxAppPortal({
     let isCancelled = false;
     async function fetchSourceBalance() {
       if (!wallet?.address || !crossSourceChain || !crossSourceToken) {
-        setCrossSourceBalance({ raw: 0n, formatted: '0.00', decimals: 18, symbol: crossSourceToken });
+        setCrossSourceBalance({ raw: 0n, formatted: '0.00', decimals: 18, symbol: crossSourceToken, loaded: false });
         return;
       }
       setIsFetchingCrossBalance(true);
@@ -263,11 +262,11 @@ export default function FundryxAppPortal({
           : getReadProvider(crossSourceChain);
         const balObj = await getUserTokenBalance(prov, wallet.address, crossSourceChain, crossSourceToken);
         if (!isCancelled) {
-          setCrossSourceBalance(balObj);
+          setCrossSourceBalance({ ...balObj, loaded: true });
         }
       } catch (_) {
         if (!isCancelled) {
-          setCrossSourceBalance({ raw: 0n, formatted: '0.00', decimals: 18, symbol: crossSourceToken });
+          setCrossSourceBalance({ raw: 0n, formatted: '0.00', decimals: 18, symbol: crossSourceToken, loaded: true });
         }
       } finally {
         if (!isCancelled) {
@@ -1265,7 +1264,7 @@ export default function FundryxAppPortal({
     if (!crossQuote.canExecute) {
       setTxNotification({
         type: 'warning',
-        message: `Cross-Chain Gated: ${crossQuote.auditVerification?.reason || 'Route currently unavailable'}`,
+        message: `Route Unavailable: ${crossQuote.unavailabilityReason || 'Route currently unavailable'}`,
       });
       return;
     }
@@ -1490,7 +1489,7 @@ export default function FundryxAppPortal({
       try {
         const destProv = getReadProvider(destCId);
         const updatedBal = await getUserTokenBalance(destProv, wallet.address, destCId, finalClaimSym);
-        setCrossSourceBalance(updatedBal);
+        setCrossSourceBalance({ ...updatedBal, loaded: true });
 
         const wData = await fetchWalletData(wallet.address, wallet.provider || destProv, destCId);
         if (wData) {
@@ -1591,7 +1590,7 @@ export default function FundryxAppPortal({
         {
           time: 'Just now',
           sender: 'AI Sentinel Quorum',
-          text: `Manual Audit Verified! Report: ${report.reportId.slice(0, 10)}... Hash: ${report.reportHash.slice(0, 10)}... Solvency: ${report.solvencyHealth}% (${report.verdict})`,
+          text: `Manual Attestation Verified! Report: ${report.reportId.slice(0, 10)}... Hash: ${report.reportHash.slice(0, 10)}... Solvency: ${report.solvencyHealth}% (${report.verdict})`,
           color: 'text-[var(--accent-2)]',
         },
         ...prev,
@@ -2459,7 +2458,8 @@ export default function FundryxAppPortal({
               )}
 
               {/* Two Hero Cards Side by Side (Stacked on screens < 1100px) */}
-              <div className="grid grid-cols-1 min-[1100px]:grid-cols-2 gap-6 items-stretch">
+              {/* Two Hero Cards Side by Side (Stacked on screens < 1280px) */}
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 items-stretch">
 
                 {/* Hero Card 1: Borrow Card */}
                 {(() => {
@@ -2491,37 +2491,37 @@ export default function FundryxAppPortal({
                   }
 
                   return (
-                    <div className="portal-card portal-card-gradient-emerald p-[36px] rounded-[20px] flex flex-col gap-[28px] h-full">
+                    <div className="portal-card portal-card-gradient-emerald p-5 sm:p-7 xl:p-8 rounded-2xl flex flex-col gap-6 h-full">
                       {/* Section 1: Header */}
-                      <div className="flex justify-between items-center gap-4">
+                      <div className="flex justify-between items-start gap-4">
                         <div>
-                          <h2 className="text-[28px] font-semibold text-white leading-[1.2] tracking-normal">
+                          <h2 className="text-2xl sm:text-[28px] font-semibold text-white leading-[1.2] tracking-normal">
                             Request Uncollateralized Loan
                           </h2>
-                          <p className="text-[15px] text-[var(--text-muted)] leading-[1.5] mt-2">
+                          <p className="text-sm sm:text-[15px] text-[var(--text-muted)] leading-[1.5] mt-2">
                             Borrow up to your credit line with instant algorithmic disbursement.
                           </p>
                         </div>
-                        <span className="h-[32px] px-[14px] rounded-full text-xs font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 flex items-center justify-center shrink-0">
+                        <span className="h-[32px] px-3.5 rounded-full text-xs font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 flex items-center justify-center shrink-0">
                           Zero Collateral
                         </span>
                       </div>
 
                       {/* Section 2: Key Facts Strip */}
-                      <div className="grid grid-cols-3 gap-[12px]">
-                        <div className="h-[76px] px-[16px] py-[14px] rounded-xl bg-[var(--surface-2)] border border-[var(--border)] flex flex-col justify-between">
-                          <span className="text-[12px] uppercase text-[var(--text-muted)] font-medium tracking-wider">Available Pool</span>
-                          <span className="text-[18px] font-semibold text-emerald-400 leading-none">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div className="min-h-[68px] h-auto p-3.5 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] flex flex-col justify-between gap-1">
+                          <span className="text-[11px] uppercase text-[var(--text-muted)] font-medium tracking-wider">Available Pool</span>
+                          <span className="text-base sm:text-[17px] font-semibold text-emerald-400 leading-none truncate">
                             {poolAvail.toLocaleString()} FDX
                           </span>
                         </div>
-                        <div className="h-[76px] px-[16px] py-[14px] rounded-xl bg-[var(--surface-2)] border border-[var(--border)] flex flex-col justify-between">
-                          <span className="text-[12px] uppercase text-[var(--text-muted)] font-medium tracking-wider">Prime Rate</span>
-                          <span className="text-[18px] font-semibold text-white leading-none">5.20% Fixed</span>
+                        <div className="min-h-[68px] h-auto p-3.5 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] flex flex-col justify-between gap-1">
+                          <span className="text-[11px] uppercase text-[var(--text-muted)] font-medium tracking-wider">Prime Rate</span>
+                          <span className="text-base sm:text-[17px] font-semibold text-white leading-none">5.20% Fixed</span>
                         </div>
-                        <div className="h-[76px] px-[16px] py-[14px] rounded-xl bg-[var(--surface-2)] border border-[var(--border)] flex flex-col justify-between">
-                          <span className="text-[12px] uppercase text-[var(--text-muted)] font-medium tracking-wider">Max Credit Line</span>
-                          <span className="text-[18px] font-semibold text-white leading-none">
+                        <div className="min-h-[68px] h-auto p-3.5 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] flex flex-col justify-between gap-1">
+                          <span className="text-[11px] uppercase text-[var(--text-muted)] font-medium tracking-wider">Max Credit Line</span>
+                          <span className="text-base sm:text-[17px] font-semibold text-white leading-none truncate">
                             {maxCap > 0 ? maxCap.toFixed(0) : '0'} FDX
                           </span>
                         </div>
@@ -2535,15 +2535,15 @@ export default function FundryxAppPortal({
                             Cap: {maxCap > 0 ? maxCap.toFixed(0) : '0'} FDX
                           </span>
                         </div>
-                        <div className="h-[80px] px-[20px] rounded-2xl bg-[var(--surface-2)] border border-[var(--border)] flex items-center justify-between gap-3 focus-within:border-emerald-400/60 transition">
+                        <div className="min-h-[72px] h-auto p-3.5 sm:p-4 rounded-2xl bg-[var(--surface-2)] border border-[var(--border)] flex items-center justify-between gap-3 focus-within:border-emerald-400/60 transition flex-wrap sm:flex-nowrap">
                           <input
                             type="number"
                             value={borrowInput}
                             onChange={(e) => setBorrowInput(e.target.value)}
-                            className="bg-transparent text-[32px] font-semibold text-white outline-none w-full min-w-0"
+                            className="bg-transparent text-2xl sm:text-[30px] font-semibold text-white outline-none w-full min-w-0"
                             placeholder="0"
                           />
-                          <div className="flex items-center gap-[12px] shrink-0">
+                          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
                             <button
                               type="button"
                               onClick={() => {
@@ -2583,7 +2583,7 @@ export default function FundryxAppPortal({
                       {/* Section 4: Repayment Tenure */}
                       <div className="flex flex-col">
                         <label className="text-[13px] font-medium text-[var(--text)] mb-[10px]">Repayment Tenure</label>
-                        <div className="h-[64px] grid grid-cols-3 gap-2 p-1 rounded-xl bg-[var(--surface-2)] border border-[var(--border)]">
+                        <div className="min-h-[56px] h-auto grid grid-cols-3 gap-2 p-1.5 rounded-xl bg-[var(--surface-2)] border border-[var(--border)]">
                           {[
                             { days: 7, apr: '5.00%' },
                             { days: 14, apr: '5.20%' },
@@ -2593,42 +2593,42 @@ export default function FundryxAppPortal({
                               key={opt.days}
                               type="button"
                               onClick={() => setBorrowTerm(opt.days)}
-                              className={`h-full rounded-lg transition cursor-pointer flex flex-col items-center justify-center gap-[4px] ${
+                              className={`py-2 px-1 rounded-lg transition cursor-pointer flex flex-col items-center justify-center gap-1 ${
                                 borrowTerm === opt.days
                                   ? 'bg-emerald-500/20 text-white border border-emerald-400/50 shadow-sm'
                                   : 'text-[var(--text-muted)] hover:text-white hover:bg-[var(--surface)]'
                               }`}
                             >
-                              <span className="text-[15px] font-semibold leading-none">{opt.days} Days</span>
-                              <span className="text-[12px] text-emerald-400/90 leading-none">{opt.apr} APR</span>
+                              <span className="text-sm sm:text-[15px] font-semibold leading-none">{opt.days} Days</span>
+                              <span className="text-[11px] sm:text-[12px] text-emerald-400/90 leading-none">{opt.apr} APR</span>
                             </button>
                           ))}
                         </div>
                       </div>
 
                       {/* Section 5: Summary Panel */}
-                      <div className="bg-[var(--surface-2)] border border-[var(--border)] rounded-[14px] px-[20px] py-[8px] flex flex-col text-[14px]">
-                        <div className="h-[48px] flex justify-between items-center border-b border-[var(--border)]/60">
+                      <div className="bg-[var(--surface-2)] border border-[var(--border)] rounded-[14px] px-4 sm:px-5 py-2 flex flex-col text-xs sm:text-[14px]">
+                        <div className="min-h-[44px] py-1.5 flex justify-between items-center gap-2 border-b border-[var(--border)]/60">
                           <span className="text-[var(--text-muted)]">You Receive</span>
                           <span className="font-semibold text-white">{Number(borrowInput || 0).toLocaleString()} FDX</span>
                         </div>
-                        <div className="h-[48px] flex justify-between items-center border-b border-[var(--border)]/60">
+                        <div className="min-h-[44px] py-1.5 flex justify-between items-center gap-2 border-b border-[var(--border)]/60">
                           <span className="text-[var(--text-muted)]">Fixed APR</span>
                           <span className="font-semibold text-emerald-400">5.20%</span>
                         </div>
-                        <div className="h-[48px] flex justify-between items-center border-b border-[var(--border)]/60">
+                        <div className="min-h-[44px] py-1.5 flex justify-between items-center gap-2 border-b border-[var(--border)]/60">
                           <span className="text-[var(--text-muted)]">Protocol Fee</span>
                           <span className="font-semibold text-white">{(Number(borrowInput || 0) * 0.052 * (borrowTerm / 365)).toFixed(2)} FDX</span>
                         </div>
-                        <div className="h-[48px] flex justify-between items-center border-b border-[var(--border)]/60">
+                        <div className="min-h-[44px] py-1.5 flex justify-between items-center gap-2 border-b border-[var(--border)]/60">
                           <span className="text-[var(--text-muted)]">Total Repayment</span>
                           <span className="font-semibold text-white">{(Number(borrowInput || 0) * (1 + 0.052 * (borrowTerm / 365))).toFixed(2)} FDX</span>
                         </div>
-                        <div className="h-[48px] flex justify-between items-center border-b border-[var(--border)]/60">
+                        <div className="min-h-[44px] py-1.5 flex justify-between items-center gap-2 border-b border-[var(--border)]/60">
                           <span className="text-[var(--text-muted)]">Due Date</span>
                           <span className="font-semibold text-white">{borrowTerm} Days from disbursement</span>
                         </div>
-                        <div className="h-[48px] flex justify-between items-center">
+                        <div className="min-h-[44px] py-1.5 flex justify-between items-center gap-2">
                           <span className="text-[var(--text-muted)]">Collateral Required</span>
                           <span className="h-[28px] px-3 rounded-full text-xs font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 flex items-center justify-center">
                             Zero Collateral
@@ -2724,39 +2724,39 @@ export default function FundryxAppPortal({
                   }
 
                   return (
-                    <div id="supply-card" className="portal-card portal-card-gradient-cyan p-[36px] rounded-[20px] flex flex-col gap-[28px] h-full">
+                    <div id="supply-card" className="portal-card portal-card-gradient-cyan p-5 sm:p-7 xl:p-8 rounded-2xl flex flex-col gap-6 h-full">
                       {/* Section 1: Header */}
-                      <div className="flex justify-between items-center gap-4">
+                      <div className="flex justify-between items-start gap-4">
                         <div>
-                          <h2 className="text-[28px] font-semibold text-white leading-[1.2] tracking-normal">
+                          <h2 className="text-2xl sm:text-[28px] font-semibold text-white leading-[1.2] tracking-normal">
                             Supply Liquidity Vaults
                           </h2>
-                          <p className="text-[15px] text-[var(--text-muted)] leading-[1.5] mt-2">
+                          <p className="text-sm sm:text-[15px] text-[var(--text-muted)] leading-[1.5] mt-2">
                             Shared protocol vault for uncollateralized lending yield.
                           </p>
                         </div>
-                        <span className="h-[32px] px-[14px] rounded-full text-xs font-semibold bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 flex items-center justify-center shrink-0">
+                        <span className="h-[32px] px-3.5 rounded-full text-xs font-semibold bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 flex items-center justify-center shrink-0">
                           7.80% APY
                         </span>
                       </div>
 
                       {/* Section 2: Key Facts Strip */}
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-[12px]">
-                        <div className="h-[76px] px-[16px] py-[14px] rounded-xl bg-[var(--surface-2)] border border-[var(--border)] flex flex-col justify-between">
-                          <span className="text-[12px] uppercase text-[var(--text-muted)] font-medium tracking-wider">Supply APY</span>
-                          <span className="text-[18px] font-semibold text-cyan-300 leading-none">7.80%</span>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        <div className="min-h-[68px] h-auto p-3.5 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] flex flex-col justify-between gap-1">
+                          <span className="text-[11px] uppercase text-[var(--text-muted)] font-medium tracking-wider">Supply APY</span>
+                          <span className="text-base sm:text-[17px] font-semibold text-cyan-300 leading-none">7.80%</span>
                         </div>
-                        <div className="h-[76px] px-[16px] py-[14px] rounded-xl bg-[var(--surface-2)] border border-[var(--border)] flex flex-col justify-between">
-                          <span className="text-[12px] uppercase text-[var(--text-muted)] font-medium tracking-wider">Pool Util.</span>
-                          <span className="text-[18px] font-semibold text-white leading-none">{Number(livePool.utilizationRate || 0).toFixed(1)}%</span>
+                        <div className="min-h-[68px] h-auto p-3.5 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] flex flex-col justify-between gap-1">
+                          <span className="text-[11px] uppercase text-[var(--text-muted)] font-medium tracking-wider">Pool Util.</span>
+                          <span className="text-base sm:text-[17px] font-semibold text-white leading-none">{Number(livePool.utilizationRate || 0).toFixed(1)}%</span>
                         </div>
-                        <div className="h-[76px] px-[16px] py-[14px] rounded-xl bg-[var(--surface-2)] border border-[var(--border)] flex flex-col justify-between">
-                          <span className="text-[12px] uppercase text-[var(--text-muted)] font-medium tracking-wider">Your Supplied</span>
-                          <span className="text-[18px] font-semibold text-white leading-none">{userLenderBalance.toFixed(0)} FDX</span>
+                        <div className="min-h-[68px] h-auto p-3.5 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] flex flex-col justify-between gap-1">
+                          <span className="text-[11px] uppercase text-[var(--text-muted)] font-medium tracking-wider">Your Supplied</span>
+                          <span className="text-base sm:text-[17px] font-semibold text-white leading-none truncate">{userLenderBalance.toFixed(0)} FDX</span>
                         </div>
-                        <div className="h-[76px] px-[16px] py-[14px] rounded-xl bg-[var(--surface-2)] border border-[var(--border)] flex flex-col justify-between">
-                          <span className="text-[12px] uppercase text-[var(--text-muted)] font-medium tracking-wider">Vault Cap</span>
-                          <span className="text-[18px] font-semibold text-white leading-none">50k FDX</span>
+                        <div className="min-h-[68px] h-auto p-3.5 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] flex flex-col justify-between gap-1">
+                          <span className="text-[11px] uppercase text-[var(--text-muted)] font-medium tracking-wider">Vault Cap</span>
+                          <span className="text-base sm:text-[17px] font-semibold text-white leading-none">50k FDX</span>
                         </div>
                       </div>
 
@@ -2772,7 +2772,7 @@ export default function FundryxAppPortal({
                               : `Available: ${userLenderBalance.toFixed(2)} ${depositAsset}`}
                           </span>
                         </div>
-                        <div className="h-[80px] px-[20px] rounded-2xl bg-[var(--surface-2)] border border-[var(--border)] flex items-center justify-between gap-3 focus-within:border-cyan-400/60 transition">
+                        <div className="min-h-[72px] h-auto p-3.5 sm:p-4 rounded-2xl bg-[var(--surface-2)] border border-[var(--border)] flex items-center justify-between gap-3 focus-within:border-cyan-400/60 transition flex-wrap sm:flex-nowrap">
                           <input
                             type="number"
                             min="0"
@@ -2785,10 +2785,10 @@ export default function FundryxAppPortal({
                                 else setWithdrawAmount(val);
                               }
                             }}
-                            className="bg-transparent text-[32px] font-semibold text-white outline-none w-full min-w-0"
+                            className="bg-transparent text-2xl sm:text-[30px] font-semibold text-white outline-none w-full min-w-0"
                             placeholder="0"
                           />
-                          <div className="flex items-center gap-[12px] shrink-0">
+                          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
                             <button
                               type="button"
                               onClick={() => {
@@ -2826,11 +2826,11 @@ export default function FundryxAppPortal({
 
                       {/* Section 4: Mode & Pool Funding Progress */}
                       <div className="flex flex-col gap-4">
-                        <div className="h-[48px] grid grid-cols-2 p-1 rounded-xl bg-[var(--surface-2)] border border-[var(--border)]">
+                        <div className="min-h-[46px] h-auto grid grid-cols-2 p-1 rounded-xl bg-[var(--surface-2)] border border-[var(--border)]">
                           <button
                             type="button"
                             onClick={() => setSupplyMode('deposit')}
-                            className={`h-full text-xs font-bold rounded-lg transition cursor-pointer flex items-center justify-center ${
+                            className={`py-2 text-xs font-bold rounded-lg transition cursor-pointer flex items-center justify-center ${
                               supplyMode === 'deposit'
                                 ? 'bg-cyan-500 text-black shadow'
                                 : 'text-[var(--text-muted)] hover:text-white'
@@ -2841,7 +2841,7 @@ export default function FundryxAppPortal({
                           <button
                             type="button"
                             onClick={() => setSupplyMode('withdraw')}
-                            className={`h-full text-xs font-bold rounded-lg transition cursor-pointer flex items-center justify-center ${
+                            className={`py-2 text-xs font-bold rounded-lg transition cursor-pointer flex items-center justify-center ${
                               supplyMode === 'withdraw'
                                 ? 'bg-cyan-500 text-black shadow'
                                 : 'text-[var(--text-muted)] hover:text-white'
@@ -2868,22 +2868,22 @@ export default function FundryxAppPortal({
                       </div>
 
                       {/* Section 5: Summary Panel */}
-                      <div className="bg-[var(--surface-2)] border border-[var(--border)] rounded-[14px] px-[20px] py-[8px] flex flex-col text-[14px]">
-                        <div className="h-[48px] flex justify-between items-center border-b border-[var(--border)]/60">
+                      <div className="bg-[var(--surface-2)] border border-[var(--border)] rounded-[14px] px-4 sm:px-5 py-2 flex flex-col text-xs sm:text-[14px]">
+                        <div className="min-h-[44px] py-1.5 flex justify-between items-center gap-2 border-b border-[var(--border)]/60">
                           <span className="text-[var(--text-muted)]">Interest Curve</span>
                           <span className="font-semibold text-white">Algorithmic continuous utilization model</span>
                         </div>
-                        <div className="h-[48px] flex justify-between items-center border-b border-[var(--border)]/60">
+                        <div className="min-h-[44px] py-1.5 flex justify-between items-center gap-2 border-b border-[var(--border)]/60">
                           <span className="text-[var(--text-muted)]">Withdrawal Liquidity</span>
                           <span className="font-semibold text-white">Instant on unborrowed pool balance</span>
                         </div>
-                        <div className="h-[48px] flex justify-between items-center border-b border-[var(--border)]/60">
+                        <div className="min-h-[44px] py-1.5 flex justify-between items-center gap-2 border-b border-[var(--border)]/60">
                           <span className="text-[var(--text-muted)]">Target Network</span>
                           <span className="h-[28px] px-3 rounded-full text-xs font-semibold bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 flex items-center justify-center">
                             {activeNetConfig?.name || 'Active Chain'} ({currentChainId})
                           </span>
                         </div>
-                        <div className="h-[48px] flex justify-between items-center">
+                        <div className="min-h-[44px] py-1.5 flex justify-between items-center gap-2">
                           <span className="text-[var(--text-muted)]">Est. Annual Yield</span>
                           <span className="font-semibold text-cyan-300">
                             +{((Number(supplyMode === 'deposit' ? supplyAmount : userLenderBalance) || 0) * 0.078).toFixed(2)} FDX/yr
@@ -3621,14 +3621,14 @@ export default function FundryxAppPortal({
                   const priceImpact = (hasReserves && numIn > 0) ? ((numIn / (resIn + numIn)) * 100) : 0;
 
                   return (
-                    <div className="grid grid-cols-1 min-[1100px]:grid-cols-12 gap-8 items-start w-full">
+                    <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start w-full">
                       {/* LEFT Column (about 60%): Swap Card */}
-                      <div className="min-[1100px]:col-span-7 portal-card portal-card-gradient-violet p-[32px] rounded-[20px] flex flex-col gap-[20px] w-full">
+                      <div className="xl:col-span-7 portal-card portal-card-gradient-violet p-5 sm:p-7 rounded-2xl flex flex-col gap-5 w-full">
                         {/* Header Row: Trade Assets & Slippage Pills */}
-                        <div className="flex justify-between items-center gap-4">
-                          <div className="flex flex-col gap-[6px]">
-                            <span className="text-[22px] font-semibold text-white leading-tight">Trade Assets</span>
-                            <span className="text-[13px] text-[var(--text-muted)] leading-none">Constant Product (x · y = k)</span>
+                        <div className="flex justify-between items-center gap-4 flex-wrap sm:flex-nowrap">
+                          <div className="flex flex-col gap-1">
+                            <span className="text-xl sm:text-[22px] font-semibold text-white leading-tight">Trade Assets</span>
+                            <span className="text-xs sm:text-[13px] text-[var(--text-muted)] leading-none">Constant Product (x · y = k)</span>
                           </div>
 
                           <div className="flex items-center gap-1.5 p-1 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] shrink-0">
@@ -3641,7 +3641,7 @@ export default function FundryxAppPortal({
                                 key={s.bps}
                                 type="button"
                                 onClick={() => setSlippageBps(s.bps)}
-                                className={`h-[36px] px-3 min-w-[46px] rounded-lg text-xs font-semibold transition cursor-pointer flex items-center justify-center ${
+                                className={`h-[34px] px-2.5 sm:px-3 min-w-[42px] rounded-lg text-xs font-semibold transition cursor-pointer flex items-center justify-center ${
                                   slippageBps === s.bps
                                     ? 'bg-purple-600 text-white shadow-sm'
                                     : 'text-[var(--text-muted)] hover:text-white hover:bg-[var(--surface)]'
@@ -3653,12 +3653,12 @@ export default function FundryxAppPortal({
                           </div>
                         </div>
 
-                        {/* "You Pay" Box: padding 20px, radius 16px */}
-                        <div className="p-[20px] rounded-[16px] bg-[var(--surface-2)] border border-[var(--border)] focus-within:border-purple-500/60 transition">
+                        {/* "You Pay" Box: padding 16-20px, radius 16px */}
+                        <div className="p-4 sm:p-5 rounded-2xl bg-[var(--surface-2)] border border-[var(--border)] focus-within:border-purple-500/60 transition">
                           {/* Row 1: label & balance */}
-                          <div className="flex justify-between items-center text-[13px] text-[var(--text-muted)]">
+                          <div className="flex justify-between items-center text-xs sm:text-[13px] text-[var(--text-muted)] gap-2">
                             <span className="font-medium text-[var(--text)]">You Pay</span>
-                            <span>
+                            <span className="truncate">
                               Balance: {swapFrom === 'FDX'
                                 ? (userFdxBalance !== null ? Number(userFdxBalance).toFixed(2) : '--')
                                 : (userWrappedBalance !== null ? Number(userWrappedBalance).toFixed(4) : '0.0000')} {swapFrom}
@@ -3666,22 +3666,22 @@ export default function FundryxAppPortal({
                           </div>
 
                           {/* Row 2: amount & token chip */}
-                          <div className="flex justify-between items-center gap-4 mt-[12px]">
+                          <div className="flex justify-between items-center gap-3 sm:gap-4 mt-3">
                             <input
                               type="number"
                               value={swapAmount}
                               onChange={(e) => setSwapAmount(e.target.value)}
-                              className="bg-transparent text-[32px] font-semibold text-white outline-none w-full min-w-0"
+                              className="bg-transparent text-2xl sm:text-[32px] font-semibold text-white outline-none w-full min-w-0"
                               placeholder="0.00"
                             />
-                            <div className="h-[40px] flex items-center gap-2 px-3.5 rounded-xl bg-[var(--surface)] border border-[var(--border)] font-semibold text-white text-sm shrink-0">
+                            <div className="h-[40px] flex items-center gap-2 px-3 sm:px-3.5 rounded-xl bg-[var(--surface)] border border-[var(--border)] font-semibold text-white text-sm shrink-0">
                               <span className="w-2.5 h-2.5 rounded-full bg-purple-400" />
                               <span>{swapFrom}</span>
                             </div>
                           </div>
 
                           {/* Row 3: quick pct pills */}
-                          <div className="flex justify-end gap-[8px] mt-[12px] pt-3 border-t border-[var(--border)]/60">
+                          <div className="flex justify-end gap-1.5 sm:gap-2 mt-3 pt-3 border-t border-[var(--border)]/60">
                             {[25, 50, 75, 100].map((pct) => (
                               <button
                                 key={pct}
@@ -3692,7 +3692,7 @@ export default function FundryxAppPortal({
                                     : (Number(userWrappedBalance) > 0 ? userWrappedBalance : (userPolBalance || 5));
                                   setSwapAmount((Number(bal) * (pct / 100)).toFixed(pct === 100 ? 2 : 2));
                                 }}
-                                className="h-[34px] px-3.5 rounded-lg text-xs font-semibold text-[var(--text-muted)] hover:text-white bg-[var(--surface)] border border-[var(--border)] hover:border-purple-500/40 transition cursor-pointer flex items-center justify-center"
+                                className="h-[32px] px-2.5 sm:px-3.5 rounded-lg text-xs font-semibold text-[var(--text-muted)] hover:text-white bg-[var(--surface)] border border-[var(--border)] hover:border-purple-500/40 transition cursor-pointer flex items-center justify-center"
                               >
                                 {pct === 100 ? 'MAX' : `${pct}%`}
                               </button>
@@ -3702,7 +3702,7 @@ export default function FundryxAppPortal({
 
                         {/* Mint test tokens button outside the box */}
                         {swapFrom === 'FDX' && isAdmin && (
-                          <div className="flex justify-end -mt-2">
+                          <div className="flex justify-end -mt-1">
                             <button
                               type="button"
                               onClick={handleMintTokens}
@@ -3715,8 +3715,8 @@ export default function FundryxAppPortal({
                           </div>
                         )}
 
-                        {/* Swap Arrow Button: 44px circle overlapping by 22px */}
-                        <div className="flex justify-center -my-[22px] relative z-10">
+                        {/* Swap Arrow Button: controlled relative spacing, no text clipping */}
+                        <div className="flex justify-center -my-3 sm:-my-4 relative z-10">
                           <button
                             type="button"
                             onClick={() => {
@@ -3724,7 +3724,7 @@ export default function FundryxAppPortal({
                               setSwapFrom(swapTo);
                               setSwapTo(prevFrom);
                             }}
-                            className="w-[44px] h-[44px] rounded-full bg-[var(--surface-3)] ring-4 ring-[#0d1512] border border-purple-500/40 text-purple-300 hover:text-white hover:scale-105 transition shadow-lg flex items-center justify-center cursor-pointer"
+                            className="w-[42px] h-[42px] rounded-full bg-[var(--surface-3)] ring-4 ring-[#0d1512] border border-purple-500/40 text-purple-300 hover:text-white hover:scale-105 transition shadow-lg flex items-center justify-center cursor-pointer"
                             title="Invert swap pair"
                           >
                             <ArrowLeftRight size={18} />
@@ -3732,37 +3732,37 @@ export default function FundryxAppPortal({
                         </div>
 
                         {/* "You Receive" Box: identical structure and height to You Pay */}
-                        <div className="p-[20px] rounded-[16px] bg-[var(--surface-2)] border border-[var(--border)]">
-                          <div className="flex justify-between items-center text-[13px] text-[var(--text-muted)]">
+                        <div className="p-4 sm:p-5 rounded-2xl bg-[var(--surface-2)] border border-[var(--border)]">
+                          <div className="flex justify-between items-center text-xs sm:text-[13px] text-[var(--text-muted)] gap-2">
                             <span className="font-medium text-[var(--text)]">You Receive (Estimated)</span>
-                            <span>
+                            <span className="truncate">
                               Balance: {swapTo === 'FDX'
                                 ? (userFdxBalance !== null ? Number(userFdxBalance).toFixed(2) : '--')
                                 : (userWrappedBalance !== null ? Number(userWrappedBalance).toFixed(4) : '0.0000')} {swapTo}
                             </span>
                           </div>
 
-                          <div className="flex justify-between items-center gap-4 mt-[12px]">
-                            <span className="text-[32px] font-semibold text-emerald-400 truncate">
+                          <div className="flex justify-between items-center gap-3 sm:gap-4 mt-3">
+                            <span className="text-2xl sm:text-[32px] font-semibold text-emerald-400 truncate">
                               {estOut > 0 ? estOut.toFixed(4) : '0.0000'}
                             </span>
-                            <div className="h-[40px] flex items-center gap-2 px-3.5 rounded-xl bg-[var(--surface)] border border-[var(--border)] font-semibold text-white text-sm shrink-0">
+                            <div className="h-[40px] flex items-center gap-2 px-3 sm:px-3.5 rounded-xl bg-[var(--surface)] border border-[var(--border)] font-semibold text-white text-sm shrink-0">
                               <span className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
                               <span>{swapTo}</span>
                             </div>
                           </div>
 
-                          <div className="mt-[12px] pt-3 border-t border-[var(--border)]/60 text-[12px] text-[var(--text-dim)] flex justify-between items-center">
+                          <div className="mt-3 pt-3 border-t border-[var(--border)]/60 text-xs text-[var(--text-dim)] flex justify-between items-center gap-2">
                             <span>Algorithmic constant product output</span>
-                            <span className="text-emerald-400/90 font-medium">Min: {minOut.toFixed(4)} {swapTo}</span>
+                            <span className="text-emerald-400/90 font-medium shrink-0">Min: {minOut.toFixed(4)} {swapTo}</span>
                           </div>
                         </div>
 
-                        {/* Details Panel: surface-2, padding 8px 20px, rows 44px high with dividers */}
-                        <div className="bg-[var(--surface-2)] border border-[var(--border)] rounded-[14px] px-[20px] py-[8px] flex flex-col text-[14px]">
-                          <div className="h-[44px] flex justify-between items-center border-b border-[var(--border)]/60">
-                            <span className="text-[var(--text-muted)]">Exchange Rate</span>
-                            <span className="font-semibold text-white">
+                        {/* Details Panel: surface-2, padding 8px 20px, rows min-h 44px with dividers */}
+                        <div className="bg-[var(--surface-2)] border border-[var(--border)] rounded-2xl px-4 sm:px-5 py-2 flex flex-col text-xs sm:text-[14px]">
+                          <div className="min-h-[44px] py-1.5 flex justify-between items-center gap-2 border-b border-[var(--border)]/60">
+                            <span className="text-[var(--text-muted)] shrink-0">Exchange Rate</span>
+                            <span className="font-semibold text-white text-right truncate">
                               {hasReserves
                                 ? (swapFrom === 'FDX'
                                   ? `1 FDX = ${(resOut / resIn).toFixed(4)} ${activeWrappedSymbol}`
@@ -3770,19 +3770,19 @@ export default function FundryxAppPortal({
                                 : 'Pool Initializing'}
                             </span>
                           </div>
-                          <div className="h-[44px] flex justify-between items-center border-b border-[var(--border)]/60">
-                            <span className="text-[var(--text-muted)]">Minimum Received ({((10000 - slippageBps) / 100).toFixed(1)}%)</span>
-                            <span className="font-semibold text-white">{minOut.toFixed(4)} {swapTo}</span>
+                          <div className="min-h-[44px] py-1.5 flex justify-between items-center gap-2 border-b border-[var(--border)]/60">
+                            <span className="text-[var(--text-muted)] shrink-0">Minimum Received ({((10000 - slippageBps) / 100).toFixed(1)}%)</span>
+                            <span className="font-semibold text-white text-right truncate">{minOut.toFixed(4)} {swapTo}</span>
                           </div>
-                          <div className="h-[44px] flex justify-between items-center border-b border-[var(--border)]/60">
-                            <span className="text-[var(--text-muted)]">Price Impact</span>
-                            <span className="font-semibold text-emerald-400">
+                          <div className="min-h-[44px] py-1.5 flex justify-between items-center gap-2 border-b border-[var(--border)]/60">
+                            <span className="text-[var(--text-muted)] shrink-0">Price Impact</span>
+                            <span className="font-semibold text-emerald-400 text-right">
                               {hasReserves && numIn > 0 ? `${priceImpact.toFixed(2)}%` : '< 0.01%'}
                             </span>
                           </div>
-                          <div className="h-[44px] flex justify-between items-center">
-                            <span className="text-[var(--text-muted)]">Execution Route</span>
-                            <span className="font-semibold text-[var(--text-dim)] truncate max-w-[240px]" title={activeRouterAddress}>
+                          <div className="min-h-[44px] py-1.5 flex justify-between items-center gap-2">
+                            <span className="text-[var(--text-muted)] shrink-0">Execution Route</span>
+                            <span className="font-semibold text-[var(--text-dim)] truncate max-w-[200px]" title={activeRouterAddress}>
                               MockSwapRouter ({activeRouterAddress ? `${activeRouterAddress.slice(0, 6)}...${activeRouterAddress.slice(-4)}` : 'Not Deployed'})
                             </span>
                           </div>
@@ -3844,7 +3844,7 @@ export default function FundryxAppPortal({
                           <button
                             onClick={handleExecuteSwap}
                             disabled={swapTxStatus === 'awaiting-wallet' || swapTxStatus === 'pending' || Number(swapAmount) <= 0}
-                            className="portal-btn-purple w-full h-[56px] rounded-[16px] text-[17px] font-semibold disabled:opacity-50 cursor-pointer transition flex items-center justify-center"
+                            className="portal-btn-purple w-full h-[56px] rounded-2xl text-[17px] font-semibold disabled:opacity-50 cursor-pointer transition flex items-center justify-center"
                           >
                             {swapTxStatus === 'awaiting-wallet' && 'Confirm in Wallet...'}
                             {swapTxStatus === 'pending' && `Swapping on ${activeNetConfig?.shortName || activeNetConfig?.name || 'Chain'}...`}
@@ -3856,47 +3856,47 @@ export default function FundryxAppPortal({
                       </div>
 
                       {/* RIGHT Column (about 40%): Two Stacked Cards */}
-                      <div className="min-[1100px]:col-span-5 flex flex-col gap-6 w-full">
+                      <div className="xl:col-span-5 flex flex-col gap-6 w-full">
                         {/* Card 1: Pool Overview */}
-                        <div className="portal-card p-[32px] rounded-[20px] flex flex-col gap-[20px] w-full">
+                        <div className="portal-card p-5 sm:p-7 rounded-2xl flex flex-col gap-4 w-full">
                           <div className="flex items-center justify-between pb-3 border-b border-[var(--border)]">
-                            <span className="text-[18px] font-semibold text-white">Pool Overview</span>
+                            <span className="text-base sm:text-[18px] font-semibold text-white">Pool Overview</span>
                             <span className="h-[28px] px-3 rounded-full text-xs font-semibold bg-purple-500/15 text-purple-300 border border-purple-500/30 flex items-center justify-center">
                               0.30% Fee Tier
                             </span>
                           </div>
 
-                          <div className="flex flex-col gap-3 text-[14px]">
-                            <div className="flex justify-between items-center py-1 border-b border-[var(--border)]/40">
-                              <span className="text-[var(--text-muted)]">Pool Reserves</span>
-                              <span className="font-semibold text-white text-right">
+                          <div className="flex flex-col gap-2.5 text-xs sm:text-[14px]">
+                            <div className="flex justify-between items-center py-1.5 border-b border-[var(--border)]/40 gap-2">
+                              <span className="text-[var(--text-muted)] shrink-0">Pool Reserves</span>
+                              <span className="font-semibold text-white text-right truncate">
                                 {pairReserves.fdx.toLocaleString()} FDX / {(pairReserves.wrapped || pairReserves.wpol || 0).toLocaleString()} {activeWrappedSymbol}
                               </span>
                             </div>
 
-                            <div className="flex justify-between items-center py-1 border-b border-[var(--border)]/40">
-                              <span className="text-[var(--text-muted)]">Current Rate</span>
-                              <span className="font-semibold text-white text-right">
+                            <div className="flex justify-between items-center py-1.5 border-b border-[var(--border)]/40 gap-2">
+                              <span className="text-[var(--text-muted)] shrink-0">Current Rate</span>
+                              <span className="font-semibold text-white text-right truncate">
                                 {hasReserves
                                   ? `1 FDX = ${(resOut / resIn).toFixed(4)} ${activeWrappedSymbol}`
                                   : 'Pool Initializing'}
                               </span>
                             </div>
 
-                            <div className="flex justify-between items-center py-1 border-b border-[var(--border)]/40">
-                              <span className="text-[var(--text-muted)]">Fee Tier</span>
+                            <div className="flex justify-between items-center py-1.5 border-b border-[var(--border)]/40 gap-2">
+                              <span className="text-[var(--text-muted)] shrink-0">Fee Tier</span>
                               <span className="font-semibold text-purple-300">0.30% (LP Reward Pool)</span>
                             </div>
 
-                            <div className="flex justify-between items-center py-1 border-b border-[var(--border)]/40">
-                              <span className="text-[var(--text-muted)]">Network</span>
-                              <span className="font-semibold text-white">
+                            <div className="flex justify-between items-center py-1.5 border-b border-[var(--border)]/40 gap-2">
+                              <span className="text-[var(--text-muted)] shrink-0">Network</span>
+                              <span className="font-semibold text-white text-right truncate">
                                 {activeNetConfig?.name || 'Active Chain'} ({currentChainId})
                               </span>
                             </div>
 
-                            <div className="flex justify-between items-center py-1">
-                              <span className="text-[var(--text-muted)]">Execution Route</span>
+                            <div className="flex justify-between items-center py-1.5 gap-2">
+                              <span className="text-[var(--text-muted)] shrink-0">Execution Route</span>
                               <span className="font-semibold text-[var(--text-dim)] truncate max-w-[180px]" title={activeRouterAddress}>
                                 {activeRouterAddress ? `${activeRouterAddress.slice(0, 6)}...${activeRouterAddress.slice(-4)}` : 'Not Deployed'}
                               </span>
@@ -3905,10 +3905,10 @@ export default function FundryxAppPortal({
                         </div>
 
                         {/* Card 2: How this swap works (3 numbered steps replacing collapsed row) */}
-                        <div className="portal-card p-[32px] rounded-[20px] flex flex-col gap-[20px] w-full">
+                        <div className="portal-card p-5 sm:p-7 rounded-2xl flex flex-col gap-4 w-full">
                           <div className="flex items-center gap-2 pb-3 border-b border-[var(--border)]">
-                            <Info size={18} className="text-purple-400" />
-                            <span className="text-[18px] font-semibold text-white">How this swap works</span>
+                            <Info size={18} className="text-purple-400 shrink-0" />
+                            <span className="text-base sm:text-[18px] font-semibold text-white">How this swap works</span>
                           </div>
 
                           <div className="flex flex-col gap-4 text-[13px] text-[var(--text-muted)] leading-relaxed">
@@ -3986,13 +3986,13 @@ export default function FundryxAppPortal({
                     wallet?.address && wallet?.chainId && Number(wallet.chainId) !== Number(crossSourceChain)
                   );
 
-                const routeMatrixData = getRouteMatrix(networkMode);
-                const amountValidation = validateTransferAmount(
-                  crossAmount,
-                  crossSourceBalance?.raw || 0n,
-                  crossSourceBalance?.decimals || 18,
-                  crossSourceToken
-                );
+                const amountValidation = validateTransferAmount({
+                  amountStr: crossAmount,
+                  balanceUnits: (!crossSourceBalance?.loaded || isFetchingCrossBalance) ? null : (crossSourceBalance?.raw ?? null),
+                  decimals: crossSourceBalance?.decimals || 18,
+                  tokenSymbol: crossSourceToken,
+                  chainName: sourceNetwork?.name || (crossSourceChain ? `Chain ${crossSourceChain}` : ''),
+                });
 
                 return (
                   <div className="portal-card p-6 flex flex-col gap-6">
@@ -4062,18 +4062,6 @@ export default function FundryxAppPortal({
                           <span>12-Route Matrix</span>
                         </button>
 
-                        {quote && quote.auditVerification && (
-                          <span
-                            className={`text-xs px-2.5 py-1 rounded-full font-mono font-semibold flex items-center gap-1.5 ${
-                              quote.auditVerification.isAudited
-                                ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
-                                : 'bg-amber-500/10 text-amber-300 border border-amber-500/30'
-                            }`}
-                          >
-                            <span className={`w-1.5 h-1.5 rounded-full ${quote.auditVerification.isAudited ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
-                            {quote.auditVerification.isAudited ? 'Audit Verified' : 'Audit Safeguard Gated'}
-                          </span>
-                        )}
                       </div>
                     </div>
 
@@ -4289,7 +4277,7 @@ export default function FundryxAppPortal({
                           className="w-full h-12 px-4 rounded-xl bg-[var(--surface-1)] border border-[var(--border)] font-mono text-white text-lg outline-none focus:border-[var(--accent-1)] transition"
                         />
                       </div>
-                      {!amountValidation.isValid && crossAmount && Number(crossAmount) > 0 && (
+                      {!isFetchingCrossBalance && crossSourceBalance?.loaded && !amountValidation.isValid && crossAmount && Number(crossAmount) > 0 && amountValidation.code === 'INSUFFICIENT_BALANCE' && (
                         <div className="mt-2.5 p-2.5 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs flex items-center gap-2 animate-fade-in">
                           <AlertTriangle size={14} className="shrink-0 text-rose-400" />
                           <span>{amountValidation.reason}</span>
@@ -4339,21 +4327,6 @@ export default function FundryxAppPortal({
                           </div>
                         </div>
 
-                        {/* Audit Verification Safeguard Banner */}
-                        <div
-                          className={`p-3.5 rounded-lg border text-xs leading-relaxed ${
-                            quote.auditVerification?.isAudited
-                              ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-200'
-                              : 'bg-amber-500/10 border-amber-500/30 text-amber-200'
-                          }`}
-                        >
-                          <div className="flex items-start gap-2">
-                            <span className="font-bold shrink-0">
-                              {quote.auditVerification?.isAudited ? '✓ Audit Verified:' : '⚠ Audit Safeguard Active:'}
-                            </span>
-                            <span>{quote.auditVerification?.reason || 'Audit verification check completed.'}</span>
-                          </div>
-                        </div>
                       </div>
                     ) : null}
 
@@ -4688,13 +4661,11 @@ export default function FundryxAppPortal({
                         {!isFetchingQuote && crossLifecycle.status === 'DESTINATION_PENDING' && `Source Confirmed · Ready to Claim on ${destNetwork.name}`}
                         {!isFetchingQuote && crossLifecycle.status === 'COMPLETED' && 'Transfer Completed · Bridge Next'}
                         {!isFetchingQuote && (crossLifecycle.status === 'IDLE' || crossLifecycle.status === 'FAILED' || crossLifecycle.status === 'REJECTED') && (
-                          !amountValidation.isValid && crossAmount && Number(crossAmount) > 0
+                          !isFetchingCrossBalance && crossSourceBalance?.loaded && !amountValidation.isValid && amountValidation.code === 'INSUFFICIENT_BALANCE'
                             ? `Insufficient Balance (${crossSourceBalance?.formatted || '0.00'} ${crossSourceToken})`
                             : (quote && quote.canExecute
                                 ? `Bridge ${crossAmount} ${crossSourceToken} to ${destNetwork.name}`
-                                : (quote?.auditVerification?.status === 'DEPLOYMENT_PENDING'
-                                    ? 'Awaiting Deployment & Multisig Signoff'
-                                    : 'Route Gated by Audit Safeguard (Zero-Trust)'))
+                                : 'Enter Transfer Amount')
                         )}
                       </button>
                     )}

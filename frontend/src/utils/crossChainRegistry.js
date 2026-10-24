@@ -83,7 +83,7 @@ export const COMPATIBLE_ASSET_MAPPINGS = {
     isBurnAndMint: false,
   },
   WPOL: {
-    targetSymbol: 'WMON',
+    targetSymbol: 'MON',
     rate: 1.0,
     supportedChains: [80002, 10143],
     isBurnAndMint: false,
@@ -95,7 +95,7 @@ export const COMPATIBLE_ASSET_MAPPINGS = {
     isBurnAndMint: false,
   },
   WMON: {
-    targetSymbol: 'WPOL',
+    targetSymbol: 'POL',
     rate: 1.0,
     supportedChains: [10143, 80002],
     isBurnAndMint: false,
@@ -107,7 +107,7 @@ export const COMPATIBLE_ASSET_MAPPINGS = {
     isBurnAndMint: false,
   },
   WAVAX: {
-    targetSymbol: 'WPOL',
+    targetSymbol: 'POL',
     rate: 1.0,
     supportedChains: [43113, 80002],
     isBurnAndMint: false,
@@ -213,9 +213,10 @@ export function validateTransferAmount(
   amountOrOpts,
   balanceUnitsArg = null,
   decimalsArg = 18,
-  tokenSymbolArg = 'FDX'
+  tokenSymbolArg = 'FDX',
+  chainNameArg = ''
 ) {
-  let amountStr, tokenSymbol, decimals, balanceUnits, nativeGasUnits, minTransferStr, maxTransferStr, isNative, estimatedGasUnits;
+  let amountStr, tokenSymbol, decimals, balanceUnits, nativeGasUnits, minTransferStr, maxTransferStr, isNative, estimatedGasUnits, chainName;
 
   if (typeof amountOrOpts === 'object' && amountOrOpts !== null && !(typeof amountOrOpts.toString === 'function' && typeof amountOrOpts.split === 'function')) {
     amountStr = amountOrOpts.amountStr ?? amountOrOpts.amount;
@@ -227,6 +228,7 @@ export function validateTransferAmount(
     maxTransferStr = amountOrOpts.maxTransferStr || '1000000';
     isNative = amountOrOpts.isNative || false;
     estimatedGasUnits = amountOrOpts.estimatedGasUnits || 5000000000000000n;
+    chainName = amountOrOpts.chainName || '';
   } else {
     amountStr = amountOrOpts;
     balanceUnits = balanceUnitsArg;
@@ -237,7 +239,10 @@ export function validateTransferAmount(
     maxTransferStr = '1000000';
     isNative = false;
     estimatedGasUnits = 5000000000000000n;
+    chainName = chainNameArg || '';
   }
+
+  const chainSuffix = chainName ? ` on ${chainName}` : '';
 
   if (amountStr === undefined || amountStr === null || amountStr.toString().trim() === '') {
     return { isValid: false, code: 'EMPTY_AMOUNT', reason: 'Enter a transfer amount.' };
@@ -285,7 +290,7 @@ export function validateTransferAmount(
         return {
           isValid: false,
           code: 'INSUFFICIENT_BALANCE',
-          reason: `Insufficient ${tokenSymbol} balance to cover transfer and network gas fees. Available: ${parseFloat(availFmt).toFixed(4)} ${tokenSymbol}.`,
+          reason: `Insufficient ${tokenSymbol} balance to cover transfer and network gas fees${chainSuffix}. Available: ${parseFloat(availFmt).toFixed(4)} ${tokenSymbol}.`,
           amountUnits,
         };
       }
@@ -295,7 +300,7 @@ export function validateTransferAmount(
         return {
           isValid: false,
           code: 'INSUFFICIENT_BALANCE',
-          reason: `Insufficient ${tokenSymbol} balance. You have ${parseFloat(availFmt).toFixed(4)} available, but requested ${amountStr} ${tokenSymbol}.`,
+          reason: `Insufficient ${tokenSymbol} balance${chainSuffix}. You have ${parseFloat(availFmt).toFixed(4)} available, but requested ${amountStr} ${tokenSymbol}.`,
           amountUnits,
         };
       }
