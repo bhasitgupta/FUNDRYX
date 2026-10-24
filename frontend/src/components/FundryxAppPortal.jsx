@@ -86,6 +86,7 @@ import {
   getRouteMatrix,
   executeCrossChainSwap,
   claimDestinationBridgeTransfer,
+  getCrossChainRouterAddress,
   CROSS_CHAIN_STATUS,
   getUserTokenBalance,
   getReadProvider,
