@@ -24,7 +24,8 @@
         "CreditPolicy": "0x68fC6E11cD8a855849D7788e035BA92E320Db0d2",
         "LendingPool": "0xF35DaC9A5Db13c2b621Aa00288A4996D5d91c07C",
         "RiskAttestationRegistry": "0xCa8C5f7AA0717BCc3435cAEbFB96Ff602232dEcC",
-        "MockSwapRouter": "0x460850Fb8495867E526e23B4149D04810d5b4e39"
+        "MockSwapRouter": "0x460850Fb8495867E526e23B4149D04810d5b4e39",
+        "CrossChainRouter": "0x751D833aB39A4092fB05fA70968eCbb5674DCd3B"
       }
     },
     "monad_testnet": {
@@ -38,7 +39,8 @@
         "CreditPolicy": "0x27B46c075bf2Cd67D174BD59629cc66b8C9Ea36d",
         "LendingPool": "0x68fC6E11cD8a855849D7788e035BA92E320Db0d2",
         "RiskAttestationRegistry": "0xF35DaC9A5Db13c2b621Aa00288A4996D5d91c07C",
-        "MockSwapRouter": "0xCa8C5f7AA0717BCc3435cAEbFB96Ff602232dEcC"
+        "MockSwapRouter": "0xCa8C5f7AA0717BCc3435cAEbFB96Ff602232dEcC",
+        "CrossChainRouter": "0x78358a760Ee666CB2A984F2c385596D373c49188"
       }
     },
     "avalanche_fuji": {
@@ -52,7 +54,8 @@
         "CreditPolicy": "0x27B46c075bf2Cd67D174BD59629cc66b8C9Ea36d",
         "LendingPool": "0x68fC6E11cD8a855849D7788e035BA92E320Db0d2",
         "RiskAttestationRegistry": "0xF35DaC9A5Db13c2b621Aa00288A4996D5d91c07C",
-        "MockSwapRouter": "0xCa8C5f7AA0717BCc3435cAEbFB96Ff602232dEcC"
+        "MockSwapRouter": "0xCa8C5f7AA0717BCc3435cAEbFB96Ff602232dEcC",
+        "CrossChainRouter": "0xEdC21F990257f5C7570bF93Ab35c4b14dd77F367"
       }
     }
   },

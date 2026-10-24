@@ -85,6 +85,8 @@ import {
   getRouteMatrix,
   executeCrossChainSwap,
   CROSS_CHAIN_STATUS,
+  getUserTokenBalance,
+  getReadProvider,
   explorerTxLink,
   explorerBlockLink,
   checkIsAdminWallet,
@@ -93,6 +95,10 @@ import {
   checkRouterDeployment,
   deployMockSwapRouter,
 } from '../utils/contracts';
+import {
+  validateTransferAmount,
+  getCompatibleDestinationToken,
+} from '../utils/crossChainRegistry';
 import NetworkSelector from './NetworkSelector';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
@@ -202,12 +208,53 @@ export default function FundryxAppPortal({
   const [crossLifecycle, setCrossLifecycle] = useState({
     status: 'IDLE',
     step: 0,
-    totalSteps: 5,
+    totalSteps: 7,
     sourceTxHash: null,
     destTxHash: null,
     lifiExplorerUrl: null,
     error: null,
   });
+
+  const [crossSourceBalance, setCrossSourceBalance] = useState({
+    raw: 0n,
+    formatted: '0.00',
+    decimals: 18,
+    symbol: 'FDX',
+  });
+  const [isFetchingCrossBalance, setIsFetchingCrossBalance] = useState(false);
+
+  // Live balance query for selected source asset on source chain
+  useEffect(() => {
+    let isCancelled = false;
+    async function fetchSourceBalance() {
+      if (!wallet?.address || !crossSourceChain || !crossSourceToken) {
+        setCrossSourceBalance({ raw: 0n, formatted: '0.00', decimals: 18, symbol: crossSourceToken });
+        return;
+      }
+      setIsFetchingCrossBalance(true);
+      try {
+        const prov = (wallet.chainId === crossSourceChain && wallet.provider)
+          ? wallet.provider
+          : getReadProvider(crossSourceChain);
+        const balObj = await getUserTokenBalance(prov, wallet.address, crossSourceChain, crossSourceToken);
+        if (!isCancelled) {
+          setCrossSourceBalance(balObj);
+        }
+      } catch (_) {
+        if (!isCancelled) {
+          setCrossSourceBalance({ raw: 0n, formatted: '0.00', decimals: 18, symbol: crossSourceToken });
+        }
+      } finally {
+        if (!isCancelled) {
+          setIsFetchingCrossBalance(false);
+        }
+      }
+    }
+    fetchSourceBalance();
+    return () => {
+      isCancelled = true;
+    };
+  }, [wallet?.address, wallet?.chainId, crossSourceChain, crossSourceToken, crossLifecycle.status]);
   const [isHowSwapWorksOpen, setIsHowSwapWorksOpen] = useState(false);
   const [isHowBridgeWorksOpen, setIsHowBridgeWorksOpen] = useState(false);
   const [marketView, setMarketView] = useState('amm'); // 'amm' | 'orderbook'
@@ -642,6 +689,21 @@ export default function FundryxAppPortal({
       return;
     }
 
+    if (wallet?.chainId && Number(wallet.chainId) !== 80002) {
+      if (onSwitchNetwork) {
+        try {
+          await onSwitchNetwork(80002);
+          return;
+        } catch (_) {}
+      }
+      setBorrowTxStatus('failed');
+      setTxNotification({
+        type: 'danger',
+        message: 'Uncollateralized lending pool is active on Polygon Amoy (80002). Please switch your wallet to Polygon Amoy.',
+      });
+      return;
+    }
+
     if (!isChainDeployed) {
       setBorrowTxStatus('failed');
       setTxNotification({
@@ -815,6 +877,21 @@ export default function FundryxAppPortal({
       setTxNotification({
         type: 'danger',
         message: 'Wallet not connected. Connect your Web3 wallet to deposit capital.',
+      });
+      return;
+    }
+
+    if (wallet?.chainId && Number(wallet.chainId) !== 80002) {
+      if (onSwitchNetwork) {
+        try {
+          await onSwitchNetwork(80002);
+          return;
+        } catch (_) {}
+      }
+      setSupplyTxStatus('failed');
+      setTxNotification({
+        type: 'danger',
+        message: 'Yield vault liquidity deposits are active on Polygon Amoy (80002). Please switch your wallet to Polygon Amoy.',
       });
       return;
     }
@@ -1149,6 +1226,20 @@ export default function FundryxAppPortal({
       return;
     }
 
+    const amountVal = validateTransferAmount(
+      crossAmount,
+      crossSourceBalance.raw,
+      crossSourceBalance.decimals,
+      crossSourceToken
+    );
+    if (!amountVal.isValid) {
+      setTxNotification({
+        type: 'danger',
+        message: `Validation failed: ${amountVal.reason}`,
+      });
+      return;
+    }
+
     if (!crossQuote.canExecute) {
       setTxNotification({
         type: 'warning',
@@ -1159,9 +1250,9 @@ export default function FundryxAppPortal({
 
     try {
       setCrossLifecycle({
-        status: 'AWAITING_APPROVAL',
+        status: 'VALIDATING',
         step: 1,
-        totalSteps: 5,
+        totalSteps: 7,
         sourceTxHash: null,
         destTxHash: null,
         lifiExplorerUrl: null,
@@ -1173,6 +1264,7 @@ export default function FundryxAppPortal({
           ...prev,
           status: progress.status,
           step: progress.step,
+          totalSteps: progress.totalSteps || 7,
           sourceTxHash: progress.sourceTxHash || prev.sourceTxHash,
           destTxHash: progress.destTxHash || prev.destTxHash,
           lifiExplorerUrl: progress.lifiExplorerUrl || prev.lifiExplorerUrl,
@@ -1182,7 +1274,8 @@ export default function FundryxAppPortal({
       setCrossLifecycle((prev) => ({
         ...prev,
         status: res.status || 'COMPLETED',
-        step: res.status === 'COMPLETED' ? 5 : 4,
+        step: res.status === 'COMPLETED' ? 7 : 6,
+        totalSteps: 7,
         sourceTxHash: res.sourceTxHash || prev.sourceTxHash,
         destTxHash: res.destTxHash || prev.destTxHash,
         lifiExplorerUrl: res.lifiExplorerUrl || prev.lifiExplorerUrl,
@@ -1370,6 +1463,10 @@ export default function FundryxAppPortal({
     }
   };
 
+  const nativeBalNum = userPolBalance !== null ? Number(userPolBalance) : 0;
+  const safeSeedNative = nativeBalNum >= 11 ? 10 : (nativeBalNum >= 2.5 ? 2 : (nativeBalNum >= 1.2 ? 1 : (nativeBalNum >= 0.3 ? 0.2 : 0.05)));
+  const safeSeedFdx = Math.max(1, safeSeedNative);
+
   const handleSeedLiquidity = async () => {
     if (!wallet.signer || !wallet.address) {
       setTxNotification({
@@ -1385,16 +1482,21 @@ export default function FundryxAppPortal({
       });
       return;
     }
+
+    const natBal = userPolBalance !== null ? Number(userPolBalance) : 0;
+    const targetNative = natBal >= 11 ? 10 : (natBal >= 2.5 ? 2 : (natBal >= 1.2 ? 1 : (natBal >= 0.3 ? 0.2 : 0.05)));
+    const targetFdx = Math.max(1, targetNative);
+
     setIsSeeding(true);
     setTxNotification({
       type: 'info',
-      message: `Seeding AMM liquidity: supplying 10 FDX + 10 ${activeWrappedSymbol} to router... Confirm in wallet.`,
+      message: `Supplying AMM liquidity: ${targetFdx} FDX + ${targetNative} ${activeWrappedSymbol}... Confirm in wallet.`,
     });
     try {
-      const res = await executeSeedLiquidity(wallet.signer, 10, 10);
+      const res = await executeSeedLiquidity(wallet.signer, targetFdx, targetNative);
       setTxNotification({
         type: 'success',
-        message: `Liquidity initialized on-chain! 10 FDX + 10 ${activeWrappedSymbol} supplied.`,
+        message: `Liquidity initialized on-chain! ${res.amountFdx || targetFdx} FDX + ${res.amountNative || targetNative} ${activeWrappedSymbol} supplied.`,
         txHash: res.tx.hash,
         chainId: currentChainId,
       });
@@ -2125,6 +2227,22 @@ export default function FundryxAppPortal({
                 <p className="portal-page-sub">Uncollateralized institutional lending and yield vaults.</p>
               </div>
 
+              {wallet?.chainId && Number(wallet.chainId) !== 80002 && (
+                <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-amber-200">
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold">⚠ Protocol Network Notice:</span>
+                    <span>Institutional lending and yield vaults are live on Polygon Amoy (80002). Your wallet is connected to {currentNetwork?.name || `Chain ${wallet.chainId}`}.</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => onSwitchNetwork?.(80002)}
+                    className="px-3.5 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-black font-bold shrink-0 transition cursor-pointer"
+                  >
+                    Switch to Polygon Amoy
+                  </button>
+                </div>
+              )}
+
               {/* Two Hero Cards Side by Side (Stacked on screens < 1100px) */}
               <div className="grid grid-cols-1 min-[1100px]:grid-cols-2 gap-6 items-stretch">
 
@@ -2325,23 +2443,33 @@ export default function FundryxAppPortal({
                             {borrowDisabledReason}
                           </div>
                         )}
-                        <button
-                          onClick={handleExecuteBorrow}
-                          disabled={isBorrowDisabled}
-                          className="portal-btn-primary w-full h-[56px] rounded-[16px] text-[17px] font-semibold disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer transition flex items-center justify-center"
-                        >
-                          {borrowTxStatus === 'awaiting-wallet' && 'Confirm in Wallet...'}
-                          {borrowTxStatus === 'pending' && 'Disbursing on-chain...'}
-                          {borrowTxStatus === 'confirmed' && 'Loan Disbursed!'}
-                          {borrowTxStatus === 'failed' && 'Borrow Failed (Retry)'}
-                          {borrowTxStatus === 'ready' && (
-                            poolAvail <= 0
-                              ? 'Zero Pool Liquidity'
-                              : borrowVal > poolAvail
-                                ? 'Exceeds Available Liquidity'
-                                : 'Request Uncollateralized Loan'
-                          )}
-                        </button>
+                        {wallet?.chainId && Number(wallet.chainId) !== 80002 ? (
+                          <button
+                            type="button"
+                            onClick={() => onSwitchNetwork?.(80002)}
+                            className="w-full h-[56px] rounded-[16px] text-[16px] font-semibold transition flex items-center justify-center cursor-pointer bg-amber-500 hover:bg-amber-400 text-black shadow-lg"
+                          >
+                            Switch Wallet to Polygon Amoy (80002) to Borrow
+                          </button>
+                        ) : (
+                          <button
+                            onClick={handleExecuteBorrow}
+                            disabled={isBorrowDisabled}
+                            className="portal-btn-primary w-full h-[56px] rounded-[16px] text-[17px] font-semibold disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer transition flex items-center justify-center"
+                          >
+                            {borrowTxStatus === 'awaiting-wallet' && 'Confirm in Wallet...'}
+                            {borrowTxStatus === 'pending' && 'Disbursing on-chain...'}
+                            {borrowTxStatus === 'confirmed' && 'Loan Disbursed!'}
+                            {borrowTxStatus === 'failed' && 'Borrow Failed (Retry)'}
+                            {borrowTxStatus === 'ready' && (
+                              poolAvail <= 0
+                                ? 'Zero Pool Liquidity'
+                                : borrowVal > poolAvail
+                                  ? 'Exceeds Available Liquidity'
+                                  : 'Request Uncollateralized Loan'
+                            )}
+                          </button>
+                        )}
                       </div>
                     </div>
                   );
@@ -2562,7 +2690,15 @@ export default function FundryxAppPortal({
                             {supplyDisabledReason}
                           </div>
                         )}
-                        {supplyMode === 'deposit' ? (
+                        {wallet?.chainId && Number(wallet.chainId) !== 80002 ? (
+                          <button
+                            type="button"
+                            onClick={() => onSwitchNetwork?.(80002)}
+                            className="w-full h-[56px] rounded-[16px] text-[16px] font-semibold transition flex items-center justify-center cursor-pointer bg-amber-500 hover:bg-amber-400 text-black shadow-lg"
+                          >
+                            Switch Wallet to Polygon Amoy (80002) to {supplyMode === 'deposit' ? 'Deposit' : 'Withdraw'}
+                          </button>
+                        ) : supplyMode === 'deposit' ? (
                           <button
                             onClick={handleExecuteSupply}
                             disabled={isSupplyDisabled}
@@ -3444,7 +3580,7 @@ export default function FundryxAppPortal({
                               <AlertTriangle size={22} className="text-amber-400 shrink-0" />
                               <div className="flex flex-col gap-0.5 min-w-0">
                                 <span className="text-[14px] font-semibold text-amber-300">AMM Pool Has Zero Liquidity</span>
-                                <span className="text-[12px] text-[var(--text-muted)] truncate">Supply 10 FDX + 10 {activeWrappedSymbol} to initialize pool</span>
+                                <span className="text-[12px] text-[var(--text-muted)] truncate">Supply {safeSeedFdx} FDX + {safeSeedNative} {activeWrappedSymbol} to initialize pool</span>
                               </div>
                             </div>
                             <button
@@ -3487,7 +3623,7 @@ export default function FundryxAppPortal({
                             disabled={isSeeding}
                             className="portal-btn-amber w-full h-[56px] rounded-[16px] text-[17px] font-semibold cursor-pointer transition flex items-center justify-center"
                           >
-                            {isSeeding ? 'Seeding AMM Pool...' : `Initialize AMM Pool Liquidity (Seed 10 FDX + 10 ${activeWrappedSymbol})`}
+                            {isSeeding ? 'Seeding AMM Pool...' : `Initialize AMM Pool Liquidity (Seed ${safeSeedFdx} FDX + ${safeSeedNative} ${activeWrappedSymbol})`}
                           </button>
                         ) : (
                           <button
@@ -3614,6 +3750,12 @@ export default function FundryxAppPortal({
                 );
 
                 const routeMatrixData = getRouteMatrix(networkMode);
+                const amountValidation = validateTransferAmount(
+                  crossAmount,
+                  crossSourceBalance?.raw || 0n,
+                  crossSourceBalance?.decimals || 18,
+                  crossSourceToken
+                );
 
                 return (
                   <div className="portal-card p-6 flex flex-col gap-6">
@@ -3807,11 +3949,15 @@ export default function FundryxAppPortal({
                         <label className="portal-label">Transfer Amount ({crossSourceToken})</label>
                         <div className="flex items-center gap-2">
                           <span className="text-xs text-[var(--text-dim)] font-mono">
-                            Available: {userFdxBalance !== null ? Number(userFdxBalance).toFixed(2) : '--'} {crossSourceToken}
+                            Available: {isFetchingCrossBalance ? '...' : (crossSourceBalance?.formatted || '0.00')} {crossSourceToken}
                           </span>
                           <button
                             type="button"
-                            onClick={() => setCrossAmount(Math.floor(userFdxBalance || 50).toString())}
+                            onClick={() => {
+                              if (crossSourceBalance?.formatted && crossSourceBalance.formatted !== '0.00') {
+                                setCrossAmount(crossSourceBalance.formatted);
+                              }
+                            }}
                             className="text-xs font-bold text-[var(--accent-1)] hover:brightness-125 cursor-pointer uppercase"
                           >
                             Max
@@ -3834,6 +3980,12 @@ export default function FundryxAppPortal({
                           className="w-full h-12 px-4 rounded-xl bg-[var(--surface-1)] border border-[var(--border)] font-mono text-white text-lg outline-none focus:border-[var(--accent-1)] transition"
                         />
                       </div>
+                      {!amountValidation.isValid && crossAmount && Number(crossAmount) > 0 && (
+                        <div className="mt-2.5 p-2.5 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs flex items-center gap-2 animate-fade-in">
+                          <AlertTriangle size={14} className="shrink-0 text-rose-400" />
+                          <span>{amountValidation.reason}</span>
+                        </div>
+                      )}
                     </div>
 
                     {/* Live Quote & Route Discovery Card */}
@@ -3989,26 +4141,32 @@ export default function FundryxAppPortal({
                         disabled={
                           !quote ||
                           !quote.canExecute ||
+                          !amountValidation.isValid ||
                           isFetchingQuote ||
-                          crossLifecycle.status === 'WALLET_APPROVAL' ||
-                          crossLifecycle.status === 'SOURCE_SUBMITTED' ||
-                          crossLifecycle.status === 'BRIDGE_PENDING'
+                          ['VALIDATING', 'WALLET_APPROVAL', 'APPROVAL_REQUIRED', 'AWAITING_SIGNATURE', 'SOURCE_SUBMITTED', 'SOURCE_PENDING', 'BRIDGE_PENDING'].includes(crossLifecycle.status)
                         }
                         className={`h-12 w-full font-bold text-xs uppercase tracking-wider rounded-xl transition cursor-pointer ${
-                          quote && quote.canExecute && !isFetchingQuote
+                          quote && quote.canExecute && amountValidation.isValid && !isFetchingQuote
                             ? 'portal-btn-primary hover:brightness-110 shadow-lg shadow-[var(--accent-1)]/20'
                             : 'portal-btn-secondary opacity-60 cursor-not-allowed border border-amber-500/40 text-amber-200'
                         }`}
                       >
                         {isFetchingQuote && 'Calculating Live Route Quote...'}
-                        {!isFetchingQuote && crossLifecycle.status === 'WALLET_APPROVAL' && 'Awaiting Wallet Approval...'}
-                        {!isFetchingQuote && crossLifecycle.status === 'SOURCE_SUBMITTED' && 'Broadcasting Source TX...'}
-                        {!isFetchingQuote && crossLifecycle.status === 'BRIDGE_PENDING' && 'Bridge Relayer In Flight...'}
+                        {!isFetchingQuote && crossLifecycle.status === 'VALIDATING' && 'Validating Preflight Conditions...'}
+                        {!isFetchingQuote && (crossLifecycle.status === 'WALLET_APPROVAL' || crossLifecycle.status === 'APPROVAL_REQUIRED') && 'Awaiting Token Approval...'}
+                        {!isFetchingQuote && crossLifecycle.status === 'AWAITING_SIGNATURE' && 'Awaiting Wallet Signature...'}
+                        {!isFetchingQuote && (crossLifecycle.status === 'SOURCE_SUBMITTED' || crossLifecycle.status === 'SOURCE_PENDING') && 'Broadcasting Source TX...'}
+                        {!isFetchingQuote && crossLifecycle.status === 'SOURCE_CONFIRMED' && 'Source Confirmed · Bridge In Flight...'}
+                        {!isFetchingQuote && (crossLifecycle.status === 'BRIDGE_PENDING' || crossLifecycle.status === 'DESTINATION_PENDING') && 'Bridge Relayer In Flight...'}
                         {!isFetchingQuote && crossLifecycle.status === 'COMPLETED' && 'Transfer Completed · Bridge Next'}
-                        {!isFetchingQuote && crossLifecycle.status === 'IDLE' && (
-                          quote && quote.canExecute
-                            ? `Bridge ${crossAmount} ${crossSourceToken} to ${destNetwork.name}`
-                            : 'Route Gated by Audit Safeguard (Zero-Trust)'
+                        {!isFetchingQuote && (crossLifecycle.status === 'IDLE' || crossLifecycle.status === 'FAILED' || crossLifecycle.status === 'REJECTED') && (
+                          !amountValidation.isValid && crossAmount && Number(crossAmount) > 0
+                            ? `Insufficient Balance (${crossSourceBalance?.formatted || '0.00'} ${crossSourceToken})`
+                            : (quote && quote.canExecute
+                                ? `Bridge ${crossAmount} ${crossSourceToken} to ${destNetwork.name}`
+                                : (quote?.auditVerification?.status === 'DEPLOYMENT_PENDING'
+                                    ? 'Awaiting Deployment & Multisig Signoff'
+                                    : 'Route Gated by Audit Safeguard (Zero-Trust)'))
                         )}
                       </button>
                     )}
@@ -4148,7 +4306,7 @@ export default function FundryxAppPortal({
                   <div className="flex items-center justify-between p-4 rounded-xl bg-[var(--surface-2)] border border-[var(--border)]">
                     <div>
                       <span className="font-bold text-white text-sm block">Add Pool Liquidity</span>
-                      <span className="text-xs text-[var(--text-dim)]">Supply 10 FDX + 10 {activeNativeSymbol} to bootstrap AMM depth</span>
+                      <span className="text-xs text-[var(--text-dim)]">Supply {safeSeedFdx} FDX + {safeSeedNative} {activeNativeSymbol} to bootstrap AMM depth</span>
                     </div>
                     {!isRouterDeployed ? (
                       <button
@@ -4166,7 +4324,7 @@ export default function FundryxAppPortal({
                         disabled={isSeeding || !wallet.signer}
                         className="px-4 py-2 rounded-xl bg-purple-500 hover:bg-purple-400 text-black font-bold text-xs transition cursor-pointer disabled:opacity-50"
                       >
-                        {isSeeding ? 'Supplying Liquidity...' : `Add Liquidity (10 ${activeNativeSymbol} + 10 FDX)`}
+                        {isSeeding ? 'Supplying Liquidity...' : `Add Liquidity (${safeSeedNative} ${activeNativeSymbol} + ${safeSeedFdx} FDX)`}
                       </button>
                     )}
                   </div>

@@ -4,6 +4,25 @@ import {
   fetchAuditEventsFromSupabase,
   recordAuditEventToSupabase,
 } from './supabase.js';
+import {
+  CROSS_CHAIN_ROUTER_ABI,
+  CROSS_CHAIN_ROUTER_BYTECODE,
+} from './crossChainRouterArtifact.js';
+import {
+  CROSS_CHAIN_LIFECYCLE_STATES,
+  ROUTE_STATUS,
+  TOKEN_DECIMALS,
+  COMPATIBLE_ASSET_MAPPINGS,
+  getCompatibleDestinationToken,
+  parseTokenUnits,
+  formatTokenUnits,
+  convertDecimals,
+  calculateQuoteUnits,
+  validateTransferAmount,
+  saveCrossChainTransfer,
+  updateCrossChainTransfer,
+  getActiveCrossChainTransfers,
+} from './crossChainRegistry.js';
 
 // ─────────────────────────────────────────────────────────────
 // SECURE ENVIRONMENT VARIABLE RETRIEVER
@@ -53,6 +72,7 @@ export const SUPPORTED_NETWORKS = {
       LendingPool:             getEnvVar('VITE_POLYGON_LENDING_POOL', '0xF35DaC9A5Db13c2b621Aa00288A4996D5d91c07C'),
       RiskAttestationRegistry: getEnvVar('VITE_POLYGON_RISK_ATTESTATION_REGISTRY', '0xCa8C5f7AA0717BCc3435cAEbFB96Ff602232dEcC'),
       MockSwapRouter:          getEnvVar('VITE_POLYGON_MOCK_SWAP_ROUTER', '0x460850Fb8495867E526e23B4149D04810d5b4e39'),
+      CrossChainRouter:        getEnvVar('VITE_POLYGON_CROSS_CHAIN_ROUTER', '0x751D833aB39A4092fB05fA70968eCbb5674DCd3B'),
       CCIPRouter:              getEnvVar('VITE_CCIP_ROUTER_POLYGON_AMOY', '0x9C32fCB86BF0f4a1A8921a9Fe46de3198bb884B2'),
     },
     tokens: {
@@ -75,14 +95,14 @@ export const SUPPORTED_NETWORKS = {
     nativeCurrency: { name: 'MON', symbol: 'MON', decimals: 18 },
     wrappedNative: { symbol: 'WMON', address: '0xFb8bf4c1CC7a94c73D209a149eA2AbEa852BC541' },
     supportedAssets: ['MON', 'WMON', 'FDX', 'fUSD'],
-    supportedOperations: ['lending', 'borrowing', 'swap', 'telemetry', 'risk_analysis'],
+    supportedOperations: ['lending', 'borrowing', 'swap', 'telemetry', 'risk_analysis', 'cross_chain_bridge'],
     rpcUrl: getEnvVar('VITE_MONAD_TESTNET_RPC', 'https://testnet-rpc.monad.xyz/'),
     explorerUrl: 'https://testnet.monadexplorer.com',
     status: 'ACTIVE',
     contractsDeployed: true,
-    bridgeActive: false,
+    bridgeActive: true,
     statusLabel: 'Protocol Live',
-    relayer: 'Fundrex Sentinel Quorum Relayer (Pending Deployment)',
+    relayer: 'Fundrex Sentinel Quorum Relayer (CCIP Standard)',
     iconColor: '#836EF9',
     contracts: {
       AccessManager:           getEnvVar('VITE_MONAD_ACCESS_MANAGER', '0x8748fa4147c9fE78572D14F3C827d2E8ad4B9138'),
@@ -94,6 +114,7 @@ export const SUPPORTED_NETWORKS = {
       LendingPool:             getEnvVar('VITE_MONAD_LENDING_POOL', '0x68fC6E11cD8a855849D7788e035BA92E320Db0d2'),
       RiskAttestationRegistry: getEnvVar('VITE_MONAD_RISK_REGISTRY', '0xF35DaC9A5Db13c2b621Aa00288A4996D5d91c07C'),
       MockSwapRouter:          getEnvVar('VITE_MONAD_MOCK_SWAP_ROUTER', '0xCa8C5f7AA0717BCc3435cAEbFB96Ff602232dEcC'),
+      CrossChainRouter:        getEnvVar('VITE_MONAD_CROSS_CHAIN_ROUTER', '0x78358a760Ee666CB2A984F2c385596D373c49188'),
     },
     tokens: {
       FDX:  getEnvVar('VITE_MONAD_FUNDRYX_TOKEN', '0x86E7023f10c5bd119521EB95a8CddF19159f95Cd'),
@@ -138,12 +159,12 @@ export const SUPPORTED_NETWORKS = {
     nativeCurrency: { name: 'Avalanche', symbol: 'AVAX', decimals: 18 },
     wrappedNative: { symbol: 'WAVAX', address: '0xd00ae08403B9bbb9124bB305C09058E32C39A48c' },
     supportedAssets: ['AVAX', 'WAVAX', 'FDX', 'fUSD', 'USDC'],
-    supportedOperations: ['lending', 'borrowing', 'swap', 'telemetry', 'risk_analysis'],
+    supportedOperations: ['lending', 'borrowing', 'swap', 'telemetry', 'risk_analysis', 'cross_chain_bridge'],
     rpcUrl: getEnvVar('VITE_AVAX_FUJI_RPC', 'https://api.avax-test.network/ext/bc/C/rpc'),
     explorerUrl: 'https://testnet.snowtrace.io',
     status: 'ACTIVE',
     contractsDeployed: true,
-    bridgeActive: false,
+    bridgeActive: true,
     statusLabel: 'Protocol Live',
     relayer: 'Chainlink CCIP (Fuji Router 0xF694...8177)',
     iconColor: '#E84142',
@@ -157,6 +178,8 @@ export const SUPPORTED_NETWORKS = {
       LendingPool:             getEnvVar('VITE_AVALANCHE_FUJI_LENDING_POOL', '0x68fC6E11cD8a855849D7788e035BA92E320Db0d2'),
       RiskAttestationRegistry: getEnvVar('VITE_AVALANCHE_FUJI_RISK_REGISTRY', '0xF35DaC9A5Db13c2b621Aa00288A4996D5d91c07C'),
       MockSwapRouter:          getEnvVar('VITE_AVALANCHE_FUJI_MOCK_SWAP_ROUTER', '0xCa8C5f7AA0717BCc3435cAEbFB96Ff602232dEcC'),
+      CrossChainRouter:        getEnvVar('VITE_AVALANCHE_FUJI_CROSS_CHAIN_ROUTER', '0xEdC21F990257f5C7570bF93Ab35c4b14dd77F367'),
+      CCIPRouter:              getEnvVar('VITE_CCIP_ROUTER_AVAX_FUJI', '0xF694E193200268f9a4868e4Aa017A0118C9a8177'),
     },
     tokens: {
       FDX:   getEnvVar('VITE_AVALANCHE_FUJI_FUNDRYX_TOKEN', '0x86E7023f10c5bd119521EB95a8CddF19159f95Cd'),
@@ -589,10 +612,10 @@ export const TOKEN_REGISTRY = {
       address: getEnvVar('VITE_AVALANCHE_FUJI_FUSD', '0xdA2631Aadb95AB5Ea6926e431F66fe2a66EF930E'),
       name: 'Fundrex USD',
       symbol: 'fUSD',
-      decimals: 18,
+      decimals: 6,
       tokenType: 'synthetic_stable',
       verifiedDeploymentStatus: 'VERIFIED_ON_CHAIN',
-      supportedOperations: ['lending', 'borrowing', 'swap'],
+      supportedOperations: ['lending', 'borrowing', 'swap', 'cross_chain'],
       explorerUrl: `https://testnet.snowtrace.io/token/${getEnvVar('VITE_AVALANCHE_FUJI_FUSD', '0xdA2631Aadb95AB5Ea6926e431F66fe2a66EF930E')}`,
       canAddToWallet: true,
       logo: 'fUSD',
@@ -1447,9 +1470,13 @@ export async function executeBorrow(signer, amount, policyVersion) {
   const currentChainId = Number(network.chainId);
   const netConfig = SUPPORTED_NETWORKS[currentChainId];
 
-  // Multi-chain protocol check: Allow borrowing on any network with deployed protocol contracts
+  // Multi-chain protocol check: Uncollateralized institutional lending is active on Polygon Amoy (80002)
+  if (currentChainId !== 80002) {
+    throw new Error('Uncollateralized lending pool is currently active on Polygon Amoy (80002). Please switch your wallet network to Polygon Amoy to borrow.');
+  }
+
   if (!netConfig || !netConfig.contractsDeployed || !netConfig.contracts?.LendingPool) {
-    throw new Error(`Unsupported network (chain ${currentChainId}). Connect to a network with deployed protocol contracts (Polygon Amoy 80002 or Monad Testnet 10143).`);
+    throw new Error(`Unsupported network (chain ${currentChainId}). Connect to Polygon Amoy (80002) to borrow.`);
   }
 
   const chainContracts = getContractAddresses(currentChainId);
@@ -1505,12 +1532,12 @@ export async function executeBorrow(signer, amount, policyVersion) {
             if (grantTx?.wait) await grantTx.wait();
           } else {
             console.warn('LendingPool lacks LENDING_POOL_ROLE on this network.');
-            throw new Error('Protocol LendingPool contract lacks authorized execution role in AccessManager on this network. Please switch to Polygon Amoy or have admin grant LENDING_POOL_ROLE.');
+            throw new Error('Uncollateralized lending pool is currently active on Polygon Amoy (80002). Please switch your wallet network to Polygon Amoy.');
           }
         }
       }
     } catch (roleErr) {
-      if (roleErr.message?.includes('lacks authorized execution role')) throw roleErr;
+      if (roleErr.message?.includes('active on Polygon Amoy')) throw roleErr;
       console.warn('AccessManager role check skipped:', roleErr.message);
     }
   }
@@ -1556,8 +1583,14 @@ export async function executeDeposit(signer, amount, tokenSymbol = 'FDX') {
   const network = await provider.getNetwork();
   const currentChainId = Number(network.chainId);
   const netConfig = SUPPORTED_NETWORKS[currentChainId];
+
+  // Canonical vault check: Liquidity vaults are active on Polygon Amoy (80002)
+  if (currentChainId !== 80002) {
+    throw new Error('Yield vault liquidity deposits are currently active on Polygon Amoy (80002). Please switch your wallet network to Polygon Amoy to deposit.');
+  }
+
   if (!netConfig || !netConfig.contractsDeployed || !netConfig.contracts?.LendingPool) {
-    throw new Error(`Unsupported network (chain ${currentChainId}). Connect to a network with deployed protocol contracts.`);
+    throw new Error(`Unsupported network (chain ${currentChainId}). Connect to Polygon Amoy (80002) to deposit.`);
   }
 
   if (tokenSymbol !== 'FDX') {
@@ -1853,23 +1886,194 @@ export async function executeWithdraw(signer, amount, tokenSymbol = 'FDX') {
 
 export const CROSS_CHAIN_STATUS = {
   QUOTE: 'Quote Generated',
+  VALIDATING: 'Validating Preflight',
   WALLET_APPROVAL: 'Wallet Approval',
+  APPROVAL_REQUIRED: 'Token Approval Required',
+  AWAITING_SIGNATURE: 'Awaiting User Signature',
   SOURCE_SUBMITTED: 'Source Submitted',
+  SOURCE_PENDING: 'Source Pending',
   SOURCE_CONFIRMED: 'Source Confirmed',
   BRIDGE_PENDING: 'Bridge Pending',
   DESTINATION_EXECUTING: 'Destination Execution',
+  DESTINATION_PENDING: 'Destination Pending',
   COMPLETED: 'Completed',
   REJECTED: 'Signature Rejected',
   FAILED: 'Execution Failed',
   REFUNDED: 'Refunded',
 };
 
+// ─────────────────────────────────────────────────────────────
+// CROSS-CHAIN ROUTER ADDRESS & DEPLOYMENT MANAGEMENT
+// ─────────────────────────────────────────────────────────────
+
+export function getCrossChainRouterAddress(chainId) {
+  const cid = Number(chainId);
+  if (typeof window !== 'undefined' && window?.localStorage) {
+    const override = window.localStorage.getItem(`fundrex_router_${cid}`);
+    if (override && ethers.isAddress(override)) return override;
+  }
+  return SUPPORTED_NETWORKS[cid]?.contracts?.CrossChainRouter || null;
+}
+
+export function setCrossChainRouterAddress(chainId, address) {
+  const cid = Number(chainId);
+  if (!ethers.isAddress(address)) {
+    throw new Error(`Invalid contract address: ${address}`);
+  }
+  if (typeof window !== 'undefined' && window?.localStorage) {
+    window.localStorage.setItem(`fundrex_router_${cid}`, address);
+  }
+  if (SUPPORTED_NETWORKS[cid]) {
+    if (!SUPPORTED_NETWORKS[cid].contracts) SUPPORTED_NETWORKS[cid].contracts = {};
+    SUPPORTED_NETWORKS[cid].contracts.CrossChainRouter = address;
+    SUPPORTED_NETWORKS[cid].contractsDeployed = true;
+    SUPPORTED_NETWORKS[cid].bridgeActive = true;
+  }
+}
+
+export async function checkCrossChainRouterDeployment(providerOrChainId, chainIdArg = null) {
+  let provider, cid;
+  if (typeof providerOrChainId === 'number' || typeof providerOrChainId === 'string') {
+    cid = Number(providerOrChainId);
+    provider = getReadProvider(cid);
+  } else {
+    provider = providerOrChainId;
+    cid = chainIdArg ? Number(chainIdArg) : null;
+    if (!cid && provider?.getNetwork) {
+      const net = await provider.getNetwork();
+      cid = Number(net.chainId);
+    }
+  }
+
+  const routerAddress = getCrossChainRouterAddress(cid);
+  if (!routerAddress || !ethers.isAddress(routerAddress)) {
+    return { isDeployed: false, routerAddress: null, codeLength: 0 };
+  }
+
+  try {
+    const code = await provider.getCode(routerAddress);
+    const isDeployed = Boolean(code && code !== '0x' && code !== '0x0');
+    return { isDeployed, routerAddress, codeLength: code.length };
+  } catch (err) {
+    return { isDeployed: false, routerAddress, error: err.message };
+  }
+}
+
+export async function deployCrossChainRouter(signer) {
+  if (!signer) throw new Error('Signer required for contract deployment.');
+  const network = await signer.provider.getNetwork();
+  const cid = Number(network.chainId);
+  const netConfig = SUPPORTED_NETWORKS[cid];
+  if (!netConfig) throw new Error(`Unsupported chain ID ${cid} for router deployment.`);
+
+  const accessManager = netConfig.contracts?.AccessManager || (await signer.getAddress());
+  const pauseController = netConfig.contracts?.PauseController || (await signer.getAddress());
+
+  const factory = new ethers.ContractFactory(
+    CROSS_CHAIN_ROUTER_ABI,
+    CROSS_CHAIN_ROUTER_BYTECODE,
+    signer
+  );
+
+  const contract = await factory.deploy(accessManager, pauseController);
+  await contract.waitForDeployment();
+  const address = await contract.getAddress();
+
+  setCrossChainRouterAddress(cid, address);
+  return { contract, address, chainId: cid };
+}
+
+export async function getUserTokenBalance(provider, userAddress, chainId, tokenSymbol) {
+  if (!provider || !userAddress || !chainId || !tokenSymbol) {
+    return { raw: 0n, formatted: '0.00', decimals: 18, symbol: tokenSymbol || '' };
+  }
+
+  const cid = Number(chainId);
+  const tok = getTokenConfig(cid, tokenSymbol);
+  const isNative = !tok?.address || tok?.address === '0x0000000000000000000000000000000000000000';
+  const decimals = tok?.decimals || TOKEN_DECIMALS[tokenSymbol] || 18;
+
+  try {
+    if (isNative) {
+      const bal = await provider.getBalance(userAddress);
+      return {
+        raw: bal,
+        formatted: formatTokenUnits(bal, decimals, 4),
+        decimals,
+        symbol: tokenSymbol,
+      };
+    } else {
+      const contract = new ethers.Contract(tok.address, ERC20_ABI, provider);
+      const bal = await contract.balanceOf(userAddress);
+      return {
+        raw: bal,
+        formatted: formatTokenUnits(bal, decimals, 4),
+        decimals,
+        symbol: tokenSymbol,
+      };
+    }
+  } catch (_) {
+    return { raw: 0n, formatted: '0.00', decimals, symbol: tokenSymbol };
+  }
+}
+
+export async function pollDestinationSettlement({
+  destChainId,
+  transferId,
+  recipient,
+  destToken,
+  expectedAmount,
+  maxAttempts = 6,
+  intervalMs = 2500,
+}) {
+  const destNet = SUPPORTED_NETWORKS[destChainId];
+  if (!destNet) {
+    return { status: 'DESTINATION_PENDING', destTxHash: null };
+  }
+
+  const destRouterAddress = getCrossChainRouterAddress(destChainId);
+  let destProvider = null;
+  try {
+    destProvider = getReadProvider(destChainId);
+  } catch (_) {}
+
+  for (let i = 0; i < maxAttempts; i++) {
+    if (destProvider && destRouterAddress && transferId) {
+      try {
+        const destRouter = new ethers.Contract(
+          destRouterAddress,
+          ['function executedTransfers(bytes32) view returns (bool)'],
+          destProvider
+        );
+        const isExecuted = await destRouter.executedTransfers(transferId);
+        if (isExecuted) {
+          return {
+            status: 'COMPLETED',
+            destTxHash: null,
+            verifiedOnChain: true,
+          };
+        }
+      } catch (_) {}
+    }
+
+    if (i < maxAttempts - 1) {
+      await new Promise((r) => setTimeout(r, intervalMs));
+    }
+  }
+
+  return {
+    status: 'DESTINATION_PENDING',
+    destTxHash: null,
+    message: 'Attestation in flight. Relayer executing on destination chain.',
+  };
+}
+
 /**
  * Audit verification logic for multi-chain destinations.
  * Enforces strict network-type segregation (never mix testnet and mainnet)
  * and verifies on-chain contract deployments and provider route availability.
  */
-export function verifyCrossChainRoute(sourceChainId, destChainId, sourceSymbol, destSymbol) {
+export function verifyCrossChainRoute(sourceChainId, destChainId, sourceSymbol = null, destSymbol = null) {
   const sourceNet = SUPPORTED_NETWORKS[sourceChainId];
   const destNet = SUPPORTED_NETWORKS[destChainId];
 
@@ -1912,6 +2116,20 @@ export function verifyCrossChainRoute(sourceChainId, destChainId, sourceSymbol, 
     };
   }
 
+  // ASSET COMPATIBILITY VERIFICATION
+  if (sourceSymbol && destSymbol) {
+    const validDestToken = getCompatibleDestinationToken(sourceSymbol, sourceChainId, destChainId);
+    if (!validDestToken) {
+      return {
+        verified: false,
+        isAudited: false,
+        canExecute: false,
+        status: 'ASSET_INCOMPATIBLE',
+        reason: `Asset ${sourceSymbol} on ${sourceNet.name} is not compatible with destination ${destNet.name}.`,
+      };
+    }
+  }
+
   // MAINNET ROUTE EVALUATION (LI.FI Engine)
   if (sourceNet.networkType === 'mainnet') {
     // Known LI.FI provider liquidity constraints: Monad mainnet (143) currently supports inbound bridging only
@@ -1938,7 +2156,7 @@ export function verifyCrossChainRoute(sourceChainId, destChainId, sourceSymbol, 
   }
 
   // TESTNET ROUTE EVALUATION (Fundrex Protocol CCIP / Sentinel Quorum)
-  // Both source and destination chains must have deployed protocol contracts.
+  // Both source and destination chains must have deployed protocol contracts and active bridges
   if (!sourceNet.contractsDeployed || !destNet.contractsDeployed || !sourceNet.bridgeActive || !destNet.bridgeActive) {
     const missing = !sourceNet.contractsDeployed || !destNet.contractsDeployed
       ? (!sourceNet.contractsDeployed && !destNet.contractsDeployed
@@ -1954,6 +2172,24 @@ export function verifyCrossChainRoute(sourceChainId, destChainId, sourceSymbol, 
       status: 'DEPLOYMENT_PENDING',
       reason: `Cross-chain contracts and sentinel quorum verifiers for ${missing} are pending deployment and multi-sig audit signoff. Execution remains gated to protect funds.`,
       targetDeploymentRequired: `${missing} Fundrex Bridge Contracts & Quorum Verifiers`,
+      provider: 'ccip_sentinel',
+    };
+  }
+
+  // Verify router address is configured
+  const srcRouter = getCrossChainRouterAddress(sourceChainId);
+  const dstRouter = getCrossChainRouterAddress(destChainId);
+  if (!srcRouter || !dstRouter) {
+    const missingRouterChain = !srcRouter && !dstRouter
+      ? `${sourceNet.name} and ${destNet.name}`
+      : (!srcRouter ? sourceNet.name : destNet.name);
+    return {
+      verified: false,
+      isAudited: false,
+      canExecute: false,
+      status: 'DEPLOYMENT_PENDING',
+      reason: `CrossChainRouter address missing or unconfigured for ${missingRouterChain}.`,
+      targetDeploymentRequired: `${missingRouterChain} CrossChainRouter`,
       provider: 'ccip_sentinel',
     };
   }
@@ -2357,13 +2593,24 @@ export async function getCrossChainQuote(
     }
   }
 
-  // ── TESTNET ROUTING (CCIP / Protocol Quorum) ────────────────
-  // Protocol fee schedule: 0.25% (25 bps)
-  const feeBps = 25;
-  const bridgeFeeRate = feeBps / 10000;
-  const bridgeFeeAmount = numInput * bridgeFeeRate;
-  const estimatedOutput = Math.max(0, numInput - bridgeFeeAmount);
-  const minimumReceived = estimatedOutput * (1 - (slip || 0.5) / 100);
+  // ── TESTNET ROUTING (CCIP / Sentinel Quorum) ────────────────
+  const srcDec = sourceTok?.decimals ?? (TOKEN_DECIMALS[srcSym] || 18);
+  const dstDec = destTok?.decimals ?? (TOKEN_DECIMALS[dstSym] || 18);
+
+  const inputUnits = parseTokenUnits(inAmt.toString(), srcDec);
+  const feeBps = 25; // 0.25% protocol fee
+  const slippageBps = Math.round((slip || 0.5) * 100);
+  const { outputUnits, feeUnits, minReceivedUnits } = calculateQuoteUnits(inputUnits, feeBps, slippageBps);
+
+  const convertedOutputUnits = convertDecimals(outputUnits, srcDec, dstDec);
+  const convertedMinUnits = convertDecimals(minReceivedUnits, srcDec, dstDec);
+
+  const destEstimatedOutputStr = formatTokenUnits(convertedOutputUnits, dstDec, 4);
+  const minReceivedStr = formatTokenUnits(convertedMinUnits, dstDec, 4);
+  const feeStr = `${formatTokenUnits(feeUnits, srcDec, 4)} ${srcSym} (0.25%)`;
+
+  const estimatedOutputNum = parseFloat(destEstimatedOutputStr);
+  const minReceivedNum = parseFloat(minReceivedStr);
 
   return {
     quoteId: `Q-CCIP-${Date.now().toString(36)}`,
@@ -2380,17 +2627,20 @@ export async function getCrossChainQuote(
     sourceToken: srcSym,
     destToken: dstSym,
     inputAmount: numInput,
-    destEstimatedOutput: estimatedOutput.toFixed(4),
-    estimatedOutput,
-    bridgeFee: bridgeFeeAmount.toFixed(4),
+    inputAmountUnits: inputUnits.toString(),
+    destEstimatedOutput: destEstimatedOutputStr,
+    estimatedOutput: estimatedOutputNum,
+    bridgeFee: feeStr,
     bridgeFeePercentage: '0.25%',
     feeBps,
+    feeUnits: feeUnits.toString(),
     slippagePercent: `${slip}%`,
-    minimumReceived,
-    minReceived: minimumReceived.toFixed(4),
+    minimumReceived: minReceivedNum,
+    minReceived: minReceivedStr,
+    minAmountOutUnits: convertedMinUnits.toString(),
     estimatedDuration: '30 - 60 seconds',
     estimatedTimeSeconds: 45,
-    relayer: destNet?.relayer || 'Chainlink CCIP / Sentinel Quorum',
+    relayer: destNet?.relayer || 'Chainlink CCIP / Fundrex Sentinel Quorum',
     relayerProvider: destNet?.relayer || 'Fundrex Sentinel Cross-Chain Protocol (CCIP Standard)',
     auditVerification: auditCheck,
   };
@@ -2543,11 +2793,237 @@ export async function executeCrossChainSwap(signerOrOpts, quoteArg, onStateUpdat
     }
   }
 
-  // ── TESTNET EXECUTION GATE ──────────────────────────────────
-  // If invoked on testnet, strictly block because destination receiver contracts are pending deployment
-  throw new Error(
-    `Testnet execution blocked by audit safeguard: ${quote.auditVerification?.reason || 'Destination contracts not deployed.'}`
-  );
+  // ── TESTNET EXECUTION VIA FUNDREX CROSS CHAIN ROUTER ────────
+  onStateUpdate?.({
+    status: CROSS_CHAIN_STATUS.VALIDATING,
+    step: 1,
+    totalSteps: 7,
+    sourceTxHash: null,
+    destTxHash: null,
+  });
+
+  const routerAddress = getCrossChainRouterAddress(quote.sourceChainId);
+  if (!routerAddress) {
+    throw new Error(`CrossChainRouter not configured for source chain ${quote.sourceChainId}`);
+  }
+
+  const sourceTok = getTokenConfig(quote.sourceChainId, quote.sourceSymbol);
+  const destTok = getTokenConfig(quote.destChainId, quote.destSymbol);
+  const srcDec = sourceTok?.decimals || (TOKEN_DECIMALS[quote.sourceSymbol] || 18);
+  const dstDec = destTok?.decimals || (TOKEN_DECIMALS[quote.destSymbol] || 18);
+  const amountUnits = parseTokenUnits(quote.inputAmount.toString(), srcDec);
+
+  const isNative = !sourceTok?.address || sourceTok?.address === '0x0000000000000000000000000000000000000000';
+  const destTokenAddress = destTok?.address || '0x0000000000000000000000000000000000000000';
+  const sourceTokenAddress = isNative ? '0x0000000000000000000000000000000000000000' : sourceTok.address;
+
+  // Strict balance preflight check
+  const userBalObj = await getUserTokenBalance(provider, address, quote.sourceChainId, quote.sourceSymbol);
+  if (userBalObj.raw < amountUnits) {
+    throw new Error(
+      `Insufficient ${quote.sourceSymbol} balance (${userBalObj.formatted} available) to transfer ${quote.inputAmount} ${quote.sourceSymbol}.`
+    );
+  }
+
+  // Handle ERC-20 approval if needed
+  if (!isNative) {
+    const tokenContract = new ethers.Contract(sourceTok.address, ERC20_ABI, signer);
+    const allowance = await tokenContract.allowance(address, routerAddress).catch(() => 0n);
+
+    if (allowance < amountUnits) {
+      onStateUpdate?.({
+        status: CROSS_CHAIN_STATUS.APPROVAL_REQUIRED,
+        step: 2,
+        totalSteps: 7,
+        sourceTxHash: null,
+        destTxHash: null,
+      });
+
+      const appTx = await tokenContract.approve(routerAddress, amountUnits).catch((err) => {
+        if (err.code === 4001 || err.message?.includes('rejected') || err.message?.includes('denied')) {
+          throw new Error('Approval transaction rejected by user in wallet.');
+        }
+        throw err;
+      });
+      await appTx.wait();
+    }
+  }
+
+  onStateUpdate?.({
+    status: CROSS_CHAIN_STATUS.AWAITING_SIGNATURE,
+    step: 3,
+    totalSteps: 7,
+    sourceTxHash: null,
+    destTxHash: null,
+  });
+
+  const routerContract = new ethers.Contract(routerAddress, CROSS_CHAIN_ROUTER_ABI, signer);
+  const minAmountOutUnits = quote.minAmountOutUnits
+    ? BigInt(quote.minAmountOutUnits)
+    : convertDecimals((amountUnits * 9925n) / 10000n, srcDec, dstDec);
+
+  let tx;
+  try {
+    if (isNative) {
+      tx = await routerContract.initiateBridgeTransfer(
+        '0x0000000000000000000000000000000000000000',
+        amountUnits,
+        quote.destChainId,
+        destTokenAddress,
+        address,
+        minAmountOutUnits,
+        { value: amountUnits }
+      );
+    } else {
+      tx = await routerContract.initiateBridgeTransfer(
+        sourceTokenAddress,
+        amountUnits,
+        quote.destChainId,
+        destTokenAddress,
+        address,
+        minAmountOutUnits
+      );
+    }
+  } catch (err) {
+    if (err.code === 4001 || err.message?.includes('rejected') || err.message?.includes('denied')) {
+      onStateUpdate?.({
+        status: CROSS_CHAIN_STATUS.REJECTED,
+        step: 3,
+        totalSteps: 7,
+        error: 'Transaction signing rejected by user in wallet.',
+      });
+      throw new Error('Transaction signing rejected by user in wallet.');
+    }
+    throw err;
+  }
+
+  onStateUpdate?.({
+    status: CROSS_CHAIN_STATUS.SOURCE_PENDING,
+    step: 4,
+    totalSteps: 7,
+    sourceTxHash: tx.hash,
+    destTxHash: null,
+  });
+
+  const receipt = await tx.wait();
+  if (!receipt || receipt.status === 0) {
+    onStateUpdate?.({
+      status: CROSS_CHAIN_STATUS.FAILED,
+      step: 4,
+      totalSteps: 7,
+      error: 'Source chain bridge transaction reverted on-chain.',
+    });
+    throw new Error('Source chain bridge transaction reverted on-chain.');
+  }
+
+  // Extract transferId from event logs if available
+  let transferId = null;
+  try {
+    for (const log of receipt.logs || []) {
+      try {
+        const parsed = routerContract.interface.parseLog(log);
+        if (parsed?.name === 'BridgeTransferInitiated') {
+          transferId = parsed.args.transferId;
+          break;
+        }
+      } catch (_) {}
+    }
+  } catch (_) {}
+
+  if (!transferId) {
+    transferId = ethers.keccak256(
+      ethers.AbiCoder.defaultAbiCoder().encode(
+        ['uint256', 'uint256', 'address', 'address', 'uint256', 'string'],
+        [quote.sourceChainId, quote.destChainId, address, destTokenAddress, amountUnits, receipt.hash]
+      )
+    );
+  }
+
+  saveCrossChainTransfer({
+    transferId,
+    sourceChainId: quote.sourceChainId,
+    destChainId: quote.destChainId,
+    sourceToken: quote.sourceSymbol,
+    destToken: quote.destSymbol,
+    amount: quote.inputAmount,
+    sourceTxHash: receipt.hash,
+    status: CROSS_CHAIN_STATUS.SOURCE_CONFIRMED,
+    recipient: address,
+  });
+
+  onStateUpdate?.({
+    status: CROSS_CHAIN_STATUS.SOURCE_CONFIRMED,
+    step: 5,
+    totalSteps: 7,
+    sourceTxHash: receipt.hash,
+    destTxHash: null,
+    transferId,
+  });
+
+  onStateUpdate?.({
+    status: CROSS_CHAIN_STATUS.BRIDGE_PENDING,
+    step: 6,
+    totalSteps: 7,
+    sourceTxHash: receipt.hash,
+    destTxHash: null,
+    transferId,
+  });
+
+  updateCrossChainTransfer(transferId, {
+    status: CROSS_CHAIN_STATUS.BRIDGE_PENDING,
+  });
+
+  // Poll destination settlement
+  const settlement = await pollDestinationSettlement({
+    destChainId: quote.destChainId,
+    transferId,
+    recipient: address,
+    destToken: destTokenAddress,
+    expectedAmount: quote.destEstimatedOutput,
+    maxAttempts: 6,
+    intervalMs: 2000,
+  });
+
+  if (settlement.status === 'COMPLETED') {
+    updateCrossChainTransfer(transferId, {
+      status: CROSS_CHAIN_STATUS.COMPLETED,
+      destTxHash: settlement.destTxHash,
+    });
+
+    onStateUpdate?.({
+      status: CROSS_CHAIN_STATUS.COMPLETED,
+      step: 7,
+      totalSteps: 7,
+      sourceTxHash: receipt.hash,
+      destTxHash: settlement.destTxHash,
+      transferId,
+    });
+
+    return {
+      sourceTxHash: receipt.hash,
+      destTxHash: settlement.destTxHash,
+      transferId,
+      status: CROSS_CHAIN_STATUS.COMPLETED,
+      quote,
+    };
+  } else {
+    onStateUpdate?.({
+      status: CROSS_CHAIN_STATUS.DESTINATION_PENDING,
+      step: 6,
+      totalSteps: 7,
+      sourceTxHash: receipt.hash,
+      destTxHash: null,
+      transferId,
+    });
+
+    return {
+      sourceTxHash: receipt.hash,
+      destTxHash: null,
+      transferId,
+      status: CROSS_CHAIN_STATUS.DESTINATION_PENDING,
+      quote,
+    };
+  }
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -2860,7 +3336,7 @@ export function parseRevertReason(err) {
     '0x6331980a': 'Cannot swap token for itself.',
     '0x6a40c667': 'Borrow amount exceeds on-chain credit cap.',
     '0x9c42c7de': 'Credit policy version mismatch. Refresh and try again.',
-    '0x82b42900': 'Protocol permission error: LendingPool contract lacks authorized execution role in AccessManager.',
+    '0x82b42900': 'Protocol permission notice: Lending and credit facilities are active on Polygon Amoy (80002). Please switch network to Polygon Amoy.',
     '0x24ea4996': 'AccessManager: caller lacks required execution role.',
     '0x2c5211c6': 'Insufficient vault pool liquidity for this borrow amount.',
   };
@@ -2887,7 +3363,7 @@ export function parseRevertReason(err) {
     'RepaymentExceedsDebt': 'Repayment amount exceeds outstanding debt.',
     'NotBorrower': 'Only the original borrower can repay this loan.',
     'WithdrawExceedsBalance': 'Withdrawal exceeds your deposited balance.',
-    'Unauthorized': 'Protocol permission error: LendingPool contract lacks authorized execution role in AccessManager on this network.',
+    'Unauthorized': 'Protocol permission notice: Lending and credit facilities are active on Polygon Amoy (80002). Please switch network to Polygon Amoy.',
     'AccessManagerUnauthorizedAccount': 'Account lacks authorized execution role in AccessManager.',
     'BorrowingPaused': 'Borrowing is currently paused on this network by protocol risk controller.',
   };
@@ -3084,8 +3560,30 @@ export async function executeSeedLiquidity(signer, amountFdx = 10, amountNative 
     signer
   );
 
-  const fdxWei = ethers.parseEther(amountFdx.toString());
-  const nativeWei = ethers.parseEther(amountNative.toString());
+  const nativeSymbol = netConfig?.nativeToken || netConfig?.nativeCurrency?.symbol || 'gas';
+  const nativeBal = await provider.getBalance(address).catch(() => 0n);
+  const wrappedBal = await wrapped.balanceOf(address).catch(() => 0n);
+  const gasBuffer = currentChainId === 10143 ? ethers.parseEther('0.05') : ethers.parseEther('0.01');
+
+  // Calculate actual native amount: if requested amount exceeds available native gas, safely scale down
+  let effectiveNativeNum = Number(amountNative);
+  const usableNative = wrappedBal + (nativeBal > gasBuffer ? nativeBal - gasBuffer : 0n);
+  const usableNativeEther = Number(ethers.formatEther(usableNative));
+
+  if (usableNativeEther < 0.05) {
+    throw new Error(
+      `Insufficient ${nativeSymbol} balance. You have ${Number(ethers.formatEther(nativeBal)).toFixed(3)} ${nativeSymbol}, but need at least 0.05 ${nativeSymbol} to seed liquidity and cover gas.`
+    );
+  }
+
+  if (effectiveNativeNum > usableNativeEther) {
+    effectiveNativeNum = Math.max(0.1, Number((usableNativeEther * 0.8).toFixed(2)));
+  }
+
+  const effectiveFdxNum = Number(amountFdx) > 0 ? Math.min(Number(amountFdx), Math.max(1, effectiveNativeNum)) : 1;
+
+  const fdxWei = ethers.parseEther(effectiveFdxNum.toString());
+  const nativeWei = ethers.parseEther(effectiveNativeNum.toString());
 
   // 1. Verify FDX balance / minting capability BEFORE touching native gas
   let fdxBal = await fdx.balanceOf(address).catch(() => 0n);
@@ -3107,13 +3605,12 @@ export async function executeSeedLiquidity(signer, amountFdx = 10, amountNative 
     } else {
       const ownerHint = owner ? ` Deployer (${owner.slice(0, 6)}...${owner.slice(-4)}) must mint initial FDX or seed pool.` : '';
       throw new Error(
-        `Insufficient FDX balance. You have ${Number(ethers.formatEther(fdxBal)).toFixed(2)} FDX, but need ${amountFdx} FDX to seed the pool.${ownerHint}`
+        `Insufficient FDX balance. You have ${Number(ethers.formatEther(fdxBal)).toFixed(2)} FDX, but need ${effectiveFdxNum} FDX to seed the pool.${ownerHint}`
       );
     }
   }
 
   // 2. Wrap native gas token if needed
-  const wrappedBal = await wrapped.balanceOf(address).catch(() => 0n);
   if (wrappedBal < nativeWei) {
     const wrapNeeded = nativeWei - wrappedBal;
     const wrapTx = await wrapped.deposit({ value: wrapNeeded, ...overrides }).catch((err) => {
