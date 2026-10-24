@@ -84,6 +84,7 @@ import {
   verifyCrossChainRoute,
   getRouteMatrix,
   executeCrossChainSwap,
+  claimDestinationBridgeTransfer,
   CROSS_CHAIN_STATUS,
   getUserTokenBalance,
   getReadProvider,
@@ -213,6 +214,7 @@ export default function FundryxAppPortal({
     destTxHash: null,
     lifiExplorerUrl: null,
     error: null,
+    transferId: null,
   });
 
   const [crossSourceBalance, setCrossSourceBalance] = useState({
@@ -1279,6 +1281,7 @@ export default function FundryxAppPortal({
         sourceTxHash: res.sourceTxHash || prev.sourceTxHash,
         destTxHash: res.destTxHash || prev.destTxHash,
         lifiExplorerUrl: res.lifiExplorerUrl || prev.lifiExplorerUrl,
+        transferId: res.transferId || prev.transferId,
       }));
 
       if (res.status === 'COMPLETED') {
@@ -1290,7 +1293,7 @@ export default function FundryxAppPortal({
       } else {
         setTxNotification({
           type: 'info',
-          message: `Source transaction broadcast on ${crossQuote.sourceChainName}. Relayer bridging in flight.`,
+          message: `Source transaction broadcast on ${crossQuote.sourceChainName}! Switch to ${crossQuote.destChainName} to claim tokens.`,
           txHash: res.sourceTxHash,
         });
       }
@@ -1304,6 +1307,51 @@ export default function FundryxAppPortal({
       setTxNotification({
         type: 'danger',
         message: `Cross-chain swap failed: ${reason}`,
+      });
+    }
+  };
+
+  const handleClaimDestinationTransfer = async () => {
+    if (!crossLifecycle.transferId || !crossQuote) return;
+    try {
+      if (wallet.chainId !== crossQuote.destChainId) {
+        await onSwitchNetwork?.(crossQuote.destChainId);
+        return;
+      }
+      setCrossLifecycle((prev) => ({ ...prev, status: 'AWAITING_SIGNATURE' }));
+      const claimRes = await claimDestinationBridgeTransfer(wallet.signer, {
+        transferId: crossLifecycle.transferId,
+        sourceChainId: crossQuote.sourceChainId,
+        destChainId: crossQuote.destChainId,
+        sourceTokenAddress: getTokenConfig(crossQuote.sourceChainId, crossQuote.sourceSymbol)?.address,
+        destTokenAddress: getTokenConfig(crossQuote.destChainId, crossQuote.destSymbol)?.address,
+        recipient: wallet.address,
+        amountOutUnits: crossQuote.minAmountOutUnits,
+      });
+
+      setCrossLifecycle((prev) => ({
+        ...prev,
+        status: 'COMPLETED',
+        step: 7,
+        destTxHash: claimRes.destTxHash,
+      }));
+
+      setTxNotification({
+        type: 'success',
+        message: `Settled on ${crossQuote.destChainName}! Received ${crossQuote.destEstimatedOutput} ${crossQuote.destSymbol}.`,
+        txHash: claimRes.destTxHash,
+      });
+      refreshAll();
+    } catch (err) {
+      const reason = parseRevertReason(err);
+      setCrossLifecycle((prev) => ({
+        ...prev,
+        status: 'DESTINATION_PENDING',
+        error: reason,
+      }));
+      setTxNotification({
+        type: 'danger',
+        message: `Settlement claim failed: ${reason}`,
       });
     }
   };
@@ -4127,7 +4175,25 @@ export default function FundryxAppPortal({
                     )}
 
                     {/* Action Button */}
-                    {isWalletMismatched ? (
+                    {crossLifecycle.status === 'DESTINATION_PENDING' ? (
+                      wallet.chainId !== crossDestChain ? (
+                        <button
+                          type="button"
+                          onClick={() => onSwitchNetwork?.(crossDestChain)}
+                          className="h-12 w-full font-bold text-xs uppercase tracking-wider rounded-xl transition cursor-pointer bg-cyan-500 hover:bg-cyan-400 text-black shadow-lg shadow-cyan-500/20"
+                        >
+                          Switch Wallet to {destNetwork.name} ({crossDestChain}) to Claim Tokens
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={handleClaimDestinationTransfer}
+                          className="h-12 w-full font-bold text-xs uppercase tracking-wider rounded-xl transition cursor-pointer bg-emerald-500 hover:bg-emerald-400 text-black shadow-lg shadow-emerald-500/20"
+                        >
+                          Claim {crossQuote?.destEstimatedOutput || crossAmount} {crossDestToken} on {destNetwork.name}
+                        </button>
+                      )
+                    ) : isWalletMismatched ? (
                       <button
                         type="button"
                         onClick={() => onSwitchNetwork?.(crossSourceChain)}
@@ -4157,7 +4223,7 @@ export default function FundryxAppPortal({
                         {!isFetchingQuote && crossLifecycle.status === 'AWAITING_SIGNATURE' && 'Awaiting Wallet Signature...'}
                         {!isFetchingQuote && (crossLifecycle.status === 'SOURCE_SUBMITTED' || crossLifecycle.status === 'SOURCE_PENDING') && 'Broadcasting Source TX...'}
                         {!isFetchingQuote && crossLifecycle.status === 'SOURCE_CONFIRMED' && 'Source Confirmed · Bridge In Flight...'}
-                        {!isFetchingQuote && (crossLifecycle.status === 'BRIDGE_PENDING' || crossLifecycle.status === 'DESTINATION_PENDING') && 'Bridge Relayer In Flight...'}
+                        {!isFetchingQuote && crossLifecycle.status === 'BRIDGE_PENDING' && 'Bridge Relayer In Flight...'}
                         {!isFetchingQuote && crossLifecycle.status === 'COMPLETED' && 'Transfer Completed · Bridge Next'}
                         {!isFetchingQuote && (crossLifecycle.status === 'IDLE' || crossLifecycle.status === 'FAILED' || crossLifecycle.status === 'REJECTED') && (
                           !amountValidation.isValid && crossAmount && Number(crossAmount) > 0

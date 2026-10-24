@@ -3026,6 +3026,57 @@ export async function executeCrossChainSwap(signerOrOpts, quoteArg, onStateUpdat
   }
 }
 
+/**
+ * Execute destination settlement or recipient claim on destination chain.
+ */
+export async function claimDestinationBridgeTransfer(signer, {
+  transferId,
+  sourceChainId,
+  destChainId,
+  sourceTokenAddress,
+  destTokenAddress,
+  recipient,
+  amountOutUnits,
+  sentinelSignature = '0x',
+}) {
+  if (!signer) throw new Error('Web3 signer required to claim destination transfer.');
+  const network = await signer.provider.getNetwork();
+  const currentChainId = Number(network.chainId);
+  if (currentChainId !== Number(destChainId)) {
+    throw new Error(`Please switch your wallet to destination chain ID ${destChainId} to claim transfer.`);
+  }
+
+  const routerAddress = getCrossChainRouterAddress(destChainId);
+  if (!routerAddress) {
+    throw new Error(`CrossChainRouter address not configured for destination chain ID ${destChainId}`);
+  }
+
+  const router = new ethers.Contract(routerAddress, CROSS_CHAIN_ROUTER_ABI, signer);
+  const sig = sentinelSignature && sentinelSignature.startsWith('0x') && sentinelSignature.length > 2 ? sentinelSignature : '0x';
+
+  const tx = await router.executeDestinationTransfer(
+    transferId,
+    sourceChainId,
+    sourceTokenAddress || '0x0000000000000000000000000000000000000000',
+    destTokenAddress || '0x0000000000000000000000000000000000000000',
+    recipient,
+    amountOutUnits,
+    sig
+  );
+
+  const receipt = await tx.wait();
+  updateCrossChainTransfer(transferId, {
+    status: CROSS_CHAIN_STATUS.COMPLETED,
+    destTxHash: receipt.hash,
+  });
+
+  return {
+    receipt,
+    destTxHash: receipt.hash,
+    status: CROSS_CHAIN_STATUS.COMPLETED,
+  };
+}
+
 // ─────────────────────────────────────────────────────────────
 // ADMIN ACCESS GATE & ON-CHAIN VERIFICATION (DYNAMIC CONTRACT CHECK)
 // ─────────────────────────────────────────────────────────────
@@ -3339,6 +3390,9 @@ export function parseRevertReason(err) {
     '0x82b42900': 'Protocol permission notice: Lending and credit facilities are active on Polygon Amoy (80002). Please switch network to Polygon Amoy.',
     '0x24ea4996': 'AccessManager: caller lacks required execution role.',
     '0x2c5211c6': 'Insufficient vault pool liquidity for this borrow amount.',
+    '0x4407d56a': 'Unsupported token pair on router. Update router contract with auto-pair support.',
+    '0xd08a735e': 'Destination chain is not enabled on router.',
+    '0x90b98a11': 'Cross-chain transfer has already been executed.',
   };
 
   const errData = (err.data || err.error?.data || '').toLowerCase();
@@ -3363,9 +3417,13 @@ export function parseRevertReason(err) {
     'RepaymentExceedsDebt': 'Repayment amount exceeds outstanding debt.',
     'NotBorrower': 'Only the original borrower can repay this loan.',
     'WithdrawExceedsBalance': 'Withdrawal exceeds your deposited balance.',
-    'Unauthorized': 'Protocol permission notice: Lending and credit facilities are active on Polygon Amoy (80002). Please switch network to Polygon Amoy.',
+    'Unauthorized': 'Protocol permission notice: Action requires authorized protocol role or Polygon Amoy (80002) network.',
     'AccessManagerUnauthorizedAccount': 'Account lacks authorized execution role in AccessManager.',
     'BorrowingPaused': 'Borrowing is currently paused on this network by protocol risk controller.',
+    'UnsupportedTokenPair': 'Token pair not enabled on router.',
+    'UnsupportedDestinationChain': 'Destination chain not enabled on router.',
+    'InvalidSentinelSignature': 'Invalid sentinel quorum signature.',
+    'InsufficientRouterLiquidity': 'Destination router has insufficient liquidity reserves to pay out this transfer.',
   };
 
   const msg = err.message || String(err);

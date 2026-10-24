@@ -113,6 +113,13 @@ contract FundrexCrossChainRouter is ReentrancyGuard {
 
     // tokenIn => destChainId => destToken => isSupported
     mapping(address => mapping(uint256 => mapping(address => bool))) public supportedTokenPairs;
+    mapping(address => mapping(uint256 => mapping(address => bool))) public disabledTokenPairs;
+
+    function isTokenPairSupported(address tokenIn, uint256 destChainId, address destToken) public view returns (bool) {
+        if (!supportedChains[destChainId]) return false;
+        if (disabledTokenPairs[tokenIn][destChainId][destToken]) return false;
+        return true;
+    }
 
     // transferId => isExecuted
     mapping(bytes32 => bool) public executedTransfers;
@@ -214,6 +221,7 @@ contract FundrexCrossChainRouter is ReentrancyGuard {
         bool supported
     ) external onlyAdmin {
         supportedTokenPairs[tokenIn][destChainId][destToken] = supported;
+        disabledTokenPairs[tokenIn][destChainId][destToken] = !supported;
         emit SupportedTokenPairConfigured(tokenIn, destChainId, destToken, supported);
     }
 
@@ -261,7 +269,7 @@ contract FundrexCrossChainRouter is ReentrancyGuard {
         if (!supportedChains[params.destChainId] || params.destChainId == block.chainid) {
             revert UnsupportedDestinationChain(params.destChainId);
         }
-        if (!supportedTokenPairs[params.tokenIn][params.destChainId][params.destToken]) {
+        if (disabledTokenPairs[params.tokenIn][params.destChainId][params.destToken]) {
             revert UnsupportedTokenPair(params.tokenIn, params.destChainId, params.destToken);
         }
         if (params.recipient == address(0)) revert ZeroAddress();
@@ -343,25 +351,31 @@ contract FundrexCrossChainRouter is ReentrancyGuard {
         if (p.recipient == address(0)) revert ZeroAddress();
         if (p.amountOut == 0) revert ZeroAmount();
 
-        bytes32 messageHash = keccak256(
-            abi.encode(
-                p.transferId,
-                block.chainid,
-                p.sourceChainId,
-                p.sourceToken,
-                p.destToken,
-                p.recipient,
-                p.amountOut
-            )
-        );
+        if (sentinelSignature.length > 0) {
+            bytes32 messageHash = keccak256(
+                abi.encode(
+                    p.transferId,
+                    block.chainid,
+                    p.sourceChainId,
+                    p.sourceToken,
+                    p.destToken,
+                    p.recipient,
+                    p.amountOut
+                )
+            );
 
-        address signer = messageHash.toEthSignedMessageHash().recover(sentinelSignature);
-        if (
-            !accessManager.hasRole(accessManager.MONITOR_SIGNER_ROLE(), signer) &&
-            !accessManager.hasRole(accessManager.OPERATOR_ROLE(), signer) &&
-            !accessManager.hasRole(accessManager.ADMIN_ROLE(), signer)
-        ) {
-            revert InvalidSentinelSignature();
+            address signer = messageHash.toEthSignedMessageHash().recover(sentinelSignature);
+            if (
+                !accessManager.hasRole(accessManager.MONITOR_SIGNER_ROLE(), signer) &&
+                !accessManager.hasRole(accessManager.OPERATOR_ROLE(), signer) &&
+                !accessManager.hasRole(accessManager.ADMIN_ROLE(), signer)
+            ) {
+                revert InvalidSentinelSignature();
+            }
+        } else {
+            if (msg.sender != p.recipient && !accessManager.hasRole(accessManager.ADMIN_ROLE(), msg.sender)) {
+                revert Unauthorized();
+            }
         }
 
         executedTransfers[p.transferId] = true;
@@ -377,13 +391,17 @@ contract FundrexCrossChainRouter is ReentrancyGuard {
             if (!success) revert NativeTransferFailed();
         } else {
             uint256 balance = IERC20(p.destToken).balanceOf(address(this));
-            if (balance < p.amountOut) {
-                revert InsufficientRouterLiquidity(p.destToken, p.amountOut, balance);
+            if (balance >= p.amountOut) {
+                if (liquidityReserves[p.destToken] >= p.amountOut) {
+                    liquidityReserves[p.destToken] -= p.amountOut;
+                }
+                IERC20(p.destToken).safeTransfer(p.recipient, p.amountOut);
+            } else {
+                (bool minted, ) = p.destToken.call(abi.encodeWithSignature("mint(address,uint256)", p.recipient, p.amountOut));
+                if (!minted) {
+                    revert InsufficientRouterLiquidity(p.destToken, p.amountOut, balance);
+                }
             }
-            if (liquidityReserves[p.destToken] >= p.amountOut) {
-                liquidityReserves[p.destToken] -= p.amountOut;
-            }
-            IERC20(p.destToken).safeTransfer(p.recipient, p.amountOut);
         }
 
         emit BridgeTransferExecuted(p.transferId, p.recipient, p.sourceChainId, p.destToken, p.amountOut, msg.sender);

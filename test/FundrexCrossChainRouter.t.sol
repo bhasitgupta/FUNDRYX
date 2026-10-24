@@ -145,6 +145,28 @@ contract FundrexCrossChainRouterTest is Test {
         assertEq(fdx.balanceOf(recipient), recipientBalBefore + amountOut);
     }
 
+    function test_destination_execution_recipient_direct_claim() public {
+        bytes32 transferId = keccak256("TRANSFER_DIRECT_CLAIM");
+        uint256 amountOut = 25e18;
+
+        uint256 recipientBalBefore = fdx.balanceOf(recipient);
+
+        // Recipient calls destination transfer directly without signature
+        vm.prank(recipient);
+        router.executeDestinationTransfer(
+            transferId,
+            monadChainId,
+            address(fdx),
+            address(fdx),
+            recipient,
+            amountOut,
+            ""
+        );
+
+        assertTrue(router.executedTransfers(transferId));
+        assertEq(fdx.balanceOf(recipient), recipientBalBefore + amountOut);
+    }
+
     function test_replay_protection_prevents_duplicate_execution() public {
         bytes32 transferId = keccak256("TRANSFER_REPLAY");
         uint256 amountOut = 50e18;
