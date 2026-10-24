@@ -99,6 +99,8 @@ import {
 import {
   validateTransferAmount,
   getCompatibleDestinationToken,
+  getActiveCrossChainTransfers,
+  updateCrossChainTransfer,
 } from '../utils/crossChainRegistry';
 import NetworkSelector from './NetworkSelector';
 
@@ -1300,6 +1302,28 @@ export default function FundryxAppPortal({
         });
       }
     } catch (err) {
+      const isNetSwitch = err?.code === 'NETWORK_ERROR' || err?.message?.includes('network changed');
+      if (isNetSwitch) {
+        const transfers = getActiveCrossChainTransfers();
+        const latest = transfers[0];
+        if (latest && latest.status !== 'COMPLETED') {
+          setCrossLifecycle((prev) => ({
+            ...prev,
+            status: 'DESTINATION_PENDING',
+            step: 6,
+            totalSteps: 7,
+            sourceTxHash: latest.sourceTxHash || prev.sourceTxHash,
+            transferId: latest.transferId || prev.transferId,
+            error: null,
+          }));
+          setTxNotification({
+            type: 'success',
+            message: `Switched network! Click 'Claim Tokens' below to receive funds on ${SUPPORTED_NETWORKS[latest.destChainId]?.name || 'destination'}.`,
+          });
+          return;
+        }
+      }
+
       const reason = parseRevertReason(err);
       setCrossLifecycle((prev) => ({
         ...prev,
@@ -1313,22 +1337,33 @@ export default function FundryxAppPortal({
     }
   };
 
-  const handleClaimDestinationTransfer = async () => {
-    if (!crossLifecycle.transferId || !crossQuote) return;
+  const handleClaimDestinationTransfer = async (targetTransfer = null) => {
+    const activeList = getActiveCrossChainTransfers();
+    const activeTransfer = targetTransfer || activeList.find((t) => t.status !== 'COMPLETED') || null;
+    const tId = activeTransfer?.transferId || crossLifecycle.transferId;
+    if (!tId) return;
+
+    const destCId = Number(activeTransfer?.destChainId || crossQuote?.destChainId || 80002);
+    const srcCId = Number(activeTransfer?.sourceChainId || crossQuote?.sourceChainId || 10143);
+    const srcSym = activeTransfer?.sourceToken || crossQuote?.sourceSymbol || 'FDX';
+    const dstSym = activeTransfer?.destToken || crossQuote?.destSymbol || 'FDX';
+    const destNet = SUPPORTED_NETWORKS[destCId] || { name: `Chain ${destCId}` };
+
     try {
-      if (wallet.chainId !== crossQuote.destChainId) {
-        await onSwitchNetwork?.(crossQuote.destChainId);
+      if (Number(wallet.chainId) !== destCId) {
+        await onSwitchNetwork?.(destCId);
         return;
       }
       setCrossLifecycle((prev) => ({ ...prev, status: 'AWAITING_SIGNATURE' }));
+      const claimAmountUnits = crossQuote?.minAmountOutUnits || ethers.parseEther((activeTransfer?.amount || 1.995).toString());
       const claimRes = await claimDestinationBridgeTransfer(wallet.signer, {
-        transferId: crossLifecycle.transferId,
-        sourceChainId: crossQuote.sourceChainId,
-        destChainId: crossQuote.destChainId,
-        sourceTokenAddress: getTokenConfig(crossQuote.sourceChainId, crossQuote.sourceSymbol)?.address,
-        destTokenAddress: getTokenConfig(crossQuote.destChainId, crossQuote.destSymbol)?.address,
+        transferId: tId,
+        sourceChainId: srcCId,
+        destChainId: destCId,
+        sourceTokenAddress: getTokenConfig(srcCId, srcSym)?.address,
+        destTokenAddress: getTokenConfig(destCId, dstSym)?.address,
         recipient: wallet.address,
-        amountOutUnits: crossQuote.minAmountOutUnits,
+        amountOutUnits: claimAmountUnits,
       });
 
       setCrossLifecycle((prev) => ({
@@ -1340,8 +1375,9 @@ export default function FundryxAppPortal({
 
       setTxNotification({
         type: 'success',
-        message: `Settled on ${crossQuote.destChainName}! Received ${crossQuote.destEstimatedOutput} ${crossQuote.destSymbol}.`,
+        message: `Settled on ${destNet.name}! Received ${activeTransfer?.amount || crossQuote?.destEstimatedOutput || ''} ${dstSym}.`,
         txHash: claimRes.destTxHash,
+        chainId: destCId,
       });
       refreshAll();
     } catch (err) {
@@ -3847,6 +3883,63 @@ export default function FundryxAppPortal({
                         )}
                       </div>
                     </div>
+
+                    {/* Persistent Pending Bridge Claim Card */}
+                    {(() => {
+                      const allTransfers = getActiveCrossChainTransfers();
+                      const pending = allTransfers.find(
+                        (t) => t.status !== 'COMPLETED' && (!wallet?.address || !t.recipient || t.recipient.toLowerCase() === wallet.address.toLowerCase())
+                      );
+                      if (!pending) return null;
+                      const pDestNet = SUPPORTED_NETWORKS[pending.destChainId] || { name: `Chain ${pending.destChainId}` };
+                      const pSrcNet = SUPPORTED_NETWORKS[pending.sourceChainId] || { name: `Chain ${pending.sourceChainId}` };
+                      const isReadyOnDest = Number(wallet?.chainId) === Number(pending.destChainId);
+
+                      return (
+                        <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/40 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 animate-fade-in shadow-lg">
+                          <div className="flex flex-col gap-1">
+                            <div className="flex items-center gap-2">
+                              <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
+                              <span className="font-bold text-sm text-emerald-300">Pending Bridge Transfer Ready to Claim!</span>
+                            </div>
+                            <div className="text-xs text-[var(--text-muted)] font-mono">
+                              {pending.amount} {pending.sourceToken} from {pSrcNet.name} &rarr; {pDestNet.name}
+                              {pending.sourceTxHash && (
+                                <a
+                                  href={`${pSrcNet.explorerUrl}/tx/${pending.sourceTxHash}`}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="ml-2 text-emerald-400 underline inline-flex items-center gap-1"
+                                >
+                                  Source TX <ExternalLink size={10} />
+                                </a>
+                              )}
+                            </div>
+                          </div>
+                          {isReadyOnDest ? (
+                            <button
+                              type="button"
+                              onClick={() => handleClaimDestinationTransfer(pending)}
+                              className="px-5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider transition cursor-pointer shadow-lg hover:brightness-110 active:scale-[0.98] shrink-0 flex items-center gap-1.5"
+                              style={{ color: '#041014', backgroundColor: '#2EE6A6' }}
+                            >
+                              <CheckCircle size={15} />
+                              <span>Claim {pending.amount} {pending.destToken} on {pDestNet.name}</span>
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => onSwitchNetwork?.(pending.destChainId)}
+                              className="px-5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider transition cursor-pointer shadow-lg hover:brightness-110 active:scale-[0.98] shrink-0 flex items-center gap-1.5"
+                              style={{ color: '#041014', backgroundColor: '#2EE6A6' }}
+                            >
+                              <ArrowLeftRight size={15} />
+                              <span>Switch to {pDestNet.name} to Claim</span>
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })()}
 
                     {/* Wallet Network Mismatch Alert Banner */}
                     {isWalletMismatched && (
