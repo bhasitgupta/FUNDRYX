@@ -3918,6 +3918,7 @@ export default function FundryxAppPortal({
               </div>
 
               {swapSubTab === 'cross-chain' && (() => {
+                const quote = crossQuote;
                 const activeDestChain = crossDestChain;
                 const activeSourceChain = crossSourceChain;
                 const sourceNetwork = SUPPORTED_NETWORKS[activeSourceChain] || { name: `Chain ${activeSourceChain}` };
