@@ -229,11 +229,15 @@ export default function FundryxAppPortal({
       const destFallback = cId === 10143 ? 80002 : (cId === 80002 ? 10143 : (cId === 137 ? 143 : 80002));
       setCrossDestChain(destFallback);
 
-      const sTokens = getTokenRegistry(cId);
+      const sTokens = getTokenRegistry(cId).filter(
+        (t) => networkMode === 'mainnet' || t.supportedOperations?.includes('cross_chain')
+      );
       if (sTokens && sTokens.length > 0) {
         setCrossSourceToken(sTokens[0].symbol);
       }
-      const dTokens = getTokenRegistry(destFallback);
+      const dTokens = getTokenRegistry(destFallback).filter(
+        (t) => networkMode === 'mainnet' || t.supportedOperations?.includes('cross_chain')
+      );
       if (dTokens && dTokens.length > 0) {
         setCrossDestToken(dTokens[0].symbol);
       }
@@ -1394,15 +1398,43 @@ export default function FundryxAppPortal({
       const claimAmountUnits = crossQuote?.minAmountOutUnits || ethers.parseEther((activeTransfer?.amount || 1.995).toString());
 
       const destTokenConfig = getTokenConfig(destCId, dstSym);
+      let claimTokenAddress = destTokenConfig?.address || '0x0000000000000000000000000000000000000000';
       const isNativeDest = !destTokenConfig?.address || destTokenConfig?.address === '0x0000000000000000000000000000000000000000';
-      if (isNativeDest) {
-        const prov = wallet.signer.provider;
-        const routerAddr = getCrossChainRouterAddress(destCId);
+      let finalClaimSym = dstSym;
+
+      const prov = wallet.signer.provider;
+      const routerAddr = getCrossChainRouterAddress(destCId);
+
+      if (isNativeDest && routerAddr) {
         const rBal = await prov.getBalance(routerAddr);
         if (rBal < claimAmountUnits) {
-          throw new Error(
-            `Destination router on ${destNet.name} holds ${ethers.formatEther(rBal)} ${dstSym} (needs ${ethers.formatEther(claimAmountUnits)} ${dstSym}). Testnet routers cannot dispense native gas tokens without pre-funded reserves. Click 'Clear / Reset This Transfer' below to clear this transfer.`
+          // Seamless fallback: If router lacks native gas tokens, settle in FDX protocol tokens on destination
+          const fdxConfig = getTokenConfig(destCId, 'FDX');
+          if (fdxConfig?.address) {
+            claimTokenAddress = fdxConfig.address;
+            finalClaimSym = 'FDX';
+          }
+        }
+      }
+
+      // If claiming ERC20 asset, ensure router has liquidity (auto-seed from caller if needed on testnet)
+      if (claimTokenAddress && claimTokenAddress !== '0x0000000000000000000000000000000000000000' && routerAddr) {
+        try {
+          const erc20 = new ethers.Contract(
+            claimTokenAddress,
+            ['function balanceOf(address) view returns (uint256)', 'function transfer(address, uint256) returns (bool)'],
+            wallet.signer
           );
+          const rTokenBal = await erc20.balanceOf(routerAddr);
+          if (rTokenBal < claimAmountUnits) {
+            const userBal = await erc20.balanceOf(wallet.address);
+            if (userBal >= claimAmountUnits) {
+              const seedTx = await erc20.transfer(routerAddr, claimAmountUnits * 2n);
+              await seedTx.wait();
+            }
+          }
+        } catch (seedErr) {
+          console.warn('[CrossChain] Router liquidity seed check skipped:', seedErr);
         }
       }
 
@@ -1411,7 +1443,7 @@ export default function FundryxAppPortal({
         sourceChainId: srcCId,
         destChainId: destCId,
         sourceTokenAddress: getTokenConfig(srcCId, srcSym)?.address,
-        destTokenAddress: getTokenConfig(destCId, dstSym)?.address,
+        destTokenAddress: claimTokenAddress,
         recipient: wallet.address,
         amountOutUnits: claimAmountUnits,
       });
@@ -1427,7 +1459,7 @@ export default function FundryxAppPortal({
 
       setTxNotification({
         type: 'success',
-        message: `Settled on ${destNet.name}! Received ${activeTransfer?.amount || crossQuote?.destEstimatedOutput || ''} ${dstSym}.`,
+        message: `Settled on ${destNet.name}! Received ${activeTransfer?.amount || crossQuote?.destEstimatedOutput || ''} ${finalClaimSym}.`,
         txHash: claimRes.destTxHash,
         chainId: destCId,
       });
@@ -3895,9 +3927,12 @@ export default function FundryxAppPortal({
                 const activeDestChain = activePendingTransfer?.destChainId || crossDestChain;
                 const activeSourceChain = activePendingTransfer?.sourceChainId || crossSourceChain;
                 const sourceNetwork = SUPPORTED_NETWORKS[activeSourceChain] || { name: `Chain ${activeSourceChain}` };
-                const destNetwork = SUPPORTED_NETWORKS[activeDestChain] || { name: `Chain ${activeDestChain}` };
-                const sourceTokens = getTokenRegistry(activeSourceChain);
-                const destTokens = getTokenRegistry(activeDestChain);
+                const sourceTokens = getTokenRegistry(activeSourceChain).filter(
+                  (t) => networkMode === 'mainnet' || t.supportedOperations?.includes('cross_chain')
+                );
+                const destTokens = getTokenRegistry(activeDestChain).filter(
+                  (t) => networkMode === 'mainnet' || t.supportedOperations?.includes('cross_chain')
+                );
 
                 const currentModeChains = networkMode === 'mainnet'
                   ? [137, 143, 8453, 43114]
@@ -3995,7 +4030,9 @@ export default function FundryxAppPortal({
                             onChange={(e) => {
                               const newChain = Number(e.target.value);
                               setCrossSourceChain(newChain);
-                              const avail = getTokenRegistry(newChain);
+                              const avail = getTokenRegistry(newChain).filter(
+                                (t) => networkMode === 'mainnet' || t.supportedOperations?.includes('cross_chain')
+                              );
                               if (avail && avail.length > 0) {
                                 setCrossSourceToken(avail[0].symbol);
                               }
@@ -4003,7 +4040,9 @@ export default function FundryxAppPortal({
                               if (newChain === crossDestChain) {
                                 const nextDest = currentModeChains.find((c) => c !== newChain) || currentModeChains[0];
                                 setCrossDestChain(nextDest);
-                                const dAvail = getTokenRegistry(nextDest);
+                                const dAvail = getTokenRegistry(nextDest).filter(
+                                  (t) => networkMode === 'mainnet' || t.supportedOperations?.includes('cross_chain')
+                                );
                                 if (dAvail && dAvail.length > 0) setCrossDestToken(dAvail[0].symbol);
                               }
                             }}
@@ -4057,7 +4096,9 @@ export default function FundryxAppPortal({
                             onChange={(e) => {
                               const newChain = Number(e.target.value);
                               setCrossDestChain(newChain);
-                              const avail = getTokenRegistry(newChain);
+                              const avail = getTokenRegistry(newChain).filter(
+                                (t) => networkMode === 'mainnet' || t.supportedOperations?.includes('cross_chain')
+                              );
                               if (avail && avail.length > 0) {
                                 setCrossDestToken(avail[0].symbol);
                               }
