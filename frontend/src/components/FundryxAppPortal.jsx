@@ -178,9 +178,9 @@ export default function FundryxAppPortal({
   const [swapSubTab, setSwapSubTab] = useState('same-chain'); // 'same-chain' | 'cross-chain' | 'pool'
   const [networkMode, setNetworkMode] = useState('testnet'); // 'testnet' | 'mainnet'
   const [crossSourceChain, setCrossSourceChain] = useState(currentChainId);
-  const [crossDestChain, setCrossDestChain] = useState(currentChainId === 10143 ? 80002 : 10143);
+  const [crossDestChain, setCrossDestChain] = useState(currentChainId === 10143 ? 43113 : 10143);
   const [crossSourceToken, setCrossSourceToken] = useState('FDX');
-  const [crossDestToken, setCrossDestToken] = useState(currentChainId === 10143 ? 'USDC' : 'WMON');
+  const [crossDestToken, setCrossDestToken] = useState('FDX');
   const [crossAmount, setCrossAmount] = useState('10');
   const [crossQuote, setCrossQuote] = useState(null);
   const [isFetchingQuote, setIsFetchingQuote] = useState(false);
@@ -206,18 +206,9 @@ export default function FundryxAppPortal({
   const [isHowBridgeWorksOpen, setIsHowBridgeWorksOpen] = useState(false);
   const [marketView, setMarketView] = useState('amm'); // 'amm' | 'orderbook'
 
-  // Synchronize swap currency and bridge network whenever wallet chain changes
+  // Synchronize swap currency and bridge network ONLY when wallet chain changes
   useEffect(() => {
     if (wallet?.chainId) {
-      const activeTransfers = getActiveCrossChainTransfers();
-      const pending = activeTransfers.find(
-        (t) => t.status !== 'COMPLETED' && (!wallet?.address || !t.recipient || t.recipient.toLowerCase() === wallet.address.toLowerCase())
-      );
-      if (pending || crossLifecycle.status === 'DESTINATION_PENDING') {
-        // Active bridge awaiting claim: do not flip source/destination
-        return;
-      }
-
       const cId = Number(wallet.chainId);
       const net = SUPPORTED_NETWORKS[cId] || SUPPORTED_NETWORKS[80002];
       const wrapSym = net?.wrappedNative?.symbol || (cId === 10143 ? 'WMON' : 'WPOL');
@@ -226,8 +217,13 @@ export default function FundryxAppPortal({
       setSwapTo(wrapSym);
       setCrossSourceChain(cId);
 
-      const destFallback = cId === 10143 ? 80002 : (cId === 80002 ? 10143 : (cId === 137 ? 143 : 80002));
-      setCrossDestChain(destFallback);
+      // PRESERVE user selected destination chain; only reassign if colliding with new source chain
+      setCrossDestChain((prevDest) => {
+        if (prevDest && prevDest !== cId) {
+          return prevDest;
+        }
+        return cId === 10143 ? 43113 : 10143;
+      });
 
       const sTokens = getTokenRegistry(cId).filter(
         (t) => networkMode === 'mainnet' || t.supportedOperations?.includes('cross_chain')
@@ -235,16 +231,10 @@ export default function FundryxAppPortal({
       if (sTokens && sTokens.length > 0) {
         setCrossSourceToken(sTokens[0].symbol);
       }
-      const dTokens = getTokenRegistry(destFallback).filter(
-        (t) => networkMode === 'mainnet' || t.supportedOperations?.includes('cross_chain')
-      );
-      if (dTokens && dTokens.length > 0) {
-        setCrossDestToken(dTokens[0].symbol);
-      }
 
       loadPairReserves(cId);
     }
-  }, [wallet?.chainId, crossLifecycle.status]);
+  }, [wallet?.chainId]);
 
   // Track unclaimed cross-chain transfers without overriding user's active route selection
   const [unclaimedTransfer, setUnclaimedTransfer] = useState(null);
